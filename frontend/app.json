@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "BloomSpeech",
+    "slug": "bloomspeech",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.timeglobaltech.bloomspeech",
+      "infoPlist": {
+        "NSCameraUsageDescription": "BloomSpeech uses the camera so a parent can add a photo for a communication tile.",
+        "NSMicrophoneUsageDescription": "BloomSpeech uses the microphone so a parent can add a word by speaking it.",
+        "NSPhotoLibraryUsageDescription": "BloomSpeech lets a parent pick a photo from the gallery for a communication tile."
+      }
+    },
+    "android": {
+      "package": "com.timeglobaltech.bloomspeech",
+      "versionCode": 1,
+      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO", "android.permission.READ_MEDIA_IMAGES"]
+    },
+    "plugins": [
+      ["expo-camera", { "cameraPermission": "BloomSpeech uses the camera so a parent can add a photo for a communication tile." }],
+      "expo-font",
+      ["expo-audio", { "microphonePermission": "BloomSpeech uses the microphone so a parent can add a word by speaking it." }],
+      ["expo-image-picker", { "photosPermission": "BloomSpeech lets a parent pick a photo from the gallery for a communication tile." }],
+      "expo-secure-store"
+    ]
+  }
+}

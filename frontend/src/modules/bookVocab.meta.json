@@ -1,0 +1,227 @@
+{
+  "water": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 4
+  },
+  "smiles": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 8
+  },
+  "bed": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 9
+  },
+  "sings": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 11
+  },
+  "book": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 13
+  },
+  "under": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 13
+  },
+  "read": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 13
+  },
+  "on": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 13
+  },
+  "woman": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 13
+  },
+  "girl": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 13
+  },
+  "in": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 13
+  },
+  "helps": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 13
+  },
+  "looks": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 13
+  },
+  "into": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 14
+  },
+  "sleeps": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 14
+  },
+  "moon": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 14
+  },
+  "mother": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 15
+  },
+  "goes": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 15
+  },
+  "hand": {
+    "level": null,
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 15
+  },
+  "inside": {
+    "level": "Emergent Readers",
+    "licenseRef": "GDL:CC-BY-SA-4.0",
+    "page": 6
+  },
+  "house": {
+    "level": "Emergent Readers",
+    "licenseRef": "GDL:CC-BY-SA-4.0",
+    "page": 6
+  },
+  "cat": {
+    "level": "Emergent Readers",
+    "licenseRef": "GDL:CC-BY-SA-4.0",
+    "page": 11
+  },
+  "dog": {
+    "level": "Emergent Readers",
+    "licenseRef": "GDL:CC-BY-SA-4.0",
+    "page": 15
+  },
+  "table": {
+    "level": "Emergent Readers",
+    "licenseRef": "GDL:CC-BY-SA-4.0",
+    "page": 17
+  },
+  "garden": {
+    "level": "Emergent Readers",
+    "licenseRef": "GDL:CC-BY-SA-4.0",
+    "page": 17
+  },
+  "hen": {
+    "level": "Emergent Readers",
+    "licenseRef": "GDL:CC-BY-SA-4.0",
+    "page": 18
+  },
+  "food": {
+    "level": "Level 1, Library Books",
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 4
+  },
+  "family": {
+    "level": "Level 1, Library Books",
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 4
+  },
+  "father": {
+    "level": "Level 1, Library Books",
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 5
+  },
+  "went": {
+    "level": "Level 1, Library Books",
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 6
+  },
+  "ate": {
+    "level": "Level 1, Library Books",
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 7
+  },
+  "up": {
+    "level": "Level 1, Library Books",
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 8
+  },
+  "looked": {
+    "level": "Level 1, Library Books",
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 8
+  },
+  "gave": {
+    "level": "Level 1, Library Books",
+    "licenseRef": "GDL:CC-BY-4.0",
+    "page": 9
+  },
+  "eats": {
+    "level": "Emergent Readers, Library Books",
+    "licenseRef": "GDL:CC-BY-SA 4.0",
+    "page": 1
+  },
+  "cow": {
+    "level": "Emergent Readers, Library Books",
+    "licenseRef": "GDL:CC-BY-SA 4.0",
+    "page": 15
+  },
+  "behind": {
+    "level": "Emergent Readers, Library Books",
+    "licenseRef": "GDL:CC-BY-SA 4.0",
+    "page": 15
+  },
+  "banana": {
+    "level": "Emergent Readers, Library Books",
+    "licenseRef": "GDL:CC-BY-SA 4.0",
+    "page": 15
+  },
+  "man": {
+    "level": "Emergent Readers, Library Books",
+    "licenseRef": "GDL:CC-BY-SA 4.0",
+    "page": 17
+  },
+  "baby": {
+    "level": "Emergent Readers, Library Books",
+    "licenseRef": "GDL:CC-BY-SA 4.0",
+    "page": 17
+  },
+  "near": {
+    "level": "Emergent Readers, Library Books",
+    "licenseRef": "GDL:CC-BY-SA 4.0",
+    "page": 17
+  },
+  "door": {
+    "level": "Emergent Readers, Library Books",
+    "licenseRef": "GDL:CC-BY-SA 4.0",
+    "page": 17
+  },
+  "car": {
+    "level": "Emergent Readers, Library Books",
+    "licenseRef": "GDL:CC-BY-SA 4.0",
+    "page": 15
+  },
+  "bus": {
+    "level": "Emergent Readers, Library Books",
+    "licenseRef": "GDL:CC-BY-SA 4.0",
+    "page": 15
+  },
+  "boat": {
+    "level": "Emergent Readers, Library Books",
+    "licenseRef": "GDL:CC-BY-SA 4.0",
+    "page": 15
+  }
+}
