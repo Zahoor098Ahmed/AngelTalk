@@ -9,7 +9,7 @@ const SEED_WORD_EN: Record<string, string[]> = {
   Food: ["Water", "Milk", "Juice", "Apple", "Banana", "Bread", "Cookie", "Rice", "Chicken", "Snack", "Pizza", "Sandwich", "Fruit"],
   Feelings: ["Happy", "Sad", "Hungry", "Thirsty", "Tired", "Excited", "Scared", "Angry", "Hurt", "Sick", "Calm", "Loved"],
   People: ["Mom", "Dad", "Me", "You", "Teacher", "Friend", "Brother", "Sister", "Grandma", "Grandpa", "Doctor", "Baby"],
-  Actions: ["Go", "Going", "Went", "Eat", "Eating", "Drink", "Drinking", "Play", "Playing", "Sleep", "Sleeping", "Come", "Wash", "Read", "Watch", "Help", "Clean", "Open", "Go to", "Stop", "Give"],
+  Actions: [],
   Places: ["Home", "School", "Park", "Playground", "Bathroom", "Outside", "Bedroom", "Kitchen", "Car", "Store"],
   Things: ["Ball", "Toy", "Book", "Tablet", "Shoes", "Blanket", "Clothes", "Cup", "Backpack"],
 };
@@ -170,26 +170,7 @@ const STARTER: { name: string; icon: string; color?: string; words: [string, str
     name: "Actions",
     icon: "⚡",
     color: "#c98a3d",
-    words: [
-      ["Go", "🚶"],
-      ["Going", "🚶"],
-      ["Went", "🚶"],
-      ["Eat", "🍽️"],
-      ["Eating", "🍽️"],
-      ["Drink", "🥤"],
-      ["Drinking", "🥤"],
-      ["Play", "🎮"],
-      ["Playing", "🎮"],
-      ["Sleep", "🛏️"],
-      ["Sleeping", "🛏️"],
-      ["Come", "🏃"],
-      ["Wash", "🧼"],
-      ["Read", "📖"],
-      ["Watch", "📺"],
-      ["Help", "🆘"],
-      ["Clean", "🧹"],
-      ["Open", "🚪"],
-    ],
+    words: [],
   },
   {
     name: "Food",
@@ -1413,35 +1394,14 @@ export function cleanAndDeduplicateCategories() {
     coreCat.words.forEach((w, i) => { w.order = i; });
   }
 
-  const actionsCat = cache.find((c) => (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase() === "actions");
-  if (actionsCat) {
-    const essentialActions: [string, string][] = [
-      ["Go", "🚶"],
-      ["Going", "🚶"],
-      ["Went", "🚶"],
-      ["Eat", "🍽️"],
-      ["Eating", "🍽️"],
-      ["Drink", "🥤"],
-      ["Drinking", "🥤"],
-      ["Play", "🎮"],
-      ["Playing", "🎮"],
-    ];
-    for (const [wLabel, wEmoji] of [...essentialActions].reverse()) {
-      if (!actionsCat.words.some((w) => w.label.toLowerCase() === wLabel.toLowerCase())) {
-        actionsCat.words.unshift({
-          id: uid("word"),
-          label: wLabel,
-          phrase: wLabel,
-          emoji: wEmoji,
-          color: "#FDF6E2",
-          size: "md",
-          order: 0,
-          useTextToSpeech: true,
-        });
-        changed = true;
-      }
-    }
-    actionsCat.words.forEach((w, i) => { w.order = i; });
+  const actionsCat = cache.find(
+    (c) => !c.parentCategoryId && (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase() === "actions"
+  );
+  if (actionsCat && actionsCat.words.length > 0) {
+    // All verbs are strictly organized inside the A-Z subcategories (Verbs A to Verbs Z).
+    // Root Actions category must not have loose words cluttering outside the subcategories.
+    actionsCat.words = [];
+    changed = true;
   }
 
   const placesCat = cache.find((c) => (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase() === "places");

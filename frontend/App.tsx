@@ -54,7 +54,7 @@ const TAB_LABEL: Record<TabScreen, string> = {
 
 function AppInner() {
   const { ready, settings } = useSettings();
-  const [screen, setScreen] = useState<Screen>("landing");
+  const [screen, setScreen] = useState<Screen>("face-scan");
   const [currentTab, setCurrentTab] = useState<TabScreen>("home");
   const [currentChild, setCurrentChild] = useState<ChildProfile | null>(null);
   const [categoryReturnScreen, setCategoryReturnScreen] = useState<"speak" | "more">("more");
@@ -71,7 +71,8 @@ function AppInner() {
       </View>
     );
   } else if (screen === "landing") {
-    body = <LandingScreen onGetStarted={() => go("onboarding-quick")} />;
+    body = <LandingScreen onGetStarted={() => go("face-scan")} />;
+  /* Commented out per user request (Onboarding steps 1, 2, 3)
   } else if (screen === "onboarding-quick") {
     body = (
       <QuickOnboardingScreen
@@ -83,6 +84,7 @@ function AppInner() {
         onSkipToNormal={() => go("face-scan")}
       />
     );
+  */
   } else if (screen === "face-scan") {
     body = (
       <FaceScanScreen
@@ -291,7 +293,7 @@ function MoreMenu({
 
   const adminRows: { key: Screen; label: string; icon: keyof typeof Ionicons.glyphMap; color: string; desc: string }[] = [
     { key: "social-stories", label: "Visual Social Stories", icon: "book", color: "#f59e0b", desc: "Read-aloud guides for dentist, haircut, school, & emotions" },
-    { key: "onboarding-quick", label: "90s Board Personalizer", icon: "sparkles", color: "#0ea5e9", desc: "Re-build board with child's real favorite foods, family & toys" },
+    // { key: "onboarding-quick", label: "90s Board Personalizer", icon: "sparkles", color: "#0ea5e9", desc: "Re-build board with child's real favorite foods, family & toys" },
     { key: "my-categories", label: "My Categories & Words", icon: "folder-open", color: "#10b981", desc: "Organize shelves, words, hide/show & delete" },
     { key: "category-builder", label: "Category Builder & Generator", icon: "sparkles-outline", color: "#0ea5e9", desc: "Build new categories from lists or AI presets" },
     { key: "voice-command", label: "Voice Command Match", icon: "mic-circle", color: "#6366f1", desc: "Practice spoken phrases with live visual matching" },

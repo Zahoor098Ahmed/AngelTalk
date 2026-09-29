@@ -1107,6 +1107,16 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         </View>
 
                         <View style={[styles.colCell, styles.colHeadAction, styles.actionsCell]}>
+                          {/* Edit Word Button */}
+                          <Pressable
+                            onPress={() => setEditorWord(w)}
+                            style={styles.rowActionBtn}
+                            hitSlop={6}
+                            accessibilityLabel={`Edit ${w.label}`}
+                          >
+                            <Ionicons name="pencil-outline" size={17} color="#235E50" />
+                          </Pressable>
+
                           {/* Eye Show/Hide Toggle */}
                           <Pressable
                             onPress={() => toggleWordHidden(w.id, !w.hidden)}
@@ -1526,7 +1536,16 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         </Text>
                       </View>
 
-                      <View style={[styles.colCell, { width: 56, flexDirection: "row", justifyContent: "flex-end", gap: 6 }]}>
+                      <View style={[styles.colCell, { width: 88, flexDirection: "row", justifyContent: "flex-end", gap: 8 }]}>
+                        {/* Edit Word Button */}
+                        <Pressable
+                          onPress={() => setEditorWord(w)}
+                          hitSlop={6}
+                          accessibilityLabel={`Edit ${w.label}`}
+                        >
+                          <Ionicons name="pencil-outline" size={16} color="#235E50" />
+                        </Pressable>
+
                         {/* Eye Toggle */}
                         <Pressable
                           onPress={() => toggleWordHidden(w.id, !w.hidden)}
@@ -2608,7 +2627,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       {/* Word Editor component for deeper edits */}
       <WordEditor
         visible={editorWord !== null}
-        catId={currentShelf?.id || ""}
+        catId={activeCategory?.id || currentShelf?.id || ""}
         word={editorWord}
         onClose={() => setEditorWord(null)}
         onSaved={refresh}
@@ -3102,7 +3121,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   colHeadAction: {
-    width: 60,
+    width: 96,
     alignItems: "flex-end",
   },
   tableBodyScroll: {
