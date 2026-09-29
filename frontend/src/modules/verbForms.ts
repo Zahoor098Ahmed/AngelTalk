@@ -124,6 +124,50 @@ export const VERB_FORMS_LIST: VerbForms[] = [
   { base: "choose", past: "chose", participle: "chosen", continuous: "choosing", emoji: "✅" },
   { base: "exercise", past: "exercised", participle: "exercised", continuous: "exercising", emoji: "🏋️" },
   { base: "breathe", past: "breathed", participle: "breathed", continuous: "breathing", emoji: "🌬️" },
+
+  // --- Additional High Frequency & Irregular Verbs ---
+  { base: "get", past: "got", participle: "gotten", continuous: "getting", emoji: "🤲" },
+  { base: "keep", past: "kept", participle: "kept", continuous: "keeping", emoji: "🔐" },
+  { base: "begin", past: "began", participle: "begun", continuous: "beginning", emoji: "▶️" },
+  { base: "bite", past: "bit", participle: "bitten", continuous: "biting", emoji: "🦷" },
+  { base: "blow", past: "blew", participle: "blown", continuous: "blowing", emoji: "💨" },
+  { base: "cut", past: "cut", participle: "cut", continuous: "cutting", emoji: "✂️" },
+  { base: "dig", past: "dug", participle: "dug", continuous: "digging", emoji: "⛏️" },
+  { base: "draw", past: "drew", participle: "drawn", continuous: "drawing", emoji: "🎨" },
+  { base: "drive", past: "drove", participle: "driven", continuous: "driving", emoji: "🚗" },
+  { base: "fall", past: "fell", participle: "fallen", continuous: "falling", emoji: "🍂" },
+  { base: "feed", past: "fed", participle: "fed", continuous: "feeding", emoji: "🍼" },
+  { base: "fight", past: "fought", participle: "fought", continuous: "fighting", emoji: "🥊" },
+  { base: "forget", past: "forgot", participle: "forgotten", continuous: "forgetting", emoji: "❓" },
+  { base: "freeze", past: "froze", participle: "frozen", continuous: "freezing", emoji: "❄️" },
+  { base: "grow", past: "grew", participle: "grown", continuous: "growing", emoji: "🌱" },
+  { base: "hang", past: "hung", participle: "hung", continuous: "hanging", emoji: "🪝" },
+  { base: "hide", past: "hid", participle: "hidden", continuous: "hiding", emoji: "🙈" },
+  { base: "hit", past: "hit", participle: "hit", continuous: "hitting", emoji: "🎯" },
+  { base: "hurt", past: "hurt", participle: "hurt", continuous: "hurting", emoji: "🤕" },
+  { base: "lose", past: "lost", participle: "lost", continuous: "losing", emoji: "🔍" },
+  { base: "pay", past: "paid", participle: "paid", continuous: "paying", emoji: "💳" },
+  { base: "ride", past: "rode", participle: "ridden", continuous: "riding", emoji: "🚴" },
+  { base: "ring", past: "rang", participle: "rung", continuous: "ringing", emoji: "🔔" },
+  { base: "send", past: "sent", participle: "sent", continuous: "sending", emoji: "✉️" },
+  { base: "shake", past: "shook", participle: "shaken", continuous: "shaking", emoji: "🤝" },
+  { base: "shine", past: "shone", participle: "shone", continuous: "shining", emoji: "✨" },
+  { base: "shoot", past: "shot", participle: "shot", continuous: "shooting", emoji: "🏀" },
+  { base: "shut", past: "shut", participle: "shut", continuous: "shutting", emoji: "🚪" },
+  { base: "sing", past: "sang", participle: "sung", continuous: "singing", emoji: "🎤" },
+  { base: "sink", past: "sank", participle: "sunk", continuous: "sinking", emoji: "⚓" },
+  { base: "sit", past: "sat", participle: "sat", continuous: "sitting", emoji: "🪑" },
+  { base: "spend", past: "spent", participle: "spent", continuous: "spending", emoji: "💰" },
+  { base: "stand", past: "stood", participle: "stood", continuous: "standing", emoji: "🧍" },
+  { base: "sweep", past: "swept", participle: "swept", continuous: "sweeping", emoji: "🧹" },
+  { base: "swim", past: "swam", participle: "swum", continuous: "swimming", emoji: "🏊" },
+  { base: "swing", past: "swung", participle: "swung", continuous: "swinging", emoji: "🪵" },
+  { base: "teach", past: "taught", participle: "taught", continuous: "teaching", emoji: "👩‍🏫" },
+  { base: "tear", past: "tore", participle: "torn", continuous: "tearing", emoji: "📄" },
+  { base: "wake", past: "woke", participle: "woken", continuous: "waking", emoji: "⏰" },
+  { base: "wear", past: "wore", participle: "worn", continuous: "wearing", emoji: "👗" },
+  { base: "win", past: "won", participle: "won", continuous: "winning", emoji: "🏆" },
+  { base: "write", past: "wrote", participle: "written", continuous: "writing", emoji: "✏️" },
 ];
 
 const LOOKUP_MAP = new Map<string, VerbForms>();
@@ -188,18 +232,28 @@ export function conjugateRegularVerb(rawBase: string): VerbForms {
 }
 
 /**
- * Recovers the base root from an inflected form (e.g. "played" -> "play", "eating" -> "eat")
+ * Recovers the base root from an inflected form (e.g. "played" -> "play", "eating" -> "eat", "dancing" -> "dance")
  */
 function extractRoot(word: string): string {
   const w = word.trim().toLowerCase();
   if (w.endsWith("ing") && w.length > 4) {
     const stem = w.slice(0, -3);
-    // e.g. stopping -> stop
+    // e.g. stopping -> stop, swimming -> swim, clapping -> clap
     if (stem.length > 2 && stem[stem.length - 1] === stem[stem.length - 2]) {
       return stem.slice(0, -1);
     }
-    // e.g. making -> make
-    if (LOOKUP_MAP.has(stem + "e")) return stem + "e";
+    // e.g. making -> make, dancing -> dance, baking -> bake, riding -> ride
+    if (LOOKUP_MAP.has(stem + "e") || KNOWN_REGULAR_VERBS.has(stem + "e")) return stem + "e";
+    // e.g. crying -> cry, flying -> fly
+    if (w.endsWith("ying") && stem.length >= 2) {
+      const yForm = stem.slice(0, -1) + "y";
+      if (LOOKUP_MAP.has(yForm) || KNOWN_REGULAR_VERBS.has(yForm)) return yForm;
+    }
+    if (LOOKUP_MAP.has(stem) || KNOWN_REGULAR_VERBS.has(stem)) return stem;
+    // General silent-e heuristic (e.g. smiling -> smile)
+    if (stem.length >= 3 && !isKnownNonVerb(stem + "e")) {
+      return stem + "e";
+    }
     return stem;
   }
   if (w.endsWith("ed") && w.length > 3) {
@@ -208,10 +262,20 @@ function extractRoot(word: string): string {
     if (stem.length > 2 && stem[stem.length - 1] === stem[stem.length - 2]) {
       return stem.slice(0, -1);
     }
-    // e.g. danced -> dance
+    // e.g. danced -> dance, loved -> love
     if (w.endsWith("ed") && stem.endsWith("e")) return stem;
+    if (LOOKUP_MAP.has(stem + "e") || KNOWN_REGULAR_VERBS.has(stem + "e")) return stem + "e";
     if (w.endsWith("ied") && w.length > 4) return w.slice(0, -3) + "y";
     return stem;
+  }
+  if (w.endsWith("es") && w.length > 4) {
+    const stem = w.slice(0, -2);
+    if (LOOKUP_MAP.has(stem) || KNOWN_REGULAR_VERBS.has(stem)) return stem;
+    if (LOOKUP_MAP.has(stem + "e") || KNOWN_REGULAR_VERBS.has(stem + "e")) return stem + "e";
+  }
+  if (w.endsWith("s") && !w.endsWith("ss") && w.length > 3) {
+    const stem = w.slice(0, -1);
+    if (LOOKUP_MAP.has(stem) || KNOWN_REGULAR_VERBS.has(stem)) return stem;
   }
   return w;
 }
@@ -448,11 +512,14 @@ export function generateAllVerbForms(inputWord: string): VerbForms | null {
     }
   }
 
-  // 5. Check root for inflected verbs (e.g. "cleaning" -> "clean")
+  // 5. Check root for inflected verbs (e.g. "cleaning" -> "clean", "eating" -> "eat", "playing" -> "play")
   const root = extractRoot(clean);
   if (root !== clean) {
     if (LOOKUP_MAP.has(root)) return getVerbForms(root);
     if (KNOWN_REGULAR_VERBS.has(root)) return conjugateRegularVerb(root);
+    if (!isKnownNonVerb(root) && root.length >= 3) {
+      return conjugateRegularVerb(root);
+    }
   }
 
   // Otherwise, it's NOT a verb (e.g. "car", "apple", "merhan car") -> null!

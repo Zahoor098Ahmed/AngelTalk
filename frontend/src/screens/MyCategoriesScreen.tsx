@@ -35,7 +35,7 @@ import {
   setSeedLanguage,
 } from "../modules/customCategories";
 import { getPictogramUrl } from "../modules/aacPictograms";
-import { generateAllVerbForms, isLikelyVerb } from "../modules/verbForms";
+import { generateAllVerbForms, isLikelyVerb, detectVerbForm } from "../modules/verbForms";
 import WordEditor from "../components/WordEditor";
 import UniversalImagePickerModal from "../components/UniversalImagePickerModal";
 import { startListening, stopListening, isListening } from "../modules/voice";
@@ -51,6 +51,11 @@ const PASTEL_PALETTE = [
 ];
 
 const SHELF_ICONS = ["💬", "♡", "😊", "⚡", "🍴", "🏛️", "✨", "🎨", "📁", "🏫", "⚽", "🛁", "🎸"];
+
+function capWord(s: string): string {
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 function formatLastUsed(ts: number | undefined): string {
   if (!ts) return "Not yet";
@@ -343,7 +348,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
   function handleCreateWord() {
     const text = newWordText.trim();
-    const targetCat =
+    let targetCat =
       (modalTargetCatId
         ? subCats.find((s) => s.id === modalTargetCatId) ||
           (currentShelf?.id === modalTargetCatId ? currentShelf : null)
@@ -351,56 +356,91 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       activeCategory ||
       currentShelf;
     if (!text || !targetCat) return;
+
+    // Ensure words are NEVER saved loose outside subcategories
+    if (subCats.length > 0 && targetCat.id === currentShelf?.id) {
+      targetCat = subCats[0];
+    }
+
     const imgUri = newWordImageUri || getPictogramUrl(text) || undefined;
 
     if (detectedVerbForms && autoAddVerbForms) {
-      const rawForms = [
-        { label: detectedVerbForms.base, phrase: detectedVerbForms.base },
-        { label: detectedVerbForms.past, phrase: detectedVerbForms.past },
-        { label: detectedVerbForms.participle, phrase: detectedVerbForms.participle },
-        { label: detectedVerbForms.continuous, phrase: detectedVerbForms.continuous },
+      const form1 = capWord(detectedVerbForms.base);
+      const form2 = capWord(detectedVerbForms.past);
+      const form3 = capWord(detectedVerbForms.participle);
+      const form4 = capWord(detectedVerbForms.continuous);
+
+      const formsToAdd: {
+        label: string;
+        phrase: string;
+        verbFormTag: "1st" | "2nd" | "3rd" | "4th";
+      }[] = [
+        { label: form1, phrase: form1, verbFormTag: "1st" },
+        { label: form2, phrase: form2, verbFormTag: "2nd" },
+        { label: form3, phrase: form3, verbFormTag: "3rd" },
+        { label: form4, phrase: form4, verbFormTag: "4th" },
       ];
-      const uniqueForms: { label: string; phrase: string }[] = [];
-      const seen = new Set<string>();
-      for (const f of rawForms) {
-        const key = f.label.toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          uniqueForms.push(f);
+
+      // Route destination:
+      // If currentShelf or target is Actions, route into Verbs A-Z subcategory
+      let actualTargetCatId = targetCat.id;
+      const isActionsShelf =
+        (targetCat.name || "").toLowerCase().includes("action") ||
+        (currentShelf?.name || "").toLowerCase().includes("action");
+
+      if (isActionsShelf) {
+        const letter = (detectedVerbForms.base[0] || "A").toUpperCase();
+        const subName = `Verbs ${letter}`;
+        const existingSub = subCats.find((sc) => sc.name.toLowerCase() === subName.toLowerCase());
+        if (existingSub) {
+          actualTargetCatId = existingSub.id;
+        } else {
+          const actionsShelf = currentShelf?.name.toLowerCase().includes("action") ? currentShelf : targetCat;
+          const allSubs = childCategories(actionsShelf.id);
+          const found = allSubs.find((sc) => sc.name.toLowerCase() === subName.toLowerCase());
+          if (found) {
+            actualTargetCatId = found.id;
+          } else {
+            const created = createBlankCategory({
+              name: subName,
+              parentCategoryId: actionsShelf.id,
+              icon: "⚡",
+              color: actionsShelf.color || "#c98a3d",
+            });
+            actualTargetCatId = created.id;
+          }
         }
       }
 
       addWordsBulk(
-        targetCat.id,
-        uniqueForms.map((f) => ({
+        actualTargetCatId,
+        formsToAdd.map((f) => ({
           label: f.label,
           phrase: f.phrase,
           color: newWordColor,
-          emoji: "🔹",
-          imageUri: imgUri || getPictogramUrl(f.label) || undefined,
+          emoji: detectedVerbForms.emoji || "⚡",
+          imageUri: imgUri || getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
           size: "md" as TileSize,
           useTextToSpeech: true,
+          verbFormTag: f.verbFormTag,
           verbForms: detectedVerbForms,
         }))
       );
+      setSelectedSubCatId(actualTargetCatId);
     } else {
+      const cLabel = capWord(text);
       addWord(targetCat.id, {
-        label: text,
-        phrase: text,
+        label: cLabel,
+        phrase: cLabel,
         color: newWordColor,
-        emoji: "🔹",
+        emoji: detectedVerbForms?.emoji || "🔹",
         imageUri: imgUri,
         size: "md" as TileSize,
         useTextToSpeech: true,
         verbForms: detectedVerbForms || undefined,
+        verbFormTag: detectedVerbForms ? detectVerbForm(text) || undefined : undefined,
       });
-    }
-
-    // Switch view to target category so user immediately sees newly added word
-    if (targetCat.id !== currentShelf?.id) {
       setSelectedSubCatId(targetCat.id);
-    } else {
-      setSelectedSubCatId(null);
     }
 
     setAddWordOpen(false);
@@ -411,7 +451,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   }
 
   function handleBulkAddWords() {
-    const targetCat =
+    let targetCat =
       (modalTargetCatId
         ? subCats.find((s) => s.id === modalTargetCatId) ||
           (currentShelf?.id === modalTargetCatId ? currentShelf : null)
@@ -419,6 +459,11 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       activeCategory ||
       currentShelf;
     if (!bulkWordsText.trim() || !targetCat) return;
+
+    if (subCats.length > 0 && targetCat.id === currentShelf?.id) {
+      targetCat = subCats[0];
+    }
+
     const items = bulkWordsText
       .split(/[\n,;]+/)
       .map((w) => w.trim())
@@ -435,49 +480,54 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       size: TileSize;
       useTextToSpeech: boolean;
       verbForms?: CustomWord["verbForms"];
+      verbFormTag?: "1st" | "2nd" | "3rd" | "4th";
     }[] = [];
 
     const seenLabels = new Set<string>();
 
     for (const item of items) {
       const customImg = bulkWordsImages[item] || bulkWordsImages[item.toLowerCase()];
-      // Smart Auto-Detection: Automatically check if word is a verb
       const vForms = generateAllVerbForms(item);
       if (vForms) {
-        // Genuine VERB: automatically expand into all 4 forms
-        const forms = [
-          vForms.base,
-          vForms.past,
-          vForms.participle,
-          vForms.continuous,
+        const form1 = capWord(vForms.base);
+        const form2 = capWord(vForms.past);
+        const form3 = capWord(vForms.participle);
+        const form4 = capWord(vForms.continuous);
+
+        const forms: { label: string; verbFormTag: "1st" | "2nd" | "3rd" | "4th" }[] = [
+          { label: form1, verbFormTag: "1st" },
+          { label: form2, verbFormTag: "2nd" },
+          { label: form3, verbFormTag: "3rd" },
+          { label: form4, verbFormTag: "4th" },
         ];
         for (const f of forms) {
-          const lower = f.toLowerCase();
+          const lower = f.label.toLowerCase();
           if (!seenLabels.has(lower)) {
             seenLabels.add(lower);
             wordsToInsert.push({
-              label: f,
-              phrase: f,
+              label: f.label,
+              phrase: f.label,
               color: bulkWordColor,
-              emoji: "🔹",
-              imageUri: customImg || getPictogramUrl(f) || getPictogramUrl(vForms.base) || undefined,
+              emoji: vForms.emoji || "⚡",
+              imageUri: customImg || getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
               size: "md" as TileSize,
               useTextToSpeech: true,
               verbForms: vForms,
+              verbFormTag: f.verbFormTag,
             });
           }
         }
       } else {
-        // NOUN / non-verb (e.g. car, apple, milk, chair): automatically add as a single tile
-        const lower = item.toLowerCase();
+        const cLabel = capWord(item);
+        const lower = cLabel.toLowerCase();
         if (!seenLabels.has(lower)) {
           seenLabels.add(lower);
           wordsToInsert.push({
-            label: item,
-            phrase: item,
+            label: cLabel,
+            phrase: cLabel,
             color: bulkWordColor,
             emoji: "🔹",
-            imageUri: customImg || getPictogramUrl(item) || undefined,
+            imageUri: customImg || getPictogramUrl(cLabel) || undefined,
             size: "md" as TileSize,
             useTextToSpeech: true,
           });
@@ -486,13 +536,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     }
 
     addWordsBulk(targetCat.id, wordsToInsert);
-
-    // Switch view to target category so user immediately sees newly added words
-    if (targetCat.id !== currentShelf?.id) {
-      setSelectedSubCatId(targetCat.id);
-    } else {
-      setSelectedSubCatId(null);
-    }
+    setSelectedSubCatId(targetCat.id);
 
     setBulkWordsOpen(false);
     setBulkWordsText("");
@@ -640,7 +684,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       });
       setSelectedSubCatId(created.id);
     } else if (voiceTargetType === "word") {
-      const targetCat = activeCategory || currentShelf;
+      let targetCat = activeCategory || currentShelf;
+      if (subCats.length > 0 && targetCat?.id === currentShelf?.id) {
+        targetCat = subCats[0];
+      }
       if (targetCat) {
         const wordsToAdd = voiceItems.length > 0 ? voiceItems : [finalClean];
         const toInsert: {
@@ -650,21 +697,51 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
           imageUri?: string;
           size: TileSize;
           useTextToSpeech: boolean;
+          verbForms?: CustomWord["verbForms"];
+          verbFormTag?: "1st" | "2nd" | "3rd" | "4th";
         }[] = [];
         for (const item of wordsToAdd) {
           const cName = cleanVoiceSpeechName(item);
           if (!cName) continue;
-          toInsert.push({
-            label: cName,
-            phrase: cName,
-            emoji: voiceIcon || "🔹",
-            imageUri: getPictogramUrl(cName) || undefined,
-            size: "md",
-            useTextToSpeech: true,
-          });
+          const vForms = generateAllVerbForms(cName);
+          if (vForms) {
+            const form1 = capWord(vForms.base);
+            const form2 = capWord(vForms.past);
+            const form3 = capWord(vForms.participle);
+            const form4 = capWord(vForms.continuous);
+            const forms = [
+              { label: form1, tag: "1st" as const },
+              { label: form2, tag: "2nd" as const },
+              { label: form3, tag: "3rd" as const },
+              { label: form4, tag: "4th" as const },
+            ];
+            for (const f of forms) {
+              toInsert.push({
+                label: f.label,
+                phrase: f.label,
+                emoji: vForms.emoji || "⚡",
+                imageUri: getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
+                size: "md",
+                useTextToSpeech: true,
+                verbForms: vForms,
+                verbFormTag: f.tag,
+              });
+            }
+          } else {
+            const cLabel = capWord(cName);
+            toInsert.push({
+              label: cLabel,
+              phrase: cLabel,
+              emoji: voiceIcon || "🔹",
+              imageUri: getPictogramUrl(cLabel) || undefined,
+              size: "md",
+              useTextToSpeech: true,
+            });
+          }
         }
         if (toInsert.length > 0) {
           addWordsBulk(targetCat.id, toInsert);
+          setSelectedSubCatId(targetCat.id);
         }
       }
     }
@@ -1839,6 +1916,42 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   <Text style={styles.voiceTranscriptText}>
                     "{voiceRawTranscript || (voiceListening ? "Listening..." : "Waiting for voice...")}"
                   </Text>
+                </View>
+
+                {/* Quick Simulation / Test Voice Chips */}
+                <View style={{ marginTop: 10, width: "100%" }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#6A7B76", marginBottom: 6, textTransform: "uppercase" }}>
+                    Quick Voice Test Samples:
+                  </Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                    {[
+                      "create category of name of apple",
+                      "create subcategory drinks",
+                      "add word pizza",
+                      "fruits",
+                      "eat, ate, eaten, eating",
+                    ].map((sample) => (
+                      <Pressable
+                        key={sample}
+                        onPress={() => {
+                          setVoiceRawTranscript(sample);
+                          applyVoiceText(sample);
+                        }}
+                        style={{
+                          backgroundColor: "#FFFFFF",
+                          borderWidth: 1,
+                          borderColor: "#CCDCD5",
+                          borderRadius: 14,
+                          paddingHorizontal: 10,
+                          paddingVertical: 6,
+                        }}
+                      >
+                        <Text style={{ fontSize: 12, color: "#1F594A", fontWeight: "600" }}>
+                          🎤 "{sample}"
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
                 </View>
               </View>
 

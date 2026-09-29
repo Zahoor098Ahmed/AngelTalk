@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import {
   createAudioPlayer,
   requestRecordingPermissionsAsync,
@@ -32,11 +33,19 @@ async function ensureDir() {
 
 // --- recording -----------------------------------------------------------
 
+// Web MediaRecorder state
+let webMediaRecorder: any = null;
+let webAudioChunks: Blob[] = [];
+let webStream: any = null;
+
 // AudioModule is a native module (loosely typed); the recorder is its class instance.
 let recorder: { prepareToRecordAsync: () => Promise<void>; record: () => void; stop: () => Promise<void>; uri: string | null } | null =
   null;
 
 export async function canRecord(): Promise<boolean> {
+  if (Platform.OS === "web") {
+    return typeof navigator !== "undefined" && !!navigator.mediaDevices && !!navigator.mediaDevices.getUserMedia;
+  }
   try {
     const res = await requestRecordingPermissionsAsync();
     return res.granted;
@@ -46,6 +55,47 @@ export async function canRecord(): Promise<boolean> {
 }
 
 export async function startRecording(): Promise<boolean> {
+  if (Platform.OS === "web") {
+    try {
+      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+        console.warn("[audio] MediaDevices.getUserMedia not supported on this browser.");
+        return false;
+      }
+      if (webStream) {
+        try {
+          webStream.getTracks().forEach((track: any) => track.stop());
+        } catch {}
+        webStream = null;
+      }
+      webStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      webAudioChunks = [];
+      let mime = "";
+      if (typeof MediaRecorder !== "undefined") {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mime = "audio/webm;codecs=opus";
+        else if (MediaRecorder.isTypeSupported("audio/webm")) mime = "audio/webm";
+        else if (MediaRecorder.isTypeSupported("audio/mp4")) mime = "audio/mp4";
+        else if (MediaRecorder.isTypeSupported("audio/ogg")) mime = "audio/ogg";
+      }
+      webMediaRecorder = mime ? new MediaRecorder(webStream, { mimeType: mime }) : new MediaRecorder(webStream);
+      webMediaRecorder.ondataavailable = (e: any) => {
+        if (e.data && e.data.size > 0) {
+          webAudioChunks.push(e.data);
+        }
+      };
+      webMediaRecorder.start(100);
+      return true;
+    } catch (err) {
+      console.warn("Web audio recording start failed:", err);
+      return false;
+    }
+  }
+
   if (!(await canRecord())) return false;
   try {
     await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
@@ -63,6 +113,52 @@ export async function startRecording(): Promise<boolean> {
 
 /** Stop recording and return the temporary file uri as-is (for transcription). */
 export async function stopRecordingTemp(): Promise<string | null> {
+  if (Platform.OS === "web") {
+    if (!webMediaRecorder) return null;
+    return new Promise((resolve) => {
+      const finish = () => {
+        try {
+          if (webStream) {
+            webStream.getTracks().forEach((track: any) => track.stop());
+            webStream = null;
+          }
+          if (webAudioChunks.length === 0) {
+            webMediaRecorder = null;
+            resolve(null);
+            return;
+          }
+          const mime = webMediaRecorder?.mimeType || "audio/webm";
+          const blob = new Blob(webAudioChunks, { type: mime });
+          webMediaRecorder = null;
+          webAudioChunks = [];
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve(reader.result as string);
+          };
+          reader.onerror = () => {
+            resolve(URL.createObjectURL(blob));
+          };
+          reader.readAsDataURL(blob);
+        } catch {
+          webMediaRecorder = null;
+          resolve(null);
+        }
+      };
+
+      if (webMediaRecorder.state === "recording") {
+        webMediaRecorder.onstop = finish;
+        try {
+          webMediaRecorder.requestData();
+          webMediaRecorder.stop();
+        } catch {
+          finish();
+        }
+      } else {
+        finish();
+      }
+    });
+  }
+
   const rec = recorder;
   if (!rec) return null;
   try {
@@ -78,6 +174,52 @@ export async function stopRecordingTemp(): Promise<string | null> {
 
 /** Stop recording and move the clip into permanent storage. Returns its uri. */
 export async function stopRecording(wordId: string): Promise<string | null> {
+  if (Platform.OS === "web") {
+    if (!webMediaRecorder) return null;
+    return new Promise((resolve) => {
+      const finish = () => {
+        try {
+          if (webStream) {
+            webStream.getTracks().forEach((track: any) => track.stop());
+            webStream = null;
+          }
+          if (webAudioChunks.length === 0) {
+            webMediaRecorder = null;
+            resolve(null);
+            return;
+          }
+          const mime = webMediaRecorder?.mimeType || "audio/webm";
+          const blob = new Blob(webAudioChunks, { type: mime });
+          webMediaRecorder = null;
+          webAudioChunks = [];
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve(reader.result as string);
+          };
+          reader.onerror = () => {
+            resolve(URL.createObjectURL(blob));
+          };
+          reader.readAsDataURL(blob);
+        } catch {
+          webMediaRecorder = null;
+          resolve(null);
+        }
+      };
+
+      if (webMediaRecorder.state === "recording") {
+        webMediaRecorder.onstop = finish;
+        try {
+          webMediaRecorder.requestData();
+          webMediaRecorder.stop();
+        } catch {
+          finish();
+        }
+      } else {
+        finish();
+      }
+    });
+  }
+
   const rec = recorder;
   if (!rec) return null;
   try {
@@ -103,6 +245,14 @@ export async function stopRecording(wordId: string): Promise<string | null> {
 
 export async function deleteClip(uri?: string) {
   if (!uri) return;
+  if (Platform.OS === "web" && uri.startsWith("blob:")) {
+    try {
+      URL.revokeObjectURL(uri);
+    } catch {
+      /* ignore */
+    }
+    return;
+  }
   try {
     await FileSystem.deleteAsync(uri, { idempotent: true });
   } catch {
@@ -118,17 +268,32 @@ function playClip(uri: string): Promise<void> {
     const finish = () => {
       if (done) return;
       done = true;
-      try {
-        player.remove();
-      } catch {
-        /* ignore */
-      }
       resolve();
     };
+
+    if (Platform.OS === "web") {
+      try {
+        const audio = new Audio(uri);
+        audio.onended = finish;
+        audio.onerror = finish;
+        audio.play().catch(finish);
+        setTimeout(finish, 6000);
+        return;
+      } catch {
+        finish();
+        return;
+      }
+    }
+
     const player = createAudioPlayer(uri);
     const sub = player.addListener("playbackStatusUpdate", (s: AudioStatus) => {
       if (s.didJustFinish) {
         sub?.remove?.();
+        try {
+          player.remove();
+        } catch {
+          /* ignore */
+        }
         finish();
       }
     });

@@ -132,39 +132,13 @@ const STARTER: { name: string; icon: string; color?: string; words: [string, str
     name: "People",
     icon: "♡",
     color: "#c96b6b",
-    words: [
-      ["Mom", "👩"],
-      ["Dad", "👨"],
-      ["Me", "🧒"],
-      ["You", "👉"],
-      ["Teacher", "👩‍🏫"],
-      ["Friend", "🧑‍🤝‍🧑"],
-      ["Brother", "👦"],
-      ["Sister", "👧"],
-      ["Grandma", "👵"],
-      ["Grandpa", "👴"],
-      ["Doctor", "👨‍⚕️"],
-      ["Baby", "👶"],
-    ],
+    words: [],
   },
   {
     name: "Feelings",
     icon: "😊",
     color: "#e67e22",
-    words: [
-      ["Happy", "😊"],
-      ["Sad", "😢"],
-      ["Hungry", "🍎"],
-      ["Thirsty", "💧"],
-      ["Tired", "😴"],
-      ["Excited", "🤩"],
-      ["Scared", "😨"],
-      ["Angry", "😠"],
-      ["Hurt", "🤕"],
-      ["Sick", "🤒"],
-      ["Calm", "😌"],
-      ["Loved", "🥰"],
-    ],
+    words: [],
   },
   {
     name: "Actions",
@@ -176,54 +150,19 @@ const STARTER: { name: string; icon: string; color?: string; words: [string, str
     name: "Food",
     icon: "🍴",
     color: "#5c9a58",
-    words: [
-      ["Water", "💧"],
-      ["Milk", "🥛"],
-      ["Juice", "🧃"],
-      ["Apple", "🍎"],
-      ["Banana", "🍌"],
-      ["Bread", "🍞"],
-      ["Cookie", "🍪"],
-      ["Rice", "🍚"],
-      ["Chicken", "🍗"],
-      ["Snack", "🥨"],
-      ["Pizza", "🍕"],
-      ["Sandwich", "🥪"],
-      ["Fruit", "🍓"],
-    ],
+    words: [],
   },
   {
     name: "Places",
     icon: "🏛️",
     color: "#4a7fe6",
-    words: [
-      ["Home", "🏠"],
-      ["School", "🏫"],
-      ["Park", "🌳"],
-      ["Bathroom", "🚻"],
-      ["Outside", "🏕️"],
-      ["Bedroom", "🛏️"],
-      ["Playground", "🛝"],
-      ["Kitchen", "🍳"],
-      ["Car", "🚗"],
-      ["Store", "🏪"],
-    ],
+    words: [],
   },
   {
     name: "Things",
     icon: "✨",
     color: "#8a6bc9",
-    words: [
-      ["Ball", "⚽"],
-      ["Toy", "🧸"],
-      ["Book", "📚"],
-      ["Tablet", "📱"],
-      ["Shoes", "👟"],
-      ["Blanket", "🧶"],
-      ["Clothes", "👕"],
-      ["Cup", "🥤"],
-      ["Backpack", "🎒"],
-    ],
+    words: [],
   },
   {
     name: "Red",
@@ -767,6 +706,8 @@ export const STARTER_SUBCATEGORIES: {
       ["Kitchen", "🍳"],
       ["Bathroom", "🚻"],
       ["Backyard", "🌳"],
+      ["Outside", "🏕️"],
+      ["Car", "🚗"],
       ["Bed", "🛏️"],
       ["Couch", "🛋️"],
       ["Dining Room", "🍽️"],
@@ -786,6 +727,7 @@ export const STARTER_SUBCATEGORIES: {
       ["Bus", "🚌"],
       ["Park", "🌳"],
       ["Hallway", "🚶"],
+      ["Street", "🛣️"],
     ],
   },
   {
@@ -830,6 +772,7 @@ export const STARTER_SUBCATEGORIES: {
       ["Blocks", "🧱"],
       ["Puzzle", "🧩"],
       ["Ball", "⚽"],
+      ["Toy", "🧸"],
       ["Video Game", "🎮"],
       ["Train", "🚂"],
       ["Teddy Bear", "🧸"],
@@ -867,6 +810,8 @@ export const STARTER_SUBCATEGORIES: {
       ["Dress", "👗"],
       ["Shorts", "🩳"],
       ["Boots", "🥾"],
+      ["Clothes", "👕"],
+      ["Blanket", "🧶"],
     ],
   },
   {
@@ -882,6 +827,7 @@ export const STARTER_SUBCATEGORIES: {
       ["Hairbrush", "💇"],
       ["Toilet Paper", "🧻"],
       ["Shower", "🚿"],
+      ["Cup", "🥤"],
     ],
   },
 
@@ -1394,38 +1340,34 @@ export function cleanAndDeduplicateCategories() {
     coreCat.words.forEach((w, i) => { w.order = i; });
   }
 
-  const actionsCat = cache.find(
-    (c) => !c.parentCategoryId && (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase() === "actions"
-  );
-  if (actionsCat && actionsCat.words.length > 0) {
-    // All verbs are strictly organized inside the A-Z subcategories (Verbs A to Verbs Z).
-    // Root Actions category must not have loose words cluttering outside the subcategories.
-    actionsCat.words = [];
-    changed = true;
+  // Ensure that ANY category with child subcategories has ZERO loose words outside its subcategories.
+  // All words must belong strictly inside the child subcategories.
+  const parentIdsWithSubCats = new Set<string>();
+  for (const c of cache) {
+    if (c.parentCategoryId) {
+      parentIdsWithSubCats.add(c.parentCategoryId);
+    }
   }
 
-  const placesCat = cache.find((c) => (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase() === "places");
-  if (placesCat) {
-    const essentialPlaces: [string, string][] = [
-      ["School", "🏫"],
-      ["Home", "🏠"],
-      ["Park", "🌳"],
-      ["Playground", "🛝"],
-    ];
-    for (const [wLabel, wEmoji] of essentialPlaces) {
-      if (!placesCat.words.some((w) => w.label.toLowerCase() === wLabel.toLowerCase())) {
-        placesCat.words.push({
-          id: uid("word"),
-          label: wLabel,
-          phrase: wLabel,
-          emoji: wEmoji,
-          color: "#E0EEF7",
-          size: "md",
-          order: placesCat.words.length,
-          useTextToSpeech: true,
-        });
-        changed = true;
+  for (const c of cache) {
+    if (parentIdsWithSubCats.has(c.id) && c.words.length > 0) {
+      // Find subcategories belonging to this parent
+      const subCatsOfParent = cache.filter((sc) => sc.parentCategoryId === c.id);
+      if (subCatsOfParent.length > 0) {
+        // Move any words from parent into appropriate child subcategory or first child if not already present
+        for (const w of c.words) {
+          const wLower = (w.label || "").trim().toLowerCase();
+          const alreadyInSub = subCatsOfParent.some((sc) =>
+            sc.words.some((sw) => (sw.label || "").trim().toLowerCase() === wLower)
+          );
+          if (!alreadyInSub) {
+            const targetSub = subCatsOfParent[0];
+            targetSub.words.push({ ...w, order: targetSub.words.length });
+          }
+        }
       }
+      c.words = [];
+      changed = true;
     }
   }
 
@@ -1589,7 +1531,18 @@ export function cleanAndDeduplicateCategories() {
 
 export function addWord(
   catId: string,
-  word: { label: string; phrase?: string; emoji?: string; imageUri?: string; audioUri?: string; useTextToSpeech?: boolean; size?: TileSize; color?: string; verbForms?: CustomWord["verbForms"] },
+  word: {
+    label: string;
+    phrase?: string;
+    emoji?: string;
+    imageUri?: string;
+    audioUri?: string;
+    useTextToSpeech?: boolean;
+    size?: TileSize;
+    color?: string;
+    verbForms?: CustomWord["verbForms"];
+    verbFormTag?: CustomWord["verbFormTag"];
+  },
 ) {
   return mutate(catId, (c) => {
     c.words.push({
@@ -1605,6 +1558,7 @@ export function addWord(
       order: c.words.length,
       useCount: 0,
       verbForms: word.verbForms,
+      verbFormTag: word.verbFormTag,
     });
   });
 }
@@ -1622,6 +1576,7 @@ export function addWordsBulk(
     size?: TileSize;
     color?: string;
     verbForms?: CustomWord["verbForms"];
+    verbFormTag?: CustomWord["verbFormTag"];
   }[],
 ) {
   return mutate(catId, (c) => {
@@ -1641,6 +1596,7 @@ export function addWordsBulk(
         order: c.words.length,
         useCount: 0,
         verbForms: word.verbForms,
+        verbFormTag: word.verbFormTag,
       });
     });
   });

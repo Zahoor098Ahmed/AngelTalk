@@ -68,7 +68,27 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
   // 1. Web Speech Recognition (Chrome/Edge/Web)
   const Rec = webRecognition();
   if (Rec) {
+    if (webInstance) {
+      try {
+        webInstance.onend = null;
+        webInstance.onerror = null;
+        webInstance.stop();
+      } catch {
+        /* ignore */
+      }
+      webInstance = null;
+    }
+
     try {
+      if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+        try {
+          const s = await navigator.mediaDevices.getUserMedia({ audio: true });
+          s.getTracks().forEach((track) => track.stop());
+        } catch {
+          /* ignore permission probe error */
+        }
+      }
+
       webInstance = new Rec();
       webInstance.lang = lang;
       webInstance.continuous = true;
@@ -85,7 +105,10 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
         if (final) h.onFinal?.(final.trim());
       };
       webInstance.onerror = (e: unknown) => {
-        h.onError?.(String((e as { error?: string })?.error ?? "voice error"));
+        const errType = String((e as { error?: string })?.error ?? "");
+        // Don't kill listening on transient silence / no-speech
+        if (errType === "no-speech") return;
+        h.onError?.(errType || "voice error");
       };
       webInstance.onend = () => {
         listening = false;

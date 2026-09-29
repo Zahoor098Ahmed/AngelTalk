@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Image, Modal, Alert, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Image, Modal, Alert, ActivityIndicator, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -42,8 +42,24 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
   const [color, setColor] = useState<string>(TILE_COLORS[0]);
 
   const [recording, setRecording] = useState(false);
+  const [recSeconds, setRecSeconds] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    let interval: any = null;
+    if (recording) {
+      setRecSeconds(0);
+      interval = setInterval(() => {
+        setRecSeconds((s) => s + 1);
+      }, 1000);
+    } else {
+      setRecSeconds(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [recording]);
 
   useEffect(() => {
     if (!visible) return;
@@ -62,10 +78,10 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
 
   async function pickFromCamera() {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) return Alert.alert(t("weCameraPermission", lang));
+    if (!perm.granted) return Alert.alert(t("weCameraPermission", lang) || "Camera permission is required");
     const res = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
     if (res.canceled || !res.assets[0]) return;
-    setBusy(t("weSavingPhoto", lang));
+    setBusy(t("weSavingPhoto", lang) || "Saving photo…");
     const saved = await saveLocalTileImage(res.assets[0].uri, tempId);
     setBusy(null);
     if (saved) setImageUri(saved);
@@ -73,10 +89,10 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
 
   async function pickFromGallery() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return Alert.alert(t("weGalleryPermission", lang));
+    if (!perm.granted) return Alert.alert(t("weGalleryPermission", lang) || "Photo library permission is required");
     const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
     if (res.canceled || !res.assets[0]) return;
-    setBusy(t("weSavingPicture", lang));
+    setBusy(t("weSavingPicture", lang) || "Saving picture…");
     const saved = await saveLocalTileImage(res.assets[0].uri, tempId);
     setBusy(null);
     if (saved) setImageUri(saved);
@@ -84,16 +100,18 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
 
   async function chooseSearchImage(hit: ImageHit) {
     setSearchOpen(false);
-    setBusy(t("weDownloading", lang));
+    setBusy(t("weDownloading", lang) || "Downloading picture…");
     const saved = await downloadTileImage(hit.full, tempId);
     setBusy(null);
     if (saved) setImageUri(saved);
-    else Alert.alert(t("weDownloadFailed", lang));
+    else Alert.alert(t("weDownloadFailed", lang) || "Download failed. Please try another image.");
   }
 
   async function toggleRecord() {
     if (recording) {
+      setBusy("Saving recorded voice…");
       const uri = await stopRecording(tempId);
+      setBusy(null);
       setRecording(false);
       if (uri) {
         setAudioUri(uri);
@@ -102,8 +120,34 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
       return;
     }
     const ok = await startRecording();
-    if (!ok) return Alert.alert(t("weMicPermission", lang));
+    if (!ok) {
+      return Alert.alert(
+        "Microphone Access Needed",
+        "Microphone permission is required to record voice. Please enable microphone permissions in your browser or device settings, or use 'Upload audio file'."
+      );
+    }
     setRecording(true);
+  }
+
+  function pickAudioFileWeb() {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "audio/*";
+    input.onchange = (e: any) => {
+      const file = e.target?.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        if (result) {
+          setAudioUri(result);
+          setUseTts(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
   }
 
   async function removeVoice() {
@@ -202,34 +246,63 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
               />
             )}
 
-            <Text style={styles.label}>{t("weVoice", lang)}</Text>
-            {audioUri ? (
-              <View style={styles.voiceRow}>
-                <Pressable onPress={() => previewClip(audioUri)} style={styles.voiceBtn}>
-                  <Ionicons name="play" size={16} color={colors.forestDark} />
-                  <Text style={styles.voiceBtnText}>{t("wePreview", lang)}</Text>
-                </Pressable>
-                <Pressable onPress={toggleRecord} style={styles.voiceBtn}>
-                  <Ionicons name={recording ? "stop" : "mic"} size={16} color={colors.forestDark} />
-                  <Text style={styles.voiceBtnText}>{recording ? t("weStop", lang) : t("weReRecord", lang)}</Text>
-                </Pressable>
-                <Pressable onPress={removeVoice} style={styles.voiceBtn}>
-                  <Ionicons name="trash-outline" size={16} color={colors.pinkDeep} />
+            <Text style={styles.label}>{t("weVoice", lang) || "Voice"}</Text>
+            {recording ? (
+              <View style={styles.recordingActiveContainer}>
+                <View style={styles.recordingHeader}>
+                  <View style={styles.pulsingRedDot} />
+                  <Text style={styles.recordingTimerText}>
+                    Recording... {Math.floor(recSeconds / 60)}:{(recSeconds % 60).toString().padStart(2, "0")}
+                  </Text>
+                </View>
+                <Pressable onPress={toggleRecord} style={styles.stopRecordBtn}>
+                  <Ionicons name="stop" size={18} color="#FFFFFF" />
+                  <Text style={styles.stopRecordBtnText}>Stop & Save Voice</Text>
                 </Pressable>
               </View>
+            ) : audioUri ? (
+              <View style={styles.recordedVoiceCard}>
+                <View style={styles.recordedVoiceInfo}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.forest} />
+                  <Text style={styles.recordedVoiceTitle}>Custom Voice Recorded</Text>
+                </View>
+                <View style={styles.voiceRow}>
+                  <Pressable onPress={() => previewClip(audioUri)} style={styles.voiceBtn}>
+                    <Ionicons name="volume-high" size={16} color={colors.forestDark} />
+                    <Text style={styles.voiceBtnText}>{t("wePreview", lang) || "Preview"}</Text>
+                  </Pressable>
+                  <Pressable onPress={toggleRecord} style={styles.voiceBtn}>
+                    <Ionicons name="mic" size={16} color={colors.forestDark} />
+                    <Text style={styles.voiceBtnText}>{t("weReRecord", lang) || "Re-record"}</Text>
+                  </Pressable>
+                  <Pressable onPress={removeVoice} style={styles.voiceBtn}>
+                    <Ionicons name="trash-outline" size={16} color={colors.pinkDeep} />
+                  </Pressable>
+                </View>
+              </View>
             ) : (
-              <Pressable onPress={toggleRecord} style={[styles.recordBtn, recording && styles.recordBtnOn]}>
-                <Ionicons name={recording ? "stop" : "mic"} size={18} color="white" />
-                <Text style={styles.recordBtnText}>{recording ? t("weStopRecording", lang) : t("weRecordVoice", lang)}</Text>
-              </Pressable>
+              <View style={{ gap: 8 }}>
+                <Pressable onPress={toggleRecord} style={styles.recordBtn}>
+                  <Ionicons name="mic" size={18} color="white" />
+                  <Text style={styles.recordBtnText}>{t("weRecordVoice", lang) || "Record a voice"}</Text>
+                </Pressable>
+                {Platform.OS === "web" && (
+                  <Pressable onPress={pickAudioFileWeb} style={styles.uploadAudioBtn}>
+                    <Ionicons name="cloud-upload-outline" size={15} color={colors.forestDark} />
+                    <Text style={styles.uploadAudioBtnText}>Upload audio file (.mp3, .wav, .m4a)</Text>
+                  </Pressable>
+                )}
+              </View>
             )}
             <Text style={styles.voiceNote}>
-              {audioUri && !useTts ? t("weVoiceNoteRecorded", lang) : t("weVoiceNoteTts", lang)}
+              {audioUri && !useTts
+                ? "The child hears your custom recorded voice clip."
+                : "The child hears the built-in speaking voice."}
             </Text>
             {audioUri && (
               <Pressable onPress={() => setUseTts((v) => !v)} style={styles.ttsToggle}>
                 <Ionicons name={useTts ? "checkbox" : "square-outline"} size={18} color={colors.forest} />
-                <Text style={styles.ttsToggleText}>{t("weUseTtsInstead", lang)}</Text>
+                <Text style={styles.ttsToggleText}>{t("weUseTtsInstead", lang) || "Use text-to-speech voice instead"}</Text>
               </Pressable>
             )}
 
@@ -404,6 +477,17 @@ const styles = StyleSheet.create({
   recordBtn: { flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", backgroundColor: colors.forest, borderRadius: radius, paddingVertical: 13, marginTop: 6 },
   recordBtnOn: { backgroundColor: colors.pinkDeep },
   recordBtnText: { color: "white", fontWeight: "800", fontSize: 14 },
+  uploadAudioBtn: { flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center", backgroundColor: "#EAF3EF", borderRadius: radius, paddingVertical: 10, borderWidth: 1, borderColor: "#B2D7C8" },
+  uploadAudioBtnText: { color: colors.forestDark, fontWeight: "700", fontSize: 12.5 },
+  recordingActiveContainer: { backgroundColor: "#FFF0F2", borderWidth: 2, borderColor: colors.pinkDeep, borderRadius: radius, padding: 14, marginTop: 6, gap: 10 },
+  recordingHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  pulsingRedDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.pinkDeep },
+  recordingTimerText: { color: colors.pinkDeep, fontWeight: "800", fontSize: 14 },
+  stopRecordBtn: { flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center", backgroundColor: colors.pinkDeep, borderRadius: 10, paddingVertical: 12 },
+  stopRecordBtnText: { color: "#FFFFFF", fontWeight: "800", fontSize: 14 },
+  recordedVoiceCard: { backgroundColor: "#EBF5F0", borderWidth: 1.5, borderColor: "#A5D6B7", borderRadius: radius, padding: 12, marginTop: 6, gap: 8 },
+  recordedVoiceInfo: { flexDirection: "row", alignItems: "center", gap: 6 },
+  recordedVoiceTitle: { color: colors.forestDark, fontWeight: "800", fontSize: 13 },
   voiceNote: { fontSize: 11.5, color: colors.textLight, marginTop: 6 },
   ttsToggle: { flexDirection: "row", gap: 8, alignItems: "center", marginTop: 8 },
   ttsToggleText: { fontSize: 12.5, color: colors.textMid },
