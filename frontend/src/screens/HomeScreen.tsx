@@ -20,6 +20,7 @@ interface Props {
   tab: TabScreen;
   onTabChange: (tab: TabScreen) => void;
   onOpenMore: () => void;
+  onOpenSocialStories?: () => void;
   labels: Record<TabScreen, string>;
 }
 
@@ -382,6 +383,36 @@ export default function HomeScreen(props: Props) {
             ))}
           </View>
 
+          {/* Visual Social Stories Banner (Tala Feature) */}
+          <Pressable
+            onPress={() => {
+              tapFeedback();
+              if (props.onOpenSocialStories) props.onOpenSocialStories();
+              else onOpenMore();
+            }}
+            style={({ pressed }) => [styles.socialStoryBanner, pressed && { transform: [{ scale: 0.99 }] }]}
+          >
+            <View style={styles.socialStoryLeft}>
+              <View style={styles.socialStoryIconCircle}>
+                <Text style={{ fontSize: 26 }}>📖</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={styles.socialStoryTitle}>Visual Social Stories</Text>
+                  <View style={styles.newBadge}>
+                    <Text style={styles.newBadgeText}>TALA FEATURE</Text>
+                  </View>
+                </View>
+                <Text style={styles.socialStorySub}>
+                  Dentist visit, haircut, school routines & calming guides with read-aloud voice.
+                </Text>
+              </View>
+            </View>
+            <View style={styles.socialStoryArrow}>
+              <Ionicons name="arrow-forward" size={18} color={colors.forest} />
+            </View>
+          </Pressable>
+
           {/* 6. Today's Routine Highlights */}
           <View style={styles.sectionHeaderRow}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -736,5 +767,67 @@ const styles = StyleSheet.create({
     height: 26,
     alignItems: "center",
     justifyContent: "center",
+  },
+  socialStoryBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#ffffff",
+    borderRadius: radiusLg,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    padding: 16,
+    marginTop: 6,
+    marginBottom: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  socialStoryLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    flex: 1,
+  },
+  socialStoryIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: "#fef3c7",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  socialStoryTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: colors.textDark,
+  },
+  socialStorySub: {
+    fontSize: 12,
+    color: colors.textMid,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  socialStoryArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: "#f0f7f4",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
+  newBadge: {
+    backgroundColor: "#fef3c7",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  newBadgeText: {
+    fontSize: 9,
+    fontWeight: "900",
+    color: "#b45309",
+    letterSpacing: 0.5,
   },
 });

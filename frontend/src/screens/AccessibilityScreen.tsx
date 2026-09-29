@@ -9,6 +9,7 @@ import { loadPixabayKey, hasPixabayKey, setPixabayKey } from "../modules/imageSe
 import { buildBackup, restoreBackup, retranslateSeedBoard, setSeedLanguage } from "../modules/customCategories";
 import { loadChildren } from "../modules/storage";
 import { ensureVoicePracticeLoaded, getStorageFootprintBytes, getClipsForChild } from "../learning/voicePractice";
+import { previewVoice } from "../modules/tts";
 import { colors, radius } from "../theme";
 
 interface Props {
@@ -133,9 +134,38 @@ export default function AccessibilityScreen({ onBack }: Props) {
         </View>
 
         <ScrollView contentContainerStyle={styles.body}>
-          {/* ---- speech ---- */}
-          <Text style={styles.sectionTitle}>{t("setSpeech", lang)}</Text>
+          {/* ---- speech & natural voices ---- */}
+          <Text style={styles.sectionTitle}>Child Voice & Speech Style</Text>
           <ToggleRow label={t("sound", lang)} emoji="🔊" value={settings.soundEnabled} onChange={(v) => update({ soundEnabled: v })} />
+          
+          <Text style={styles.subLabel}>Natural Child Voice</Text>
+          <View style={styles.segRow}>
+            {(
+              [
+                { key: "boy", label: "Boy", icon: "👦" },
+                { key: "girl", label: "Girl", icon: "👧" },
+                { key: "woman", label: "Woman", icon: "👩" },
+                { key: "man", label: "Man", icon: "👨" },
+              ] as const
+            ).map((v) => {
+              const active = (settings.voiceType || "boy") === v.key;
+              return (
+                <Pressable
+                  key={v.key}
+                  onPress={() => {
+                    update({ voiceType: v.key });
+                    previewVoice(v.key, lang);
+                  }}
+                  style={[styles.seg, active && styles.segOn]}
+                >
+                  <Text style={[styles.segText, active && { color: "white" }]}>
+                    {v.icon} {v.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
           <Text style={styles.subLabel}>{t("setSpeakingSpeed", lang)}</Text>
           <View style={styles.segRow}>
             {RATES.map((r) => (
@@ -149,8 +179,43 @@ export default function AccessibilityScreen({ onBack }: Props) {
             ))}
           </View>
 
-          {/* ---- board ---- */}
-          <Text style={styles.sectionTitle}>{t("setBoard", lang)}</Text>
+          {/* ---- board & GLP mode ---- */}
+          <Text style={styles.sectionTitle}>Communication & Board Mode</Text>
+          <Text style={styles.subLabel}>Tapping Behavior (Gestalt Language / Whole Phrases)</Text>
+          <View style={styles.segRow}>
+            {(
+              [
+                { key: "phrase", label: "⚡ Tap-to-Talk (Whole Phrases)" },
+                { key: "sentence", label: "🧩 Sentence Builder Strip" },
+              ] as const
+            ).map((m) => {
+              const active = (settings.boardMode || "phrase") === m.key;
+              return (
+                <Pressable
+                  key={m.key}
+                  onPress={() => update({ boardMode: m.key })}
+                  style={[styles.seg, active && styles.segOn, { flex: 1 }]}
+                >
+                  <Text style={[styles.segText, active && { color: "white" }]}>{m.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <ToggleRow
+            label="Bilingual Dual-Language Cards (English + Arabic)"
+            emoji="🌐"
+            value={settings.bilingualDisplay}
+            onChange={(v) => update({ bilingualDisplay: v })}
+          />
+
+          <ToggleRow
+            label="Family-First Simple Mode (Clean, uncluttered)"
+            emoji="🧸"
+            value={settings.simpleMode}
+            onChange={(v) => update({ simpleMode: v })}
+          />
+
           <ToggleRow label={t("setHaptics", lang)} emoji="📳" value={settings.hapticsEnabled} onChange={(v) => update({ hapticsEnabled: v })} />
           <Text style={styles.subLabel}>{t("setTilesPerRow", lang)}</Text>
           <View style={styles.segRow}>

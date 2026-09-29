@@ -16,6 +16,11 @@ const DEFAULT_SETTINGS: AppSettings = {
   speechRate: 0.9,
   boardColumns: 3,
   kioskMode: false,
+  voiceType: "boy",
+  boardMode: "phrase",
+  bilingualDisplay: false,
+  simpleMode: true,
+  userRole: "parent",
 };
 
 export const defaultTags: ContentTag[] = ["colors", "numbers", "shapes", "animals", "music", "stories", "art", "nature"];

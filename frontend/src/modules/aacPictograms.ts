@@ -5,6 +5,7 @@
  */
 
 import { dictUrl } from "./imageLibrary";
+import { getVerbForms } from "./verbForms";
 
 function arasaac(id: number): string {
   return `https://static.arasaac.org/pictograms/${id}/${id}_500.png`;
@@ -268,7 +269,16 @@ export function getPictogramUrl(label: string): string | null {
   const dictHit = dictUrl(lower);
   if (dictHit) return dictHit;
 
-  // 3. Try individual meaningful words from a multi-word phrase
+  // 3. Try verb forms base root (e.g. "went" -> "go", "drank" -> "drink", "asking" -> "ask")
+  const v = getVerbForms(lower);
+  if (v) {
+    const baseLower = v.base.toLowerCase();
+    if (AAC_PICTOGRAM_MAP[baseLower]) return AAC_PICTOGRAM_MAP[baseLower];
+    const baseHit = dictUrl(baseLower);
+    if (baseHit) return baseHit;
+  }
+
+  // 4. Try individual meaningful words from a multi-word phrase
   const words = lower.split(/[\s,·\-_]+/).filter((w) => w.length > 2);
   for (const w of words) {
     if (AAC_PICTOGRAM_MAP[w]) return AAC_PICTOGRAM_MAP[w];

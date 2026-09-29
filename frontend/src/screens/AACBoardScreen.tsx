@@ -39,12 +39,13 @@ import Mascot from "../components/Mascot";
 import TabBar from "../components/TabBar";
 import AddByVoiceScreen from "./AddByVoiceScreen";
 import { colors } from "../theme";
-import { getVerbForms, transformVerbToForm } from "../modules/verbForms";
+import { getVerbForms, detectVerbForm } from "../modules/verbForms";
 
 interface Props {
   child: ChildProfile;
   tab: TabScreen;
   onTabChange: (tab: TabScreen) => void;
+  onOpenCategories?: (categoryId?: string) => void;
   labels: Record<TabScreen, string>;
 }
 
@@ -160,9 +161,12 @@ function CardPic({
   return <Text style={{ fontSize: Math.max(18, Math.round(size * 0.72)) }}>{emoji || "🔹"}</Text>;
 }
 
-export default function AACBoardScreen({ child, tab, onTabChange, labels }: Props) {
-  const { settings } = useSettings();
+export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategories, labels }: Props) {
+  const { settings, update } = useSettings();
   const lang = settings.language;
+  const boardMode = settings.boardMode || "phrase";
+  const bilingual = settings.bilingualDisplay || false;
+  const voiceType = settings.voiceType || "boy";
   const { width } = useWindowDimensions();
 
   // Responsive columns: supports density levels (1, 2, 4, 8, 16, 28, 35+) or window dimensions
@@ -239,8 +243,6 @@ export default function AACBoardScreen({ child, tab, onTabChange, labels }: Prop
   );
   const isCoreGridMode = child.pageSetStyle === "core-grid";
 
-  const [verbFormFilter, setVerbFormFilter] = useState<"all" | "1st" | "2nd" | "3rd" | "4th">("all");
-
   const rawWords: CustomWord[] = useMemo(() => {
     if (isCoreGridMode && (!currentId || current?.name.toLowerCase() === "core")) {
       // Fixed-position core words locked at top slots for motor-memory
@@ -253,7 +255,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, labels }: Prop
 
   const isActionsCategory = useMemo(() => {
     const catName = (current?.name || "").toLowerCase();
-    return catName.includes("action") || rawWords.some((w) => !!getVerbForms(w.label));
+    return catName.includes("action") || catName.includes("verbs") || rawWords.some((w) => !!getVerbForms(w.label));
   }, [current, rawWords]);
 
   const words: CustomWord[] = useMemo(() => {
@@ -261,21 +263,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, labels }: Prop
     if (child.buttonDensity && child.buttonDensity > 0) {
       list = rawWords.slice(0, child.buttonDensity);
     }
-    if (verbFormFilter !== "all") {
-      return list.map((w) => {
-        const transformed = transformVerbToForm(w.label, verbFormFilter);
-        if (transformed !== w.label) {
-          return {
-            ...w,
-            label: transformed,
-            phrase: transformed,
-          };
-        }
-        return w;
-      });
-    }
     return list;
-  }, [rawWords, child.buttonDensity, verbFormFilter]);
+  }, [rawWords, child.buttonDensity]);
 
   const bottomTabs = useMemo(() => (ready ? bottomTabCategories() : []), [ready, tick]);
 
@@ -305,23 +294,28 @@ export default function AACBoardScreen({ child, tab, onTabChange, labels }: Prop
     tapFeedback();
     recordWordUsage(child.id, w.label);
     recordWordUseByWordId(w.id);
-    // Instant clear pronunciation of tapped card
+    const isPhraseMode = boardMode === "phrase";
+    // Instant clear pronunciation of tapped card in selected voice
     void playWord(
-      { label: w.phrase || w.label, audioUri: w.audioUri, useTextToSpeech: w.useTextToSpeech },
+      { label: w.phrase || w.label, phrase: w.phrase, audioUri: w.audioUri, useTextToSpeech: w.useTextToSpeech },
       lang,
-      settings.speechRate
+      settings.speechRate,
+      voiceType,
+      isPhraseMode
     );
-    setSentence((prev) => [
-      ...prev,
-      {
-        id: `${w.id}-${prev.length}-${Date.now().toString(36).slice(-4)}`,
-        label: w.phrase || w.label,
-        emoji: w.emoji,
-        imageUri: w.imageUri || getPictogramUrl(w.phrase || w.label) || undefined,
-        audioUri: w.audioUri,
-        useTextToSpeech: w.useTextToSpeech,
-      },
-    ]);
+    if (!isPhraseMode) {
+      setSentence((prev) => [
+        ...prev,
+        {
+          id: `${w.id}-${prev.length}-${Date.now().toString(36).slice(-4)}`,
+          label: w.phrase || w.label,
+          emoji: w.emoji,
+          imageUri: w.imageUri || getPictogramUrl(w.phrase || w.label) || undefined,
+          audioUri: w.audioUri,
+          useTextToSpeech: w.useTextToSpeech,
+        },
+      ]);
+    }
   }
 
   function removeChipAt(index: number) {
@@ -372,9 +366,9 @@ export default function AACBoardScreen({ child, tab, onTabChange, labels }: Prop
 
     try {
       if (lang === "en-US" && !sentence.some((c) => c.audioUri && c.useTextToSpeech !== true)) {
-        await playSentence([{ label: spokenText, useTextToSpeech: true }], lang, settings.speechRate);
+        await playSentence([{ label: spokenText, useTextToSpeech: true }], lang, settings.speechRate, voiceType);
       } else {
-        await playSentence(speakWords(), lang, settings.speechRate);
+        await playSentence(speakWords(), lang, settings.speechRate, voiceType);
       }
     } finally {
       setSpeaking(false);
@@ -565,60 +559,38 @@ export default function AACBoardScreen({ child, tab, onTabChange, labels }: Prop
           </View>
         </View>
 
-        {/* Interactive Verb Forms Selector (1st, 2nd, 3rd, 4th forms) */}
-        {isActionsCategory && (
-          <View style={styles.verbFormsBar}>
-            <View style={styles.verbFormsHeader}>
-              <Ionicons name="sparkles" size={13} color={colors.forest} />
-              <Text style={styles.verbFormsTitle}>Verb Forms / Tenses</Text>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.verbFormsChips}
+        {/* Tala Subcategory Breadcrumb Bar */}
+        {path.length > 1 && (
+          <View style={styles.breadcrumbBar}>
+            <Pressable
+              onPress={handleBack}
+              style={styles.breadcrumbBackBtn}
+              accessibilityLabel="Back to previous category"
             >
-              {(
-                [
-                  { id: "all", label: "All Words", hint: "" },
-                  { id: "1st", label: "1st Form", hint: "Base (go, eat)" },
-                  { id: "2nd", label: "2nd Form", hint: "Past (went, ate)" },
-                  { id: "3rd", label: "3rd Form", hint: "Participle (gone)" },
-                  { id: "4th", label: "4th Form", hint: "Continuous (going)" },
-                ] as const
-              ).map((tab) => {
-                const active = verbFormFilter === tab.id;
-                return (
-                  <Pressable
-                    key={tab.id}
-                    onPress={() => {
-                      tapFeedback();
-                      setVerbFormFilter(tab.id);
-                    }}
-                    style={[styles.verbFormChip, active && styles.verbFormChipActive]}
-                    accessibilityLabel={`${tab.label} verb form`}
-                  >
-                    <Text
-                      style={[
-                        styles.verbFormChipText,
-                        active && styles.verbFormChipTextActive,
-                      ]}
-                    >
-                      {tab.label}
-                    </Text>
-                    {tab.hint ? (
-                      <Text
-                        style={[
-                          styles.verbFormChipHint,
-                          active && styles.verbFormChipHintActive,
-                        ]}
-                      >
-                        {tab.hint}
-                      </Text>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+              <Ionicons
+                name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
+                size={14}
+                color={colors.forest}
+              />
+              <Text style={styles.breadcrumbBackText}>
+                {getCategory(path[path.length - 2])?.name ?? t("back", lang)}
+              </Text>
+            </Pressable>
+            <Ionicons
+              name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+              size={12}
+              color="#94a3b8"
+            />
+            <View style={styles.breadcrumbCurrentPill}>
+              <Text style={styles.breadcrumbCurrentText} numberOfLines={1}>
+                {current?.icon ? `${current.icon} ` : ""}{current?.name}
+              </Text>
+              {words.length > 0 && (
+                <View style={styles.breadcrumbCountBadge}>
+                  <Text style={styles.breadcrumbCountText}>{words.length}</Text>
+                </View>
+              )}
+            </View>
           </View>
         )}
 
@@ -632,13 +604,32 @@ export default function AACBoardScreen({ child, tab, onTabChange, labels }: Prop
             <>
               {folders.map((f) => {
                 const c = f.color ?? colors.forest;
+                const childCount = f.words?.length || 0;
                 return (
                   <View key={f.id} style={[styles.cell, tileSize]}>
                     <Pressable
                       onPress={() => openFolder(f.id)}
-                      style={[styles.tile, styles.folderTile, { borderColor: c }]}
+                      style={({ pressed }) => [
+                        styles.tile,
+                        styles.folderTile,
+                        { borderColor: c, backgroundColor: c + "08" },
+                        pressed && styles.tilePressed,
+                      ]}
                     >
-                      <View style={[styles.folderBody, { backgroundColor: c + "12" }]}>
+                      <View style={styles.folderTopTab}>
+                        <View style={[styles.folderTabPill, { backgroundColor: c }]}>
+                          <Ionicons name="folder-open" size={9} color="#ffffff" />
+                          <Text style={styles.folderTabPillText}>Folder</Text>
+                        </View>
+                        {childCount > 0 && (
+                          <View style={[styles.folderCountPill, { borderColor: c + "40" }]}>
+                            <Text style={[styles.folderCountText, { color: c }]}>
+                              {childCount}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={[styles.folderBody, { backgroundColor: c + "10" }]}>
                         {f.imageUri ? (
                           <CardPic
                             label={f.name}
@@ -660,32 +651,72 @@ export default function AACBoardScreen({ child, tab, onTabChange, labels }: Prop
                 );
               })}
 
-              {words.map((w) => (
-                <View key={w.id} style={[styles.cell, tileSize]}>
-                  <Pressable
-                    onPress={() => tapWord(w)}
-                    style={({ pressed }) => [
-                      styles.tile,
-                      styles.wordTile,
-                      pressed && styles.tilePressed,
-                    ]}
-                  >
-                    <View style={styles.wordBody}>
-                      <CardPic
-                        label={w.label}
-                        imageUri={w.imageUri}
-                        emoji={w.emoji}
-                        size={cardPicSize}
-                      />
-                    </View>
-                    <View style={styles.wordLabelBar}>
-                      <Text style={styles.wordLabelText} numberOfLines={1}>
-                        {w.label}
-                      </Text>
-                    </View>
-                  </Pressable>
-                </View>
-              ))}
+              {words.map((w) => {
+                const vTag = w.verbFormTag || (isActionsCategory ? detectVerbForm(w.label) : null);
+                return (
+                  <View key={w.id} style={[styles.cell, tileSize]}>
+                    <Pressable
+                      onPress={() => tapWord(w)}
+                      style={({ pressed }) => [
+                        styles.tile,
+                        styles.wordTile,
+                        pressed && styles.tilePressed,
+                      ]}
+                    >
+                      {/* Verb Form Badge (1st Form, 2nd Form, 3rd Form, 4th Form) */}
+                      {vTag && (
+                        <View
+                          style={[
+                            styles.verbFormBadge,
+                            vTag === "1st" && styles.verbFormBadge1st,
+                            vTag === "2nd" && styles.verbFormBadge2nd,
+                            vTag === "3rd" && styles.verbFormBadge3rd,
+                            vTag === "4th" && styles.verbFormBadge4th,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.verbFormBadgeText,
+                              vTag === "1st" && styles.verbFormBadgeText1st,
+                              vTag === "2nd" && styles.verbFormBadgeText2nd,
+                              vTag === "3rd" && styles.verbFormBadgeText3rd,
+                              vTag === "4th" && styles.verbFormBadgeText4th,
+                            ]}
+                          >
+                            {vTag} Form
+                          </Text>
+                        </View>
+                      )}
+
+                      {boardMode === "phrase" && w.phrase && w.phrase !== w.label && (
+                        <View style={styles.phraseBadge}>
+                          <Ionicons name="chatbubble-ellipses" size={10} color="#0284c7" />
+                        </View>
+                      )}
+                      <View style={styles.wordBody}>
+                        <CardPic
+                          label={w.label}
+                          imageUri={w.imageUri}
+                          emoji={w.emoji}
+                          size={cardPicSize}
+                        />
+                      </View>
+                      <View style={styles.wordLabelBar}>
+                        <Text style={styles.wordLabelText} numberOfLines={1}>
+                          {w.label}
+                        </Text>
+                        {bilingual && (
+                          <Text style={styles.secondaryLabelText} numberOfLines={1}>
+                            {lang === "ar-SA"
+                              ? wordLabel(w.label, "en-US")
+                              : wordLabel(w.label, "ar-SA")}
+                          </Text>
+                        )}
+                      </View>
+                    </Pressable>
+                  </View>
+                );
+              })}
 
               {folders.length === 0 && words.length === 0 && (
                 <View style={{ width: "100%", alignItems: "center", gap: 10, paddingVertical: 12 }}>
@@ -973,43 +1004,45 @@ const styles = StyleSheet.create({
   },
   tile: {
     aspectRatio: 0.95,
-    borderRadius: 14,
+    borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: "#cbd5e1",
+    borderColor: "#e2e8f0",
     backgroundColor: "#ffffff",
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    elevation: 3,
   },
   tilePressed: {
-    transform: [{ scale: 0.96 }],
+    transform: [{ scale: 0.95 }],
     borderColor: colors.forest,
   },
 
   // Word card styles
-  wordTile: {},
+  wordTile: {
+    backgroundColor: "#ffffff",
+  },
   wordBody: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#ffffff",
-    padding: 4,
+    padding: 6,
   },
   wordLabelBar: {
-    paddingVertical: 5,
-    paddingHorizontal: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
     alignItems: "center",
     backgroundColor: "#f8fafc",
     borderTopWidth: 1,
     borderTopColor: "#f1f5f9",
   },
   wordLabelText: {
-    color: "#1e293b",
+    color: "#0f172a",
     fontWeight: "800",
-    fontSize: 11.5,
+    fontSize: 12,
     textAlign: "center",
   },
 
@@ -1017,13 +1050,45 @@ const styles = StyleSheet.create({
   folderTile: {
     borderWidth: 2,
   },
+  folderTopTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 6,
+    paddingTop: 5,
+  },
+  folderTabPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  folderTabPillText: {
+    color: "#ffffff",
+    fontSize: 8.5,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  folderCountPill: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 6,
+    borderWidth: 1,
+    backgroundColor: "rgba(255,255,255,0.75)",
+  },
+  folderCountText: {
+    fontSize: 8.5,
+    fontWeight: "800",
+  },
   folderBody: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
   folderIcon: {
-    fontSize: 38,
+    fontSize: 36,
   },
   folderLabelBar: {
     paddingVertical: 5,
@@ -1091,61 +1156,153 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
 
-  // Verb Forms Selector Bar
-  verbFormsBar: {
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-  },
-  verbFormsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginBottom: 4,
-  },
-  verbFormsTitle: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: colors.forest,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  verbFormsChips: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
-  verbFormChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: "#f1f5f9",
+  // Verb Form Pill Badge (1st Form, 2nd Form, 3rd Form, 4th Form)
+  verbFormBadge: {
+    position: "absolute",
+    top: 5,
+    left: 5,
+    zIndex: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
   },
-  verbFormChipActive: {
-    backgroundColor: colors.forest,
-    borderColor: colors.forest,
+  verbFormBadge1st: {
+    backgroundColor: "#ecfdf5",
+    borderColor: "#a7f3d0",
   },
-  verbFormChipText: {
-    fontSize: 12,
+  verbFormBadge2nd: {
+    backgroundColor: "#f0f9ff",
+    borderColor: "#bae6fd",
+  },
+  verbFormBadge3rd: {
+    backgroundColor: "#faf5ff",
+    borderColor: "#e9d5ff",
+  },
+  verbFormBadge4th: {
+    backgroundColor: "#fffbeb",
+    borderColor: "#fde68a",
+  },
+  verbFormBadgeText: {
+    fontSize: 8.5,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  verbFormBadgeText1st: {
+    color: "#065f46",
+  },
+  verbFormBadgeText2nd: {
+    color: "#0369a1",
+  },
+  verbFormBadgeText3rd: {
+    color: "#6b21a8",
+  },
+  verbFormBadgeText4th: {
+    color: "#b45309",
+  },
+
+  // Tala Subcategory Breadcrumb Navigation Bar
+  breadcrumbBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: "#f8fafc",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+    gap: 8,
+  },
+  breadcrumbBackBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  breadcrumbBackText: {
+    fontSize: 11.5,
     fontWeight: "700",
-    color: colors.textDark,
+    color: colors.forest,
   },
-  verbFormChipTextActive: {
+  breadcrumbCurrentPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#e0f2fe",
+  },
+  breadcrumbCurrentText: {
+    fontSize: 11.5,
+    fontWeight: "800",
+    color: "#0369a1",
+  },
+  breadcrumbCountBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 999,
+    backgroundColor: "#0284c7",
+  },
+  breadcrumbCountText: {
+    fontSize: 9.5,
+    fontWeight: "800",
     color: "#ffffff",
   },
-  verbFormChipHint: {
-    fontSize: 10,
-    color: colors.textLight,
-    fontWeight: "500",
+
+  editCategoriesHeaderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.forest,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 999,
+    gap: 4,
   },
-  verbFormChipHintActive: {
-    color: "rgba(255,255,255,0.85)",
+  editCategoriesHeaderBtnText: {
+    color: "#ffffff",
+    fontSize: 11.5,
+    fontWeight: "700",
+  },
+  breadcrumbEditBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+    marginLeft: "auto",
+  },
+  breadcrumbEditText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#0284c7",
+  },
+  phraseBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    zIndex: 2,
+    backgroundColor: "#e0f2fe",
+    borderRadius: 6,
+    padding: 2,
+  },
+  secondaryLabelText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: colors.forest,
+    marginTop: 1,
   },
 });

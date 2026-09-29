@@ -23,6 +23,7 @@ import {
   deleteCategoryDeep,
   createBlankCategory,
   createBlankCategoriesBulk,
+  updateCategory,
   addWord,
   addWordsBulk,
   updateWord,
@@ -37,6 +38,8 @@ import { getPictogramUrl } from "../modules/aacPictograms";
 import { generateAllVerbForms, isLikelyVerb } from "../modules/verbForms";
 import WordEditor from "../components/WordEditor";
 import UniversalImagePickerModal from "../components/UniversalImagePickerModal";
+import { startListening, stopListening, isListening } from "../modules/voice";
+import { parseVoiceCategoryCommand, cleanVoiceSpeechName, type ParsedVoiceResult } from "../modules/voiceCategories";
 
 const PASTEL_PALETTE = [
   "#D5E8DF", // mint
@@ -62,9 +65,10 @@ function formatLastUsed(ts: number | undefined): string {
 interface Props {
   onBack: () => void;
   onCreate?: () => void;
+  initialCategoryId?: string;
 }
 
-export default function MyCategoriesScreen({ onBack }: Props) {
+export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId }: Props) {
   const { width } = useWindowDimensions();
   const isWide = width >= 720;
   const { settings } = useSettings();
@@ -101,9 +105,28 @@ export default function MyCategoriesScreen({ onBack }: Props) {
   const [newShelfImageUri, setNewShelfImageUri] = useState<string | undefined>();
   const [newWordImageUri, setNewWordImageUri] = useState<string | undefined>();
 
+  // Category / Shelf Edit Modal (Parent editing)
+  const [editCatOpen, setEditCatOpen] = useState(false);
+  const [catToEdit, setCatToEdit] = useState<CustomCategory | null>(null);
+  const [editCatName, setEditCatName] = useState("");
+  const [editCatIcon, setEditCatIcon] = useState("💬");
+  const [editCatColor, setEditCatColor] = useState(PASTEL_PALETTE[0]);
+  const [editCatImageUri, setEditCatImageUri] = useState<string | undefined>();
+
+  // Voice Category & Word Creator Modal (Caregiver Space)
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [voiceRawTranscript, setVoiceRawTranscript] = useState("");
+  const [voiceTargetType, setVoiceTargetType] = useState<"category" | "subcategory" | "word">("category");
+  const [voiceName, setVoiceName] = useState("");
+  const [voiceIcon, setVoiceIcon] = useState("📁");
+  const [voiceColor, setVoiceColor] = useState(PASTEL_PALETTE[0]);
+  const [voiceImageUri, setVoiceImageUri] = useState<string | undefined>();
+  const [voiceItems, setVoiceItems] = useState<string[]>([]);
+
   // Universal 3-Option Image Picker Target (Gallery, App Library, Chrome Search)
   const [imagePickerTarget, setImagePickerTarget] = useState<{
-    type: "word" | "shelf" | "tableWord" | "bulkWord";
+    type: "word" | "shelf" | "tableWord" | "bulkWord" | "editCat" | "voiceCat";
     wordId?: string;
     label: string;
     currentUri?: string;
@@ -140,6 +163,26 @@ export default function MyCategoriesScreen({ onBack }: Props) {
       setReady(true);
     });
   }, [lang]);
+
+  // Jump to initial category if opened directly from AAC Board "Edit"
+  useEffect(() => {
+    if (!initialCategoryId || cats.length === 0) return;
+    const topMatch = cats.find((c) => c.id === initialCategoryId);
+    if (topMatch) {
+      setSelectedShelfId(topMatch.id);
+      setSelectedSubCatId(null);
+      return;
+    }
+    for (const top of cats) {
+      const subs = childCategories(top.id);
+      const subMatch = subs.find((sc) => sc.id === initialCategoryId);
+      if (subMatch) {
+        setSelectedShelfId(top.id);
+        setSelectedSubCatId(subMatch.id);
+        return;
+      }
+    }
+  }, [initialCategoryId, cats]);
 
   // Selected shelf
   const currentShelf = useMemo(() => {
@@ -457,12 +500,40 @@ export default function MyCategoriesScreen({ onBack }: Props) {
     refresh();
   }
 
+  function openEditCategory(cat: CustomCategory) {
+    setCatToEdit(cat);
+    setEditCatName(cat.name);
+    setEditCatIcon(cat.icon || "📁");
+    setEditCatColor(cat.color || PASTEL_PALETTE[0]);
+    setEditCatImageUri(cat.imageUri);
+    setEditCatOpen(true);
+  }
+
+  function handleSaveEditCategory() {
+    if (!catToEdit) return;
+    const trimmed = editCatName.trim();
+    if (!trimmed) return;
+    updateCategory(catToEdit.id, {
+      name: trimmed,
+      icon: editCatIcon,
+      color: editCatColor,
+      imageUri: editCatImageUri,
+    });
+    setEditCatOpen(false);
+    setCatToEdit(null);
+    refresh();
+  }
+
   function handleImageSelected(uri: string) {
     if (!imagePickerTarget) return;
     if (imagePickerTarget.type === "word") {
       setNewWordImageUri(uri);
     } else if (imagePickerTarget.type === "shelf") {
       setNewShelfImageUri(uri);
+    } else if (imagePickerTarget.type === "editCat") {
+      setEditCatImageUri(uri);
+    } else if (imagePickerTarget.type === "voiceCat") {
+      setVoiceImageUri(uri);
     } else if (imagePickerTarget.type === "tableWord" && imagePickerTarget.wordId && activeCategory) {
       updateWord(activeCategory.id, imagePickerTarget.wordId, { imageUri: uri });
       refresh();
@@ -477,6 +548,10 @@ export default function MyCategoriesScreen({ onBack }: Props) {
       setNewWordImageUri(undefined);
     } else if (imagePickerTarget.type === "shelf") {
       setNewShelfImageUri(undefined);
+    } else if (imagePickerTarget.type === "editCat") {
+      setEditCatImageUri(undefined);
+    } else if (imagePickerTarget.type === "voiceCat") {
+      setVoiceImageUri(undefined);
     } else if (imagePickerTarget.type === "tableWord" && imagePickerTarget.wordId && activeCategory) {
       updateWord(activeCategory.id, imagePickerTarget.wordId, { imageUri: undefined });
       refresh();
@@ -487,6 +562,115 @@ export default function MyCategoriesScreen({ onBack }: Props) {
         return next;
       });
     }
+  }
+
+  function openVoiceAdd() {
+    setVoiceRawTranscript("");
+    setVoiceName("");
+    setVoiceIcon("📁");
+    setVoiceColor(PASTEL_PALETTE[0]);
+    setVoiceImageUri(undefined);
+    setVoiceItems([]);
+    setVoiceTargetType("category");
+    setVoiceOpen(true);
+    startVoiceCapture();
+  }
+
+  function startVoiceCapture() {
+    setVoiceListening(true);
+    const recognitionLang = lang.startsWith("ur") ? "ur-PK" : lang.startsWith("ar") ? "ar-SA" : lang;
+    startListening({
+      lang: recognitionLang,
+      onPartial: (text) => {
+        setVoiceRawTranscript(text);
+        applyVoiceText(text);
+      },
+      onFinal: (text) => {
+        setVoiceRawTranscript(text);
+        applyVoiceText(text);
+        setVoiceListening(false);
+      },
+      onError: () => setVoiceListening(false),
+      onEnd: () => setVoiceListening(false),
+    });
+  }
+
+  function applyVoiceText(text: string) {
+    const parsed = parseVoiceCategoryCommand(text);
+    setVoiceName(parsed.cleanName);
+    setVoiceIcon(parsed.icon);
+    setVoiceColor(parsed.color);
+    setVoiceImageUri(parsed.imageUri);
+    setVoiceItems(parsed.items);
+    if (parsed.intent === "words") {
+      setVoiceTargetType("word");
+    } else if (parsed.intent === "subcategory") {
+      setVoiceTargetType("subcategory");
+    } else {
+      setVoiceTargetType("category");
+    }
+  }
+
+  function stopVoiceCapture() {
+    stopListening();
+    setVoiceListening(false);
+  }
+
+  function handleSaveVoice() {
+    stopVoiceCapture();
+    const finalClean = voiceName.trim() || cleanVoiceSpeechName(voiceRawTranscript) || "New Category";
+    if (!finalClean) return;
+
+    if (voiceTargetType === "category") {
+      const created = createBlankCategory({
+        name: finalClean,
+        icon: voiceIcon || "📁",
+        color: voiceColor || "#235E50",
+        imageUri: voiceImageUri || getPictogramUrl(finalClean) || undefined,
+      });
+      setSelectedShelfId(created.id);
+      setSelectedSubCatId(null);
+    } else if (voiceTargetType === "subcategory" && currentShelf) {
+      const created = createBlankCategory({
+        name: finalClean,
+        parentCategoryId: currentShelf.id,
+        icon: voiceIcon || currentShelf.icon || "📁",
+        color: voiceColor || currentShelf.color || "#235E50",
+        imageUri: voiceImageUri || getPictogramUrl(finalClean) || undefined,
+      });
+      setSelectedSubCatId(created.id);
+    } else if (voiceTargetType === "word") {
+      const targetCat = activeCategory || currentShelf;
+      if (targetCat) {
+        const wordsToAdd = voiceItems.length > 0 ? voiceItems : [finalClean];
+        const toInsert: {
+          label: string;
+          phrase: string;
+          emoji: string;
+          imageUri?: string;
+          size: TileSize;
+          useTextToSpeech: boolean;
+        }[] = [];
+        for (const item of wordsToAdd) {
+          const cName = cleanVoiceSpeechName(item);
+          if (!cName) continue;
+          toInsert.push({
+            label: cName,
+            phrase: cName,
+            emoji: voiceIcon || "🔹",
+            imageUri: getPictogramUrl(cName) || undefined,
+            size: "md",
+            useTextToSpeech: true,
+          });
+        }
+        if (toInsert.length > 0) {
+          addWordsBulk(targetCat.id, toInsert);
+        }
+      }
+    }
+
+    setVoiceOpen(false);
+    refresh();
   }
 
   function toggleShelfHidden(cat: CustomCategory) {
@@ -544,6 +728,15 @@ export default function MyCategoriesScreen({ onBack }: Props) {
           </View>
 
           <View style={[styles.headerActionsRow, !isWide && styles.headerActionsRowMobile]}>
+            <Pressable
+              onPress={openVoiceAdd}
+              style={[styles.voiceAddTopBtn, !isWide && styles.voiceAddTopBtnMobile]}
+              accessibilityLabel="Voice add category or words"
+            >
+              <Ionicons name="mic" size={16} color="#235E50" />
+              <Text style={styles.voiceAddTopBtnText}>🎙️ Voice add</Text>
+            </Pressable>
+
             <Pressable
               onPress={() => {
                 setModalTargetCatId(activeCategory?.id || currentShelf?.id || null);
@@ -639,6 +832,16 @@ export default function MyCategoriesScreen({ onBack }: Props) {
                         </View>
 
                         <View style={styles.rowActions}>
+                          {/* Pencil Edit Button */}
+                          <Pressable
+                            onPress={() => openEditCategory(cat)}
+                            style={styles.shelfActionBtn}
+                            hitSlop={6}
+                            accessibilityLabel={`Edit ${cat.name}`}
+                          >
+                            <Ionicons name="pencil" size={15} color="#235E50" />
+                          </Pressable>
+
                           {/* Eye Show/Hide Toggle */}
                           <Pressable
                             onPress={() => toggleShelfHidden(cat)}
@@ -703,6 +906,16 @@ export default function MyCategoriesScreen({ onBack }: Props) {
                                 </View>
 
                                 <View style={styles.rowActions}>
+                                  {/* Pencil Edit Button */}
+                                  <Pressable
+                                    onPress={() => openEditCategory(sc)}
+                                    style={styles.shelfActionBtn}
+                                    hitSlop={4}
+                                    accessibilityLabel={`Edit ${sc.name}`}
+                                  >
+                                    <Ionicons name="pencil" size={13} color="#235E50" />
+                                  </Pressable>
+
                                   <Pressable
                                     onPress={() => toggleSubCatHidden(sc)}
                                     style={styles.shelfActionBtn}
@@ -765,7 +978,7 @@ export default function MyCategoriesScreen({ onBack }: Props) {
             <View style={styles.contentCard}>
               <View style={styles.tableHeaderRow}>
                 <View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Pressable onPress={() => setSelectedSubCatId(null)}>
                       <Text style={[styles.selectedShelfTitle, selectedSubCatId ? { color: "#235E50" } : null]}>
                         {currentShelf ? currentShelf.name : "Core"}
@@ -779,6 +992,16 @@ export default function MyCategoriesScreen({ onBack }: Props) {
                         </Text>
                       </>
                     )}
+                    <Pressable
+                      onPress={() => activeCategory && openEditCategory(activeCategory)}
+                      style={styles.editCategoryTopPill}
+                      accessibilityLabel="Edit category settings"
+                    >
+                      <Ionicons name="pencil" size={12} color="#235E50" />
+                      <Text style={styles.editCategoryTopPillText}>
+                        Edit {selectedSubCatId ? "sub-category" : "shelf"}
+                      </Text>
+                    </Pressable>
                   </View>
                   <Text style={styles.selectedShelfMeta}>
                     {displayWords.length} words · {selectedSubCatId ? `in sub-category "${activeCategory?.name}"` : "used on this device"}
@@ -989,6 +1212,19 @@ export default function MyCategoriesScreen({ onBack }: Props) {
                         {cat.name}
                       </Text>
 
+                      {/* Pencil Edit button */}
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation?.();
+                          openEditCategory(cat);
+                        }}
+                        hitSlop={4}
+                        style={{ marginLeft: 2 }}
+                        accessibilityLabel={`Edit ${cat.name}`}
+                      >
+                        <Ionicons name="pencil" size={13} color="#235E50" />
+                      </Pressable>
+
                       {/* Eye button */}
                       <Pressable
                         onPress={() => toggleShelfHidden(cat)}
@@ -1037,16 +1273,27 @@ export default function MyCategoriesScreen({ onBack }: Props) {
                   </Text>
                 </View>
 
-                <Pressable
-                  onPress={() => {
-                    setSubCatName("");
-                    setSubCatOpen(true);
-                  }}
-                  style={styles.mobileAddSubBtn}
-                >
-                  <Ionicons name="add" size={13} color="#1A3830" />
-                  <Text style={styles.mobileAddSubBtnText}>Sub-category</Text>
-                </Pressable>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Pressable
+                    onPress={() => activeCategory && openEditCategory(activeCategory)}
+                    style={styles.mobileEditCategoryBtn}
+                    accessibilityLabel="Edit category"
+                  >
+                    <Ionicons name="pencil" size={12} color="#1A3830" />
+                    <Text style={styles.mobileEditCategoryBtnText}>Edit</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => {
+                      setSubCatName("");
+                      setSubCatOpen(true);
+                    }}
+                    style={styles.mobileAddSubBtn}
+                  >
+                    <Ionicons name="add" size={13} color="#1A3830" />
+                    <Text style={styles.mobileAddSubBtnText}>Sub-category</Text>
+                  </Pressable>
+                </View>
               </View>
 
               {/* Search Bar */}
@@ -1142,6 +1389,23 @@ export default function MyCategoriesScreen({ onBack }: Props) {
                             {sc.words.length}
                           </Text>
                         </View>
+
+                        {/* Edit button */}
+                        <Pressable
+                          onPress={(e) => {
+                            e.stopPropagation?.();
+                            openEditCategory(sc);
+                          }}
+                          hitSlop={4}
+                          style={styles.subCatPillActionBtn}
+                          accessibilityLabel={`Edit ${sc.name}`}
+                        >
+                          <Ionicons
+                            name="pencil"
+                            size={11}
+                            color={isSubActive ? "#FFFFFF" : "#235E50"}
+                          />
+                        </Pressable>
 
                         {/* Eye toggle */}
                         <Pressable
@@ -1338,6 +1602,394 @@ export default function MyCategoriesScreen({ onBack }: Props) {
               >
                 <Ionicons name="trash" size={16} color="#FFFFFF" />
                 <Text style={styles.actionPillBtnText}>Delete</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: Edit Category / Shelf (Parent Editing) */}
+      <Modal
+        visible={editCatOpen && catToEdit !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setEditCatOpen(false);
+          setCatToEdit(null);
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { maxHeight: "90%" }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {catToEdit?.parentCategoryId ? "Edit Sub-Category" : "Edit Shelf / Category"}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  setEditCatOpen(false);
+                  setCatToEdit(null);
+                }}
+                hitSlop={8}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons name="close" size={20} color="#777777" />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {/* Category Name */}
+              <Text style={styles.fieldLabel}>Category name</Text>
+              <TextInput
+                value={editCatName}
+                onChangeText={setEditCatName}
+                placeholder="e.g. Food, Actions, Drinks, Toys"
+                placeholderTextColor="#9E9E9E"
+                style={styles.inputBoxCoral}
+              />
+
+              {/* Category Icon / Emoji */}
+              <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Icon / Emoji</Text>
+              <View style={styles.editCatIconWrap}>
+                <TextInput
+                  value={editCatIcon}
+                  onChangeText={setEditCatIcon}
+                  style={styles.editCatCustomIconInput}
+                  maxLength={4}
+                />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.editCatIconRow}>
+                  {["💬", "🍽️", "⚡", "😊", "♡", "🧸", "🎨", "🏫", "⚽", "🛁", "🎸", "🚗", "🍎", "💧", "👗", "💊", "🛏️", "💻", "🐶", "⭐", "📁"].map((ic) => (
+                    <Pressable
+                      key={ic}
+                      onPress={() => setEditCatIcon(ic)}
+                      style={[
+                        styles.editCatIconChip,
+                        editCatIcon === ic && styles.editCatIconChipActive,
+                      ]}
+                    >
+                      <Text style={styles.editCatIconText}>{ic}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Theme Color */}
+              <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Theme color</Text>
+              <View style={styles.colorSwatchesRow}>
+                {[
+                  "#235E50",
+                  "#4A7FE6",
+                  "#E67E22",
+                  "#8A6BC9",
+                  "#5C9A58",
+                  "#C96B6B",
+                  "#D46CAE",
+                  "#D5E8DF",
+                  "#FCE7D6",
+                  "#D6ECFA",
+                ].map((c) => {
+                  const isSelected = editCatColor === c;
+                  return (
+                    <Pressable
+                      key={c}
+                      onPress={() => setEditCatColor(c)}
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: c },
+                        isSelected && styles.colorSwatchSelected,
+                      ]}
+                    />
+                  );
+                })}
+              </View>
+
+              {/* Category Picture / Pictogram */}
+              <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Category Picture (Optional)</Text>
+              <View style={styles.editCatPicRow}>
+                {editCatImageUri ? (
+                  <View style={styles.editCatPicPreviewWrap}>
+                    <Image source={{ uri: editCatImageUri }} style={styles.editCatPicPreview} resizeMode="contain" />
+                    <Pressable
+                      onPress={() => setEditCatImageUri(undefined)}
+                      style={styles.editCatPicRemoveBtn}
+                      hitSlop={6}
+                    >
+                      <Ionicons name="close-circle" size={20} color="#C44545" />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={styles.editCatPicEmptyWrap}>
+                    <Text style={{ fontSize: 24 }}>{editCatIcon || "📁"}</Text>
+                  </View>
+                )}
+
+                <Pressable
+                  onPress={() =>
+                    setImagePickerTarget({
+                      type: "editCat",
+                      label: editCatName.trim() || catToEdit?.name || "Category",
+                      currentUri: editCatImageUri,
+                    })
+                  }
+                  style={styles.editCatPickPicBtn}
+                >
+                  <Ionicons name="images-outline" size={16} color="#235E50" />
+                  <Text style={styles.editCatPickPicBtnText}>
+                    {editCatImageUri ? "Change Picture" : "Choose Picture"}
+                  </Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Pressable
+                onPress={() => {
+                  setEditCatOpen(false);
+                  setCatToEdit(null);
+                }}
+                style={styles.cancelTextBtn}
+              >
+                <Text style={styles.cancelTextBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSaveEditCategory}
+                style={styles.actionPillBtn}
+                disabled={!editCatName.trim()}
+              >
+                <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                <Text style={styles.actionPillBtnText}>Save Changes</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: Voice Category & Word Creator (Caregiver Space) */}
+      <Modal
+        visible={voiceOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          stopVoiceCapture();
+          setVoiceOpen(false);
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { maxHeight: "90%" }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <View style={styles.voiceModalIconBubble}>
+                  <Ionicons name="mic" size={18} color="#235E50" />
+                </View>
+                <View>
+                  <Text style={styles.modalTitle}>Voice Add</Text>
+                  <Text style={styles.modalSubHeader}>Create shelf, sub-category, or words by voice</Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => {
+                  stopVoiceCapture();
+                  setVoiceOpen(false);
+                }}
+                hitSlop={8}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons name="close" size={20} color="#777777" />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {/* Live Microphone Box */}
+              <View style={[styles.voiceMicLiveBox, voiceListening ? styles.voiceMicLiveBoxActive : null]}>
+                <Pressable
+                  onPress={() => (voiceListening ? stopVoiceCapture() : startVoiceCapture())}
+                  style={[styles.voiceMicCircleBtn, voiceListening ? styles.voiceMicCircleBtnActive : null]}
+                >
+                  <Ionicons name={voiceListening ? "mic" : "mic-outline"} size={32} color="#FFFFFF" />
+                </Pressable>
+
+                <Text style={styles.voiceMicStatusText}>
+                  {voiceListening ? "Listening... Speak now!" : "Tap microphone to speak"}
+                </Text>
+                <Text style={styles.voiceExampleHint}>
+                  Try: "create category of name of apple" or "fruits" or "add word pizza"
+                </Text>
+
+                {/* Spoken Transcript Bubble */}
+                <View style={styles.voiceTranscriptWrap}>
+                  <Text style={styles.voiceTranscriptLabel}>What you said:</Text>
+                  <Text style={styles.voiceTranscriptText}>
+                    "{voiceRawTranscript || (voiceListening ? "Listening..." : "Waiting for voice...")}"
+                  </Text>
+                </View>
+              </View>
+
+              {/* Target Type Selector (Auto-detected, user can toggle) */}
+              <Text style={[styles.fieldLabel, { marginTop: 14 }]}>What would you like to create?</Text>
+              <View style={styles.voiceTypeRow}>
+                <Pressable
+                  onPress={() => setVoiceTargetType("category")}
+                  style={[styles.voiceTypePill, voiceTargetType === "category" && styles.voiceTypePillActive]}
+                >
+                  <Ionicons
+                    name="folder-outline"
+                    size={14}
+                    color={voiceTargetType === "category" ? "#FFFFFF" : "#235E50"}
+                  />
+                  <Text
+                    style={[
+                      styles.voiceTypePillText,
+                      voiceTargetType === "category" && styles.voiceTypePillTextActive,
+                    ]}
+                  >
+                    Main Shelf
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setVoiceTargetType("subcategory")}
+                  style={[styles.voiceTypePill, voiceTargetType === "subcategory" && styles.voiceTypePillActive]}
+                >
+                  <Ionicons
+                    name="file-tray-stacked-outline"
+                    size={14}
+                    color={voiceTargetType === "subcategory" ? "#FFFFFF" : "#235E50"}
+                  />
+                  <Text
+                    style={[
+                      styles.voiceTypePillText,
+                      voiceTargetType === "subcategory" && styles.voiceTypePillTextActive,
+                    ]}
+                  >
+                    Sub-category
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setVoiceTargetType("word")}
+                  style={[styles.voiceTypePill, voiceTargetType === "word" && styles.voiceTypePillActive]}
+                >
+                  <Ionicons
+                    name="chatbubble-outline"
+                    size={14}
+                    color={voiceTargetType === "word" ? "#FFFFFF" : "#235E50"}
+                  />
+                  <Text
+                    style={[
+                      styles.voiceTypePillText,
+                      voiceTargetType === "word" && styles.voiceTypePillTextActive,
+                    ]}
+                  >
+                    Word(s)
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Clean Output Preview (Filtered of Noise) */}
+              <View style={styles.voiceSmartFilterBanner}>
+                <Ionicons name="sparkles" size={16} color="#1F594A" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.voiceSmartFilterTitle}>
+                    Noise & Boilerplate Filtered
+                  </Text>
+                  <Text style={styles.voiceSmartFilterSub}>
+                    Commands like "create category of name of apple" are cleanly parsed as "Apple" with picture & emoji matched.
+                  </Text>
+                </View>
+              </View>
+
+              {/* Clean Name Input (Parent can edit if needed) */}
+              <Text style={[styles.fieldLabel, { marginTop: 14 }]}>
+                {voiceTargetType === "word" ? "Word / Items to add" : "Category name"}
+              </Text>
+              <TextInput
+                value={voiceName}
+                onChangeText={(txt) => {
+                  setVoiceName(txt);
+                  const parsed = parseVoiceCategoryCommand(txt);
+                  setVoiceIcon(parsed.icon);
+                  if (parsed.imageUri) setVoiceImageUri(parsed.imageUri);
+                }}
+                placeholder="e.g. Apple"
+                placeholderTextColor="#9E9E9E"
+                style={styles.inputBoxCoral}
+              />
+
+              {/* Icon & Picture */}
+              <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Icon & Picture</Text>
+              <View style={styles.editCatPicRow}>
+                {voiceImageUri ? (
+                  <View style={styles.editCatPicPreviewWrap}>
+                    <Image source={{ uri: voiceImageUri }} style={styles.editCatPicPreview} resizeMode="contain" />
+                    <Pressable
+                      onPress={() => setVoiceImageUri(undefined)}
+                      style={styles.editCatPicRemoveBtn}
+                      hitSlop={6}
+                    >
+                      <Ionicons name="close-circle" size={20} color="#C44545" />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={styles.editCatPicEmptyWrap}>
+                    <Text style={{ fontSize: 24 }}>{voiceIcon || "📁"}</Text>
+                  </View>
+                )}
+
+                <Pressable
+                  onPress={() =>
+                    setImagePickerTarget({
+                      type: "voiceCat",
+                      label: voiceName.trim() || "Item",
+                      currentUri: voiceImageUri,
+                    })
+                  }
+                  style={styles.editCatPickPicBtn}
+                >
+                  <Ionicons name="images-outline" size={16} color="#235E50" />
+                  <Text style={styles.editCatPickPicBtnText}>
+                    {voiceImageUri ? "Change Picture" : "Choose Picture"}
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Color Swatches */}
+              <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Theme color</Text>
+              <View style={styles.colorSwatchesRow}>
+                {PASTEL_PALETTE.map((c) => {
+                  const isSelected = voiceColor === c;
+                  return (
+                    <Pressable
+                      key={c}
+                      onPress={() => setVoiceColor(c)}
+                      style={[
+                        styles.colorSwatch,
+                        { backgroundColor: c },
+                        isSelected && styles.colorSwatchSelected,
+                      ]}
+                    />
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Pressable
+                onPress={() => {
+                  stopVoiceCapture();
+                  setVoiceOpen(false);
+                }}
+                style={styles.cancelTextBtn}
+              >
+                <Text style={styles.cancelTextBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSaveVoice}
+                style={styles.actionPillBtn}
+                disabled={!voiceName.trim()}
+              >
+                <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                <Text style={styles.actionPillBtnText}>
+                  Add {voiceTargetType === "category" ? "Shelf" : voiceTargetType === "subcategory" ? "Sub-category" : "Word(s)"}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -3125,5 +3777,282 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 4,
+  },
+  editCategoryTopPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#E2EFE9",
+    borderWidth: 1,
+    borderColor: "#A9D5C3",
+  },
+  editCategoryTopPillText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#235E50",
+  },
+  mobileEditCategoryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F6EFE6",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E5DACE",
+  },
+  mobileEditCategoryBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#1A3830",
+  },
+  editCatIconWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  editCatCustomIconInput: {
+    width: 48,
+    height: 40,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#EBE5D8",
+    borderRadius: 12,
+    fontSize: 20,
+    textAlign: "center",
+  },
+  editCatIconRow: {
+    flexDirection: "row",
+    gap: 6,
+    paddingVertical: 2,
+  },
+  editCatIconChip: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#F7F5EE",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#EBE5D8",
+  },
+  editCatIconChipActive: {
+    backgroundColor: "#D5E8DF",
+    borderColor: "#235E50",
+    borderWidth: 1.5,
+  },
+  editCatIconText: {
+    fontSize: 18,
+  },
+  editCatPicRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 4,
+  },
+  editCatPicPreviewWrap: {
+    position: "relative",
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: "#F7F5EE",
+    borderWidth: 1,
+    borderColor: "#EBE5D8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editCatPicPreview: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+  },
+  editCatPicRemoveBtn: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+  },
+  editCatPicEmptyWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: "#F7F5EE",
+    borderWidth: 1,
+    borderColor: "#EBE5D8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  editCatPickPicBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#E2EFE9",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#A9D5C3",
+  },
+  editCatPickPicBtnText: {
+    color: "#235E50",
+    fontSize: 12.5,
+    fontWeight: "700",
+  },
+  voiceAddTopBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#E2EFE9",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: "#A9D5C3",
+  },
+  voiceAddTopBtnMobile: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 2,
+  },
+  voiceAddTopBtnText: {
+    color: "#235E50",
+    fontSize: 12.5,
+    fontWeight: "700",
+  },
+  voiceModalIconBubble: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#E2EFE9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalSubHeader: {
+    fontSize: 12,
+    color: "#7A8580",
+    marginTop: 1,
+  },
+  voiceMicLiveBox: {
+    alignItems: "center",
+    backgroundColor: "#F7F5EE",
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: "#EBE5D8",
+    marginBottom: 8,
+  },
+  voiceMicLiveBoxActive: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#22C55E",
+  },
+  voiceMicCircleBtn: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: "#235E50",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#235E50",
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+    marginBottom: 10,
+  },
+  voiceMicCircleBtnActive: {
+    backgroundColor: "#16A34A",
+    transform: [{ scale: 1.05 }],
+  },
+  voiceMicStatusText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#1A3830",
+    marginBottom: 4,
+  },
+  voiceExampleHint: {
+    fontSize: 11.5,
+    color: "#7A8580",
+    fontStyle: "italic",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  voiceTranscriptWrap: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#EBE5D8",
+  },
+  voiceTranscriptLabel: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#8A9590",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  voiceTranscriptText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1F594A",
+    fontStyle: "italic",
+  },
+  voiceTypeRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  voiceTypePill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "#F7F5EE",
+    borderWidth: 1,
+    borderColor: "#EBE5D8",
+  },
+  voiceTypePillActive: {
+    backgroundColor: "#235E50",
+    borderColor: "#235E50",
+  },
+  voiceTypePillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#235E50",
+  },
+  voiceTypePillTextActive: {
+    color: "#FFFFFF",
+  },
+  voiceSmartFilterBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: "#EAF5F1",
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#A9D5C3",
+  },
+  voiceSmartFilterTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#1F594A",
+    marginBottom: 2,
+  },
+  voiceSmartFilterSub: {
+    fontSize: 11,
+    color: "#4A6B62",
+    lineHeight: 15,
   },
 });

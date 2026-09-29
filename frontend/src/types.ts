@@ -137,6 +137,37 @@ export interface ChildProfile {
   supervisors?: Supervisor[];
   careLogs?: CareLogEntry[];
   passcard?: CaregiverPasscard;
+  role?: UserRole;
+  voiceType?: VoiceType;
+  boardMode?: BoardMode;
+  simpleMode?: boolean;
+  bilingualDisplay?: boolean;
+  favourites?: {
+    foods: string[];
+    family: { name: string; relation: string; photoUri?: string }[];
+    activities: string[];
+  };
+}
+
+export type VoiceType = 'boy' | 'girl' | 'woman' | 'man';
+export type UserRole = 'parent' | 'educator' | 'slp';
+export type BoardMode = 'phrase' | 'sentence'; // Phrase mode (1-tap whole phrase GLP) vs Sentence Builder
+
+export interface SocialStoryPage {
+  text: string;
+  imageUri?: string;
+  emoji?: string;
+  pictogramName?: string;
+}
+
+export interface SocialStory {
+  id: string;
+  title: string;
+  category: 'routine' | 'health' | 'school' | 'emotions' | 'social' | 'custom';
+  icon: string;
+  description: string;
+  coverImage?: string;
+  pages: SocialStoryPage[];
 }
 
 export type LanguageCode = 'en-US' | 'ar-SA' | 'ur-PK' | 'hi-IN' | 'es-ES' | 'fr-FR';
@@ -161,16 +192,24 @@ export interface AppSettings {
   speechRate: number;      // 0.5 (slow) .. 1.0 (normal)
   boardColumns: number;    // 2 .. 5 tiles per row
   kioskMode: boolean;      // best-effort in-app lock
+  /** Angel Talk vs Tala feature parity */
+  voiceType: VoiceType;
+  boardMode: BoardMode;
+  bilingualDisplay: boolean;
+  simpleMode: boolean;
+  userRole: UserRole;
 }
 
 export type AppScreen =
   | 'landing'
+  | 'onboarding-quick'
   | 'face-scan'
   | 'home'
   | 'speak'
   | 'schedule'
   | 'games'
   | 'progress'
+  | 'social-stories'
   | 'more'
   | 'parent-setup'
   | 'enroll-child'
@@ -238,6 +277,8 @@ export interface CustomWord {
     continuous: string;
     emoji?: string;
   };
+  /** Explicit verb form tag for display and speech (1st, 2nd, 3rd, 4th) */
+  verbFormTag?: '1st' | '2nd' | '3rd' | '4th';
 }
 
 export interface CustomCategory {

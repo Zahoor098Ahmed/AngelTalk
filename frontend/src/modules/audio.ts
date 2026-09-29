@@ -142,7 +142,7 @@ function playClip(uri: string): Promise<void> {
   });
 }
 
-function speakWord(text: string, lang: LanguageCode, rate: number): Promise<void> {
+function speakWord(text: string, lang: LanguageCode, rate: number, voiceType: import("../types").VoiceType = "boy"): Promise<void> {
   return new Promise((resolve) => {
     let resolved = false;
     const finish = () => {
@@ -159,11 +159,20 @@ function speakWord(text: string, lang: LanguageCode, rate: number): Promise<void
     const isAscii = /^[\x00-\x7F\s.,!?'"-]+$/.test(text);
     const speechLang = isAscii && (lang === "ur-PK" || lang === "ar-SA") ? "en-US" : lang;
 
+    const profile = {
+      boy: { pitch: 1.25, rateMultiplier: 1.0 },
+      girl: { pitch: 1.38, rateMultiplier: 1.0 },
+      woman: { pitch: 1.08, rateMultiplier: 0.96 },
+      man: { pitch: 0.82, rateMultiplier: 0.92 },
+    }[voiceType] || { pitch: 1.25, rateMultiplier: 1.0 };
+
+    const finalRate = Math.max(0.5, Math.min(1.5, rate * profile.rateMultiplier));
+
     try {
       Speech.speak(text, {
         language: speechLang,
-        rate,
-        pitch: 1.05,
+        rate: finalRate,
+        pitch: profile.pitch,
         onDone: () => {
           clearTimeout(timer);
           finish();
@@ -186,17 +195,25 @@ function speakWord(text: string, lang: LanguageCode, rate: number): Promise<void
 
 export interface SpokenWord {
   label: string;
+  phrase?: string;
   audioUri?: string;
   useTextToSpeech?: boolean;
 }
 
 /** Play one word: its clip if present and allowed, otherwise TTS. */
-export async function playWord(word: SpokenWord, lang: LanguageCode, rate = 0.9): Promise<void> {
+export async function playWord(
+  word: SpokenWord,
+  lang: LanguageCode,
+  rate = 0.9,
+  voiceType: import("../types").VoiceType = "boy",
+  useWholePhrase = false
+): Promise<void> {
   Speech.stop();
   if (word.audioUri && word.useTextToSpeech !== true) {
     await playClip(word.audioUri);
   } else {
-    await speakWord(word.label, lang, rate);
+    const textToSpeak = (useWholePhrase && word.phrase) ? word.phrase : word.label;
+    await speakWord(textToSpeak, lang, rate, voiceType);
   }
 }
 
@@ -210,7 +227,12 @@ export function stopSentence(): void {
 }
 
 /** Play a whole sentence: natural coherent speech if text-to-speech, or sequenced clips. */
-export async function playSentence(words: SpokenWord[], lang: LanguageCode, rate = 0.9): Promise<void> {
+export async function playSentence(
+  words: SpokenWord[],
+  lang: LanguageCode,
+  rate = 0.9,
+  voiceType: import("../types").VoiceType = "boy"
+): Promise<void> {
   stopSentence();
   if (!words || words.length === 0) return;
 
@@ -219,14 +241,14 @@ export async function playSentence(words: SpokenWord[], lang: LanguageCode, rate
     // Speak continuous natural sentence
     const fullText = words.map((w) => w.label.trim()).filter(Boolean).join(" ");
     if (fullText) {
-      await speakWord(fullText, lang, rate);
+      await speakWord(fullText, lang, rate, voiceType);
     }
     return;
   }
 
   // Sequenced fallback for custom recorded parent voice clips
   for (const w of words) {
-    await playWord(w, lang, rate);
+    await playWord(w, lang, rate, voiceType);
     await new Promise((r) => setTimeout(r, 100));
   }
 }

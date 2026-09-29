@@ -343,13 +343,232 @@ const STARTER: { name: string; icon: string; color?: string; words: [string, str
   },
 ];
 
+// Helper to capitalize words
+function capWord(s: string): string {
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// Complete A-Z Verbs mapping: each letter contains its verbs, each verb has 1st, 2nd, 3rd, and 4th forms
+const VERBS_A_TO_Z: Record<string, { base: string; past: string; participle: string; continuous: string; emoji: string }[]> = {
+  A: [
+    { base: "ask", past: "asked", participle: "asked", continuous: "asking", emoji: "❓" },
+    { base: "answer", past: "answered", participle: "answered", continuous: "answering", emoji: "💡" },
+    { base: "agree", past: "agreed", participle: "agreed", continuous: "agreeing", emoji: "🤝" },
+    { base: "arrive", past: "arrived", participle: "arrived", continuous: "arriving", emoji: "🛬" },
+  ],
+  B: [
+    { base: "bake", past: "baked", participle: "baked", continuous: "baking", emoji: "🧁" },
+    { base: "be", past: "was", participle: "been", continuous: "being", emoji: "✨" },
+    { base: "bite", past: "bit", participle: "bitten", continuous: "biting", emoji: "🦷" },
+    { base: "blow", past: "blew", participle: "blown", continuous: "blowing", emoji: "💨" },
+    { base: "break", past: "broke", participle: "broken", continuous: "breaking", emoji: "💔" },
+    { base: "breathe", past: "breathed", participle: "breathed", continuous: "breathing", emoji: "🌬️" },
+    { base: "bring", past: "brought", participle: "brought", continuous: "bringing", emoji: "🎁" },
+    { base: "brush", past: "brushed", participle: "brushed", continuous: "brushing", emoji: "🪥" },
+    { base: "build", past: "built", participle: "built", continuous: "building", emoji: "🧱" },
+    { base: "buy", past: "bought", participle: "bought", continuous: "buying", emoji: "🛍️" },
+  ],
+  C: [
+    { base: "call", past: "called", participle: "called", continuous: "calling", emoji: "📞" },
+    { base: "carry", past: "carried", participle: "carried", continuous: "carrying", emoji: "🎒" },
+    { base: "catch", past: "caught", participle: "caught", continuous: "catching", emoji: "⚾" },
+    { base: "choose", past: "chose", participle: "chosen", continuous: "choosing", emoji: "✅" },
+    { base: "clean", past: "cleaned", participle: "cleaned", continuous: "cleaning", emoji: "🧹" },
+    { base: "climb", past: "climbed", participle: "climbed", continuous: "climbing", emoji: "🧗" },
+    { base: "close", past: "closed", participle: "closed", continuous: "closing", emoji: "🚪" },
+    { base: "color", past: "colored", participle: "colored", continuous: "coloring", emoji: "🖍️" },
+    { base: "come", past: "came", participle: "come", continuous: "coming", emoji: "🏃" },
+    { base: "cook", past: "cooked", participle: "cooked", continuous: "cooking", emoji: "🍳" },
+    { base: "count", past: "counted", participle: "counted", continuous: "counting", emoji: "🔢" },
+    { base: "cry", past: "cried", participle: "cried", continuous: "crying", emoji: "😢" },
+    { base: "cut", past: "cut", participle: "cut", continuous: "cutting", emoji: "✂️" },
+  ],
+  D: [
+    { base: "dance", past: "danced", participle: "danced", continuous: "dancing", emoji: "💃" },
+    { base: "do", past: "did", participle: "done", continuous: "doing", emoji: "✨" },
+    { base: "draw", past: "drew", participle: "drawn", continuous: "drawing", emoji: "🎨" },
+    { base: "dream", past: "dreamed", participle: "dreamed", continuous: "dreaming", emoji: "💭" },
+    { base: "drink", past: "drank", participle: "drunk", continuous: "drinking", emoji: "🥤" },
+    { base: "drive", past: "drove", participle: "driven", continuous: "driving", emoji: "🚗" },
+    { base: "drop", past: "dropped", participle: "dropped", continuous: "dropping", emoji: "💧" },
+  ],
+  E: [
+    { base: "eat", past: "ate", participle: "eaten", continuous: "eating", emoji: "🍽️" },
+    { base: "enter", past: "entered", participle: "entered", continuous: "entering", emoji: "🚪" },
+    { base: "exercise", past: "exercised", participle: "exercised", continuous: "exercising", emoji: "🏋️" },
+    { base: "explain", past: "explained", participle: "explained", continuous: "explaining", emoji: "🗣️" },
+  ],
+  F: [
+    { base: "fall", past: "fell", participle: "fallen", continuous: "falling", emoji: "🍂" },
+    { base: "feel", past: "felt", participle: "felt", continuous: "feeling", emoji: "💓" },
+    { base: "fight", past: "fought", participle: "fought", continuous: "fighting", emoji: "🥊" },
+    { base: "find", past: "found", participle: "found", continuous: "finding", emoji: "🔎" },
+    { base: "fix", past: "fixed", participle: "fixed", continuous: "fixing", emoji: "🔧" },
+    { base: "fly", past: "flew", participle: "flown", continuous: "flying", emoji: "✈️" },
+    { base: "fold", past: "folded", participle: "folded", continuous: "folding", emoji: "📄" },
+    { base: "forget", past: "forgot", participle: "forgotten", continuous: "forgetting", emoji: "🙈" },
+  ],
+  G: [
+    { base: "get", past: "got", participle: "got", continuous: "getting", emoji: "🤲" },
+    { base: "give", past: "gave", participle: "given", continuous: "giving", emoji: "🤲" },
+    { base: "go", past: "went", participle: "gone", continuous: "going", emoji: "🚶" },
+    { base: "grow", past: "grew", participle: "grown", continuous: "growing", emoji: "🌱" },
+  ],
+  H: [
+    { base: "have", past: "had", participle: "had", continuous: "having", emoji: "📦" },
+    { base: "hear", past: "heard", participle: "heard", continuous: "hearing", emoji: "👂" },
+    { base: "help", past: "helped", participle: "helped", continuous: "helping", emoji: "🆘" },
+    { base: "hide", past: "hid", participle: "hidden", continuous: "hiding", emoji: "🫣" },
+    { base: "hit", past: "hit", participle: "hit", continuous: "hitting", emoji: "💥" },
+    { base: "hold", past: "held", participle: "held", continuous: "holding", emoji: "🤲" },
+    { base: "hop", past: "hopped", participle: "hopped", continuous: "hopping", emoji: "🐰" },
+    { base: "hug", past: "hugged", participle: "hugged", continuous: "hugging", emoji: "🫂" },
+  ],
+  I: [
+    { base: "imagine", past: "imagined", participle: "imagined", continuous: "imagining", emoji: "🌈" },
+    { base: "introduce", past: "introduced", participle: "introduced", continuous: "introducing", emoji: "🤝" },
+    { base: "invite", past: "invited", participle: "invited", continuous: "inviting", emoji: "✉️" },
+  ],
+  J: [
+    { base: "join", past: "joined", participle: "joined", continuous: "joining", emoji: "🤝" },
+    { base: "jog", past: "jogged", participle: "jogged", continuous: "jogging", emoji: "🏃" },
+    { base: "jump", past: "jumped", participle: "jumped", continuous: "jumping", emoji: "🦘" },
+  ],
+  K: [
+    { base: "keep", past: "kept", participle: "kept", continuous: "keeping", emoji: "🔒" },
+    { base: "kick", past: "kicked", participle: "kicked", continuous: "kicking", emoji: "⚽" },
+    { base: "kiss", past: "kissed", participle: "kissed", continuous: "kissing", emoji: "😘" },
+    { base: "knock", past: "knocked", participle: "knocked", continuous: "knocking", emoji: "🚪" },
+    { base: "know", past: "knew", participle: "known", continuous: "knowing", emoji: "💡" },
+  ],
+  L: [
+    { base: "laugh", past: "laughed", participle: "laughed", continuous: "laughing", emoji: "😄" },
+    { base: "learn", past: "learned", participle: "learned", continuous: "learning", emoji: "🧠" },
+    { base: "leave", past: "left", participle: "left", continuous: "leaving", emoji: "🚪" },
+    { base: "like", past: "liked", participle: "liked", continuous: "liking", emoji: "❤️" },
+    { base: "listen", past: "listened", participle: "listened", continuous: "listening", emoji: "👂" },
+    { base: "look", past: "looked", participle: "looked", continuous: "looking", emoji: "👀" },
+    { base: "love", past: "loved", participle: "loved", continuous: "loving", emoji: "💖" },
+  ],
+  M: [
+    { base: "make", past: "made", participle: "made", continuous: "making", emoji: "🛠️" },
+    { base: "meet", past: "met", participle: "met", continuous: "meeting", emoji: "🤝" },
+    { base: "move", past: "moved", participle: "moved", continuous: "moving", emoji: "📦" },
+  ],
+  N: [
+    { base: "need", past: "needed", participle: "needed", continuous: "needing", emoji: "🤲" },
+    { base: "nod", past: "nodded", participle: "nodded", continuous: "nodding", emoji: "👍" },
+    { base: "notice", past: "noticed", participle: "noticed", continuous: "noticing", emoji: "👁️" },
+  ],
+  O: [
+    { base: "open", past: "opened", participle: "opened", continuous: "opening", emoji: "🚪" },
+    { base: "order", past: "ordered", participle: "ordered", continuous: "ordering", emoji: "📝" },
+  ],
+  P: [
+    { base: "paint", past: "painted", participle: "painted", continuous: "painting", emoji: "🖌️" },
+    { base: "paste", past: "pasted", participle: "pasted", continuous: "pasting", emoji: "📋" },
+    { base: "play", past: "played", participle: "played", continuous: "playing", emoji: "🎮" },
+    { base: "point", past: "pointed", participle: "pointed", continuous: "pointing", emoji: "👉" },
+    { base: "pull", past: "pulled", participle: "pulled", continuous: "pulling", emoji: "🫷" },
+    { base: "push", past: "pushed", participle: "pushed", continuous: "pushing", emoji: "🫸" },
+    { base: "put", past: "put", participle: "put", continuous: "putting", emoji: "📥" },
+  ],
+  Q: [
+    { base: "quit", past: "quit", participle: "quit", continuous: "quitting", emoji: "⏹️" },
+    { base: "question", past: "questioned", participle: "questioned", continuous: "questioning", emoji: "❓" },
+  ],
+  R: [
+    { base: "read", past: "read", participle: "read", continuous: "reading", emoji: "📖" },
+    { base: "rest", past: "rested", participle: "rested", continuous: "resting", emoji: "🛋️" },
+    { base: "ride", past: "rode", participle: "ridden", continuous: "riding", emoji: "🚴" },
+    { base: "ring", past: "rang", participle: "rung", continuous: "ringing", emoji: "🔔" },
+    { base: "run", past: "ran", participle: "run", continuous: "running", emoji: "🏃" },
+  ],
+  S: [
+    { base: "say", past: "said", participle: "said", continuous: "saying", emoji: "💬" },
+    { base: "see", past: "saw", participle: "seen", continuous: "seeing", emoji: "👀" },
+    { base: "share", past: "shared", participle: "shared", continuous: "sharing", emoji: "🤝" },
+    { base: "show", past: "showed", participle: "shown", continuous: "showing", emoji: "👉" },
+    { base: "sing", past: "sang", participle: "sung", continuous: "singing", emoji: "🎤" },
+    { base: "sit", past: "sat", participle: "sat", continuous: "sitting", emoji: "🪑" },
+    { base: "sleep", past: "slept", participle: "slept", continuous: "sleeping", emoji: "🛏️" },
+    { base: "smell", past: "smelled", participle: "smelled", continuous: "smelling", emoji: "👃" },
+    { base: "smile", past: "smiled", participle: "smiled", continuous: "smiling", emoji: "😊" },
+    { base: "speak", past: "spoke", participle: "spoken", continuous: "speaking", emoji: "🗣️" },
+    { base: "spell", past: "spelled", participle: "spelled", continuous: "spelling", emoji: "🔤" },
+    { base: "stand", past: "stood", participle: "stood", continuous: "standing", emoji: "🧍" },
+    { base: "stop", past: "stopped", participle: "stopped", continuous: "stopping", emoji: "🛑" },
+    { base: "study", past: "studied", participle: "studied", continuous: "studying", emoji: "📚" },
+    { base: "swim", past: "swam", participle: "swum", continuous: "swimming", emoji: "🏊" },
+  ],
+  T: [
+    { base: "take", past: "took", participle: "taken", continuous: "taking", emoji: "🤏" },
+    { base: "talk", past: "talked", participle: "talked", continuous: "talking", emoji: "💬" },
+    { base: "taste", past: "tasted", participle: "tasted", continuous: "tasting", emoji: "👅" },
+    { base: "teach", past: "taught", participle: "taught", continuous: "teaching", emoji: "👩‍🏫" },
+    { base: "tell", past: "told", participle: "told", continuous: "telling", emoji: "🗣️" },
+    { base: "think", past: "thought", participle: "thought", continuous: "thinking", emoji: "💭" },
+    { base: "throw", past: "threw", participle: "thrown", continuous: "throwing", emoji: "🎯" },
+    { base: "touch", past: "touched", participle: "touched", continuous: "touching", emoji: "👉" },
+    { base: "try", past: "tried", participle: "tried", continuous: "trying", emoji: "🎯" },
+    { base: "turn", past: "turned", participle: "turned", continuous: "turning", emoji: "🔄" },
+  ],
+  U: [
+    { base: "understand", past: "understood", participle: "understood", continuous: "understanding", emoji: "💡" },
+    { base: "use", past: "used", participle: "used", continuous: "using", emoji: "📱" },
+  ],
+  V: [
+    { base: "visit", past: "visited", participle: "visited", continuous: "visiting", emoji: "🚗" },
+    { base: "view", past: "viewed", participle: "viewed", continuous: "viewing", emoji: "👓" },
+  ],
+  W: [
+    { base: "wait", past: "waited", participle: "waited", continuous: "waiting", emoji: "⏳" },
+    { base: "wake", past: "woke", participle: "woken", continuous: "waking", emoji: "⏰" },
+    { base: "walk", past: "walked", participle: "walked", continuous: "walking", emoji: "🚶" },
+    { base: "want", past: "wanted", participle: "wanted", continuous: "wanting", emoji: "➕" },
+    { base: "wash", past: "washed", participle: "washed", continuous: "washing", emoji: "🧼" },
+    { base: "watch", past: "watched", participle: "watched", continuous: "watching", emoji: "📺" },
+    { base: "wear", past: "wore", participle: "worn", continuous: "wearing", emoji: "👗" },
+    { base: "win", past: "won", participle: "won", continuous: "winning", emoji: "🏆" },
+    { base: "wish", past: "wished", participle: "wished", continuous: "wishing", emoji: "⭐" },
+    { base: "work", past: "worked", participle: "worked", continuous: "working", emoji: "💼" },
+    { base: "write", past: "wrote", participle: "written", continuous: "writing", emoji: "✏️" },
+  ],
+  Y: [
+    { base: "yawn", past: "yawned", participle: "yawned", continuous: "yawning", emoji: "🥱" },
+    { base: "yell", past: "yelled", participle: "yelled", continuous: "yelling", emoji: "📢" },
+  ],
+  Z: [
+    { base: "zip", past: "zipped", participle: "zipped", continuous: "zipping", emoji: "🤐" },
+    { base: "zoom", past: "zoomed", participle: "zoomed", continuous: "zooming", emoji: "🏎️" },
+  ],
+};
+
+// Generates alphabetical Actions subcategories where every verb appears strictly in 1st -> 2nd -> 3rd -> 4th order
+const ACTION_VERB_SUBCATEGORIES = Object.entries(VERBS_A_TO_Z).map(([letter, list]) => {
+  const words: [string, string, ("1st" | "2nd" | "3rd" | "4th")?][] = [];
+  list.forEach((v) => {
+    words.push([capWord(v.base), v.emoji, "1st"]);
+    words.push([capWord(v.past), v.emoji, "2nd"]);
+    words.push([capWord(v.participle), v.emoji, "3rd"]);
+    words.push([capWord(v.continuous), v.emoji, "4th"]);
+  });
+  return {
+    parentCategory: "Actions",
+    name: `Verbs ${letter}`,
+    icon: letter === "A" ? "🅰️" : letter === "B" ? "🅱️" : "🔤",
+    words,
+  };
+});
+
 export const STARTER_SUBCATEGORIES: {
   parentCategory: string;
   name: string;
   icon: string;
-  words: [string, string][];
+  words: [string, string, ("1st" | "2nd" | "3rd" | "4th")?][];
 }[] = [
-  // Food
+  // --- Food Subcategories ---
   {
     parentCategory: "Food",
     name: "Drinks",
@@ -358,6 +577,29 @@ export const STARTER_SUBCATEGORIES: {
       ["Water", "💧"],
       ["Milk", "🥛"],
       ["Juice", "🧃"],
+      ["Apple Juice", "🧃"],
+      ["Orange Juice", "🍊"],
+      ["Hot Chocolate", "☕"],
+      ["Tea", "🍵"],
+      ["Soda", "🥤"],
+      ["Smoothie", "🥤"],
+      ["Lemonade", "🍋"],
+    ],
+  },
+  {
+    parentCategory: "Food",
+    name: "Fast Food",
+    icon: "🍕",
+    words: [
+      ["Pizza", "🍕"],
+      ["Burger", "🍔"],
+      ["French Fries", "🍟"],
+      ["Hot Dog", "🌭"],
+      ["Chicken Nuggets", "🍗"],
+      ["Taco", "🌮"],
+      ["Sandwich", "🥪"],
+      ["Fried Chicken", "🍗"],
+      ["Onion Rings", "🧅"],
     ],
   },
   {
@@ -367,159 +609,302 @@ export const STARTER_SUBCATEGORIES: {
     words: [
       ["Apple", "🍎"],
       ["Banana", "🍌"],
-      ["Fruit", "🍓"],
+      ["Orange", "🍊"],
+      ["Strawberry", "🍓"],
+      ["Grapes", "🍇"],
+      ["Watermelon", "🍉"],
+      ["Peach", "🍑"],
+      ["Mango", "🥭"],
+      ["Pineapple", "🍍"],
+      ["Pear", "🍐"],
+      ["Cherries", "🍒"],
     ],
   },
   {
     parentCategory: "Food",
-    name: "Meals & Snacks",
-    icon: "🥪",
+    name: "Vegetables",
+    icon: "🥦",
     words: [
-      ["Bread", "🍞"],
-      ["Cookie", "🍪"],
-      ["Rice", "🍚"],
-      ["Chicken", "🍗"],
-      ["Snack", "🥨"],
-      ["Pizza", "🍕"],
-      ["Sandwich", "🥪"],
+      ["Carrot", "🥕"],
+      ["Broccoli", "🥦"],
+      ["Corn", "🌽"],
+      ["Potato", "🥔"],
+      ["Cucumber", "🥒"],
+      ["Tomato", "🍅"],
+      ["Peas", "🫛"],
+      ["Lettuce", "🥬"],
+      ["Onion", "🧅"],
+      ["Pepper", "🫑"],
     ],
   },
-  // People
+  {
+    parentCategory: "Food",
+    name: "Breakfast & Meals",
+    icon: "🍳",
+    words: [
+      ["Eggs", "🍳"],
+      ["Pancakes", "🥞"],
+      ["Waffles", "🧇"],
+      ["Cereal", "🥣"],
+      ["Toast", "🍞"],
+      ["Rice", "🍚"],
+      ["Noodles", "🍜"],
+      ["Pasta", "🍝"],
+      ["Soup", "🍲"],
+      ["Grilled Cheese", "🥪"],
+    ],
+  },
+  {
+    parentCategory: "Food",
+    name: "Snacks & Sweets",
+    icon: "🍪",
+    words: [
+      ["Cookie", "🍪"],
+      ["Ice Cream", "🍦"],
+      ["Cake", "🎂"],
+      ["Donut", "🍩"],
+      ["Chips", "🥔"],
+      ["Popcorn", "🍿"],
+      ["Candy", "🍬"],
+      ["Chocolate", "🍫"],
+      ["Cupcake", "🧁"],
+      ["Pretzel", "🥨"],
+    ],
+  },
+
+  // --- People Subcategories ---
   {
     parentCategory: "People",
     name: "Family",
-    icon: "👨‍👩‍👦",
+    icon: "👨‍👩‍👧",
     words: [
       ["Mom", "👩"],
       ["Dad", "👨"],
       ["Brother", "👦"],
       ["Sister", "👧"],
+      ["Baby", "👶"],
       ["Grandma", "👵"],
       ["Grandpa", "👴"],
-      ["Baby", "👶"],
+      ["Aunt", "👩"],
+      ["Uncle", "👨"],
+      ["Cousin", "🧑"],
+      ["Pet", "🐶"],
     ],
   },
   {
     parentCategory: "People",
-    name: "Friends & Helpers",
-    icon: "🧑‍🤝‍🧑",
+    name: "Friends & School",
+    icon: "👩‍🏫",
     words: [
       ["Teacher", "👩‍🏫"],
       ["Friend", "🧑‍🤝‍🧑"],
-      ["Doctor", "👨‍⚕️"],
+      ["Classmate", "🧑"],
+      ["Principal", "👨‍💼"],
+      ["Aide", "👩‍💼"],
+      ["Student", "🧑‍🎓"],
       ["Me", "🧒"],
       ["You", "👉"],
     ],
   },
-  // Feelings
+  {
+    parentCategory: "People",
+    name: "Helpers & Therapists",
+    icon: "🩺",
+    words: [
+      ["Doctor", "👨‍⚕️"],
+      ["Nurse", "👩‍⚕️"],
+      ["Speech Therapist", "🗣️"],
+      ["OT", "🩺"],
+      ["PT", "🏃"],
+      ["Police", "👮"],
+      ["Firefighter", "👨‍🚒"],
+      ["Driver", "🚌"],
+    ],
+  },
+
+  // --- Feelings Subcategories ---
   {
     parentCategory: "Feelings",
-    name: "Good Feelings",
+    name: "Happy & Calm",
     icon: "😊",
     words: [
       ["Happy", "😊"],
       ["Excited", "🤩"],
+      ["Proud", "🦁"],
       ["Calm", "😌"],
       ["Loved", "🥰"],
+      ["Relaxed", "🧘"],
+      ["Silly", "😜"],
+      ["Energetic", "⚡"],
+      ["Safe", "🛡️"],
     ],
   },
   {
     parentCategory: "Feelings",
-    name: "Needs & Hard Feelings",
-    icon: "💭",
+    name: "Hard Feelings",
+    icon: "😢",
     words: [
       ["Sad", "😢"],
-      ["Hungry", "🍎"],
-      ["Thirsty", "💧"],
-      ["Tired", "😴"],
-      ["Scared", "😨"],
       ["Angry", "😠"],
-      ["Hurt", "🤕"],
-      ["Sick", "🤒"],
+      ["Frustrated", "😤"],
+      ["Scared", "😨"],
+      ["Worried", "😟"],
+      ["Confused", "😕"],
+      ["Jealous", "😒"],
+      ["Lonely", "🥺"],
+      ["Bored", "🥱"],
     ],
   },
-  // Places
+  {
+    parentCategory: "Feelings",
+    name: "Body Sensations",
+    icon: "🤒",
+    words: [
+      ["Tired", "😴"],
+      ["Hungry", "🍎"],
+      ["Thirsty", "💧"],
+      ["Sick", "🤒"],
+      ["Hurt", "🤕"],
+      ["Cold", "🥶"],
+      ["Hot", "🥵"],
+      ["Itchy", "🦟"],
+      ["Full", "🫄"],
+      ["Dizzy", "😵"],
+    ],
+  },
+
+  // --- Places Subcategories ---
   {
     parentCategory: "Places",
     name: "Home",
-    icon: "🏠",
+    icon: "🏡",
     words: [
       ["Home", "🏠"],
       ["Bedroom", "🛏️"],
+      ["Living Room", "🛋️"],
       ["Kitchen", "🍳"],
       ["Bathroom", "🚻"],
+      ["Backyard", "🌳"],
+      ["Bed", "🛏️"],
+      ["Couch", "🛋️"],
+      ["Dining Room", "🍽️"],
     ],
   },
   {
     parentCategory: "Places",
-    name: "Outside & Community",
-    icon: "🌳",
+    name: "School & Community",
+    icon: "🏫",
     words: [
       ["School", "🏫"],
-      ["Park", "🌳"],
+      ["Classroom", "🏫"],
       ["Playground", "🛝"],
-      ["Outside", "🏕️"],
-      ["Car", "🚗"],
+      ["Cafeteria", "🍽️"],
+      ["Library", "📚"],
+      ["Gym", "🏀"],
+      ["Bus", "🚌"],
+      ["Park", "🌳"],
+      ["Hallway", "🚶"],
+    ],
+  },
+  {
+    parentCategory: "Places",
+    name: "Health & Clinic",
+    icon: "🏥",
+    words: [
+      ["Doctor", "👨‍⚕️"],
+      ["Dentist", "🦷"],
+      ["Hospital", "🏥"],
+      ["Therapy", "🩺"],
+      ["Clinic", "🏥"],
+      ["Pharmacy", "💊"],
+    ],
+  },
+  {
+    parentCategory: "Places",
+    name: "Fun Outings",
+    icon: "🏬",
+    words: [
       ["Store", "🏪"],
+      ["Supermarket", "🛒"],
+      ["Mall", "🏬"],
+      ["Restaurant", "🍽️"],
+      ["Zoo", "🦁"],
+      ["Beach", "🏖️"],
+      ["Movie Theater", "🎬"],
+      ["Pool", "🏊"],
     ],
   },
-  // Actions
-  {
-    parentCategory: "Actions",
-    name: "Daily Routines",
-    icon: "🧼",
-    words: [
-      ["Eat", "🍽️"],
-      ["Eating", "🍽️"],
-      ["Drink", "🥤"],
-      ["Drinking", "🥤"],
-      ["Sleep", "🛏️"],
-      ["Sleeping", "🛏️"],
-      ["Wash", "🧼"],
-      ["Clean", "🧹"],
-    ],
-  },
-  {
-    parentCategory: "Actions",
-    name: "Play & Movement",
-    icon: "🏃",
-    words: [
-      ["Go", "🚶"],
-      ["Going", "🚶"],
-      ["Went", "🚶"],
-      ["Play", "🎮"],
-      ["Playing", "🎮"],
-      ["Come", "🏃"],
-      ["Read", "📖"],
-      ["Watch", "📺"],
-      ["Help", "🆘"],
-      ["Open", "🚪"],
-    ],
-  },
-  // Things
+
+  // --- Things Subcategories ---
   {
     parentCategory: "Things",
     name: "Toys & Tech",
     icon: "🧸",
     words: [
-      ["Ball", "⚽"],
-      ["Toy", "🧸"],
-      ["Book", "📚"],
       ["Tablet", "📱"],
+      ["Phone", "📞"],
+      ["Toy Car", "🚗"],
+      ["Doll", "🪆"],
+      ["Blocks", "🧱"],
+      ["Puzzle", "🧩"],
+      ["Ball", "⚽"],
+      ["Video Game", "🎮"],
+      ["Train", "🚂"],
+      ["Teddy Bear", "🧸"],
     ],
   },
   {
     parentCategory: "Things",
-    name: "Daily Items",
+    name: "School Supplies",
     icon: "🎒",
     words: [
-      ["Shoes", "👟"],
-      ["Blanket", "🧶"],
-      ["Clothes", "👕"],
-      ["Cup", "🥤"],
       ["Backpack", "🎒"],
+      ["Pencil", "✏️"],
+      ["Crayon", "🖍️"],
+      ["Scissors", "✂️"],
+      ["Glue", "🧴"],
+      ["Paper", "📄"],
+      ["Book", "📖"],
+      ["Marker", "🖊️"],
+      ["Ruler", "📏"],
+      ["Eraser", "🧼"],
     ],
   },
+  {
+    parentCategory: "Things",
+    name: "Clothes",
+    icon: "👕",
+    words: [
+      ["Shirt", "👕"],
+      ["Pants", "👖"],
+      ["Shoes", "👟"],
+      ["Socks", "🧦"],
+      ["Jacket", "🧥"],
+      ["Hat", "🧢"],
+      ["Pajamas", "🩳"],
+      ["Dress", "👗"],
+      ["Shorts", "🩳"],
+      ["Boots", "🥾"],
+    ],
+  },
+  {
+    parentCategory: "Things",
+    name: "Bathroom & Hygiene",
+    icon: "🛁",
+    words: [
+      ["Toothbrush", "🪥"],
+      ["Toothpaste", "🧴"],
+      ["Soap", "🧼"],
+      ["Shampoo", "🧴"],
+      ["Towel", "🧖"],
+      ["Hairbrush", "💇"],
+      ["Toilet Paper", "🧻"],
+      ["Shower", "🚿"],
+    ],
+  },
+
+  // --- Actions Alphabetical A to Z Subcategories ---
+  ...ACTION_VERB_SUBCATEGORIES,
 ];
 
 // Built-in folder names (starter board + bulk-build seed lists), by language.
@@ -667,7 +1052,27 @@ function ensureAllStandardCategories() {
     }
   });
 
-  // Ensure standard sub-categories exist and have their words populated
+  // 1. Remove obsolete seed subcategories under Actions that are not in current STARTER_SUBCATEGORIES
+  const actionsCat = cache.find(
+    (c) =>
+      !c.parentCategoryId &&
+      (c.name.toLowerCase() === "actions" || (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase() === "actions")
+  );
+  if (actionsCat) {
+    const validActionSubNames = new Set(
+      STARTER_SUBCATEGORIES.filter((s) => s.parentCategory === "Actions").map((s) => s.name.toLowerCase())
+    );
+    const toRemove = cache.filter(
+      (c) => c.parentCategoryId === actionsCat.id && c.source === "seed" && !validActionSubNames.has(c.name.toLowerCase())
+    );
+    if (toRemove.length > 0) {
+      const removeIds = new Set(toRemove.map((c) => c.id));
+      cache = cache.filter((c) => !removeIds.has(c.id));
+      changed = true;
+    }
+  }
+
+  // 2. Ensure standard sub-categories exist and have their words populated in exact sequence
   STARTER_SUBCATEGORIES.forEach((sub, subIdx) => {
     const parent = cache.find(
       (c) =>
@@ -701,24 +1106,46 @@ function ensureAllStandardCategories() {
       changed = true;
     }
 
-    // Populate words for this sub-category
-    sub.words.forEach(([label, emoji]) => {
+    // Populate and synchronize words for this sub-category in strict sequential order
+    const targetWords = sub.words.map(([label, emoji, verbFormTag], wi) => {
+      const existing = subCat!.words.find(
+        (w) => w.label.toLowerCase() === label.toLowerCase()
+      );
       const localized = starterLabel(label, seedLang) || label;
-      if (!subCat!.words.some((w) => w.label.toLowerCase() === localized.toLowerCase() || w.label.toLowerCase() === label.toLowerCase())) {
-        subCat!.words.push({
-          id: uid("w"),
-          label: localized,
-          phrase: localized,
-          emoji,
-          imageUri: getPictogramUrl(label) || undefined,
-          useTextToSpeech: true,
-          size: "md" as TileSize,
-          order: subCat!.words.length,
-          useCount: 0,
-        });
-        changed = true;
-      }
+      return {
+        id: existing?.id ?? uid("w"),
+        label: localized,
+        phrase: localized,
+        emoji: emoji || existing?.emoji || "🔹",
+        imageUri: existing?.imageUri || getPictogramUrl(label) || undefined,
+        useTextToSpeech: true,
+        size: "md" as TileSize,
+        order: wi,
+        useCount: existing?.useCount ?? 0,
+        verbFormTag: verbFormTag ?? existing?.verbFormTag,
+      };
     });
+
+    // Preserve any custom words the parent added to this category
+    const customParentWords = subCat.words.filter(
+      (w) => !sub.words.some(([swLabel]) => swLabel.toLowerCase() === w.label.toLowerCase())
+    );
+    const combinedWords = [
+      ...targetWords,
+      ...customParentWords.map((cw, i) => ({ ...cw, order: targetWords.length + i })),
+    ];
+
+    if (
+      subCat.words.length !== combinedWords.length ||
+      subCat.words.some(
+        (w, i) =>
+          w.label !== combinedWords[i]?.label ||
+          w.verbFormTag !== combinedWords[i]?.verbFormTag
+      )
+    ) {
+      subCat.words = combinedWords;
+      changed = true;
+    }
   });
 
   // Ensure priority shelves appear first: Core, People, Feelings, Actions, Food, Places, Things, Red
@@ -846,6 +1273,20 @@ function mutate(id: string, fn: (c: CustomCategory) => void): CustomCategory | u
 export function renameCategory(id: string, name: string) {
   return mutate(id, (c) => {
     c.name = name.trim() || c.name;
+  });
+}
+
+export function updateCategory(
+  id: string,
+  patch: Partial<Pick<CustomCategory, "name" | "icon" | "color" | "imageUri">>
+): CustomCategory | undefined {
+  return mutate(id, (c) => {
+    if (patch.name !== undefined && patch.name.trim().length > 0) {
+      c.name = patch.name.trim();
+    }
+    if (patch.icon !== undefined) c.icon = patch.icon;
+    if (patch.color !== undefined) c.color = patch.color;
+    if (patch.imageUri !== undefined) c.imageUri = patch.imageUri;
   });
 }
 
@@ -1025,6 +1466,65 @@ export function cleanAndDeduplicateCategories() {
         changed = true;
       }
     }
+  }
+
+  // 1. Separate Verbs vs Nouns/Places/Food/Things:
+  // Verbs with forms (e.g. Go, Went, Going, Eat, Eating, Drink, Drinking, Play, Playing, Sleep, Sleeping, Wash, etc.)
+  // must ONLY live in "Actions". Remove verb-form words from Places, Food, Things, Feelings, People.
+  const nonVerbCategories = ["places", "food", "things", "feelings", "people"];
+  const actionVerbLabels = new Set([
+    "go", "went", "going", "gone",
+    "eat", "eating", "ate", "eaten",
+    "play", "playing", "played",
+    "sleep", "sleeping", "slept",
+    "come", "coming", "came",
+    "wash", "washing", "washed",
+    "clean", "cleaning", "cleaned",
+    "open", "opening", "opened",
+    "close", "closing", "closed",
+    "give", "giving", "gave", "given",
+    "take", "taking", "took", "taken",
+    "run", "running", "ran",
+    "walk", "walking", "walked",
+    "read", "reading",
+    "watch", "watching", "watched",
+    "write", "writing", "wrote", "written",
+  ]);
+
+  for (const c of cache) {
+    const enName = (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase();
+    if (nonVerbCategories.includes(enName)) {
+      const beforeCount = c.words.length;
+      c.words = c.words.filter((w) => {
+        const lbl = (w.label || "").trim().toLowerCase();
+        return !actionVerbLabels.has(lbl);
+      });
+      if (c.words.length !== beforeCount) {
+        changed = true;
+      }
+    }
+  }
+
+  // 2. Alphabetical (A to Z) sorting for ALL categories (except Core & Say It For Me):
+  for (const c of cache) {
+    const enName = (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase();
+    if (enName !== "core" && enName !== "say it for me") {
+      c.words.sort((a, b) => (a.label || "").localeCompare(b.label || "", undefined, { sensitivity: "base" }));
+      c.words.forEach((w, i) => { w.order = i; });
+    }
+  }
+
+  // 3. Alphabetical (A to Z) sorting for sub-categories under any shelf:
+  const subCats = cache.filter((c) => !!c.parentCategoryId);
+  const byParent: Record<string, CustomCategory[]> = {};
+  for (const sc of subCats) {
+    const p = sc.parentCategoryId!;
+    if (!byParent[p]) byParent[p] = [];
+    byParent[p].push(sc);
+  }
+  for (const p in byParent) {
+    byParent[p].sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" }));
+    byParent[p].forEach((sc, i) => { sc.order = i; });
   }
 
   // Ensure priority shelves appear first
@@ -1254,6 +1754,127 @@ export function recordWordUseByWordId(wordId: string) {
       return;
     }
   }
+}
+
+/**
+ * 90-Second Personalized Board Builder (Tala Parity)
+ * Creates a top-priority "⭐️ [Name]'s World" category seeded with the child's
+ * real favorite foods, family members, activities and essential functional phrase cards.
+ */
+export function createPersonalizedFavoritesCategory(
+  childName: string,
+  favourites: {
+    foods: string[];
+    family: string[];
+    activities: string[];
+  }
+): CustomCategory {
+  const catName = childName.trim() ? `⭐️ ${childName.trim()}'s World` : "⭐️ My Favorites";
+  // Remove existing personalized category if it exists
+  cache = cache.filter((c) => !c.name.startsWith("⭐️"));
+
+  const now = Date.now();
+  const words: CustomWord[] = [];
+
+  // Essential instant request cards (GLP phrase-first)
+  const essentials: [string, string, string][] = [
+    ["Yes", "Yes, please!", "✅"],
+    ["No", "No, thank you.", "❌"],
+    ["Help", "Can someone please help me?", "🆘"],
+    ["More", "Can I have some more, please?", "➕"],
+    ["Break", "I need a quiet break, please.", "🧘"],
+    ["All done", "I am all done now, thank you!", "⭐"],
+  ];
+  for (const [lbl, phr, emj] of essentials) {
+    words.push({
+      id: uid("w_fav"),
+      label: lbl,
+      phrase: phr,
+      emoji: emj,
+      imageUri: getPictogramUrl(lbl) || undefined,
+      color: "#D5E8DF",
+      useTextToSpeech: true,
+      size: "md",
+      order: words.length,
+      useCount: 0,
+    });
+  }
+
+  // Foods
+  for (const food of (favourites.foods || [])) {
+    if (!food.trim()) continue;
+    const clean = food.trim();
+    words.push({
+      id: uid("w_food"),
+      label: clean,
+      phrase: `I want ${clean.toLowerCase()}, please.`,
+      emoji: "🍽️",
+      imageUri: getPictogramUrl(clean) || undefined,
+      color: "#FFF0B8",
+      useTextToSpeech: true,
+      size: "md",
+      order: words.length,
+      useCount: 0,
+    });
+  }
+
+  // Family / Important People
+  for (const person of (favourites.family || [])) {
+    if (!person.trim()) continue;
+    const clean = person.trim();
+    words.push({
+      id: uid("w_fam"),
+      label: clean,
+      phrase: `I want to see ${clean}!`,
+      emoji: "❤️",
+      imageUri: getPictogramUrl(clean) || undefined,
+      color: "#FCD6D6",
+      useTextToSpeech: true,
+      size: "md",
+      order: words.length,
+      useCount: 0,
+    });
+  }
+
+  // Activities
+  for (const act of (favourites.activities || [])) {
+    if (!act.trim()) continue;
+    const clean = act.trim();
+    words.push({
+      id: uid("w_act"),
+      label: clean,
+      phrase: `Can I play ${clean.toLowerCase()}?`,
+      emoji: "🎮",
+      imageUri: getPictogramUrl(clean) || undefined,
+      color: "#D6ECFA",
+      useTextToSpeech: true,
+      size: "md",
+      order: words.length,
+      useCount: 0,
+    });
+  }
+
+  const cat: CustomCategory = {
+    id: uid("cat_fav"),
+    name: catName,
+    createdAt: now,
+    updatedAt: now,
+    source: "manual",
+    grouping: "none",
+    color: "#EAB308",
+    icon: "⭐",
+    parentCategoryId: null,
+    order: -1, // always first!
+    words,
+  };
+
+  cache = [cat, ...cache];
+  // Re-index orders
+  cache.forEach((c, idx) => {
+    c.order = idx;
+  });
+  persist();
+  return cat;
 }
 
 /** Delete a category and any sub-folders under it. */

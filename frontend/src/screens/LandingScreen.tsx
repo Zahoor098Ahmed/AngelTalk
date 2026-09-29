@@ -23,43 +23,51 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     icon: "heart",
-    title: { en: "BloomSpeech", ar: "بلوم سبيتش" },
+    title: { en: "Angel Talk", ar: "ملاك توك (Angel Talk)" },
     subtitle: {
-      en: "A gentle AAC communication companion for children with autism and other special needs",
-      ar: "رفيق تواصل لطيف للأطفال ذوي التوحد واحتياجات خاصة أخرى",
+      en: "A gentle, modern AAC communication companion for children with autism and speech delays — designed for families, built with love",
+      ar: "رفيق تواصل لطيف وحديث للأطفال ذوي التوحد وتأخر النطق — مصمم للعائلات بكل حب",
     },
   },
   {
-    icon: "chatbubble-ellipses",
-    title: { en: "Speak With Ease", ar: "تواصل بسهولة" },
+    icon: "flash",
+    title: { en: "Whole Phrases & Tap-to-Talk", ar: "جمل كاملة وتحدث بنقرة واحدة" },
     subtitle: {
-      en: "A simple AAC picture board so your child can tap a picture and be understood",
-      ar: "لوحة تواصل بالصور تساعد طفلك على التعبير عن احتياجاته ومشاعره",
+      en: "Supports Gestalt Language Processors (GLP) — one tap speaks full natural sentences like 'I want pizza' or 'Can I play iPad?'",
+      ar: "يدعم معالجي اللغة الكلية — نقرة واحدة تنطق جملاً طبيعية كاملة مثل 'أريد بيتزا' أو 'هل يمكنني اللعب؟'",
     },
   },
   {
-    icon: "folder-open",
-    title: { en: "Vocabulary That Grows With Them", ar: "مفردات تنمو معهم" },
+    icon: "sparkles",
+    title: { en: "90-Second Personalized Board", ar: "لوحة مخصصة في 90 ثانية" },
     subtitle: {
-      en: "Add new words by voice, from the gallery, or from the web — organized into categories only a parent can edit",
-      ar: "أضف كلمات جديدة بالصوت أو من المعرض أو من الويب — مرتبة في فئات يعدلها الوالدان فقط",
+      en: "Built around your child's favorite foods, real family, and toys — not just a generic starter board",
+      ar: "مبنية حول أطعمة طفلك المفضلة، أفراد العائلة، وألعابه الحقيقية — وليست مجرد لوحة عامة",
+    },
+  },
+  {
+    icon: "book",
+    title: { en: "Visual Social Stories", ar: "قصص اجتماعية بصرية" },
+    subtitle: {
+      en: "Illustrated step-by-step guides for dentist visits, haircuts, school routines, and emotional calming with read-aloud voice",
+      ar: "إرشادات بصرية مصورة لزيارة طبيب الأسنان، الحلاقة، المدرسة، والهدوء النفسي مع نطق صوتي",
     },
   },
   {
     icon: "shield-checkmark",
-    title: { en: "Private & Secure", ar: "خصوصية وأمان" },
+    title: { en: "100% Private & Offline", ar: "خصوصية وأمان تام بدون إنترنت" },
     subtitle: {
-      en: "Face recognition stays on this device — nothing is ever uploaded anywhere",
-      ar: "التعرف على الوجه يبقى على هذا الجهاز فقط ولا يُرفع أبداً",
+      en: "Everything stays on your device — no subscriptions required, no data selling, completely safe",
+      ar: "كل شيء يبقى على جهازك — بدون اشتراكات إجبارية، بدون بيع للبيانات، آمن تماماً",
     },
   },
 ];
 
 const FEATURES: { icon: keyof typeof Ionicons.glyphMap; en: string; ar: string }[] = [
   { icon: "chatbubbles", en: "AAC Board", ar: "لوحة تواصل" },
-  { icon: "folder-open-outline", en: "My Categories", ar: "فئاتي" },
-  { icon: "mic-outline", en: "Add by Voice", ar: "أضف بالصوت" },
-  { icon: "mic-circle-outline", en: "Voice Match", ar: "مطابقة صوتية" },
+  { icon: "flash-outline", en: "Tap-to-Talk", ar: "نطق فوري" },
+  { icon: "book-outline", en: "Social Stories", ar: "قصص بصرية" },
+  { icon: "sparkles-outline", en: "90s Setup", ar: "إعداد سريع" },
 ];
 
 // Muted, low-saturation blue/green palette — calmer and less overstimulating

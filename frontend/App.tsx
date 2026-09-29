@@ -25,14 +25,18 @@ import CategoryBuilderScreen from "./src/screens/CategoryBuilderScreen";
 import PhraseMatchLibraryScreen from "./src/screens/PhraseMatchLibraryScreen";
 import ContentReviewQueueScreen from "./src/screens/ContentReviewQueueScreen";
 import VoiceCommandMatchScreen from "./src/screens/VoiceCommandMatchScreen";
+import QuickOnboardingScreen from "./src/screens/QuickOnboardingScreen";
+import SocialStoriesScreen from "./src/screens/SocialStoriesScreen";
 
 type Screen =
   | "landing"
+  | "onboarding-quick"
   | "face-scan"
   | "parent-setup"
   | "enroll-child"
   | "main"
   | "more"
+  | "social-stories"
   | "my-categories"
   | "category-builder"
   | "phrase-library"
@@ -53,6 +57,8 @@ function AppInner() {
   const [screen, setScreen] = useState<Screen>("landing");
   const [currentTab, setCurrentTab] = useState<TabScreen>("home");
   const [currentChild, setCurrentChild] = useState<ChildProfile | null>(null);
+  const [categoryReturnScreen, setCategoryReturnScreen] = useState<"speak" | "more">("more");
+  const [categoryInitialId, setCategoryInitialId] = useState<string | null>(null);
   const lang = settings.language;
   const go = (s: Screen) => setScreen(s);
 
@@ -65,7 +71,18 @@ function AppInner() {
       </View>
     );
   } else if (screen === "landing") {
-    body = <LandingScreen onGetStarted={() => go("face-scan")} />;
+    body = <LandingScreen onGetStarted={() => go("onboarding-quick")} />;
+  } else if (screen === "onboarding-quick") {
+    body = (
+      <QuickOnboardingScreen
+        onComplete={(child) => {
+          setCurrentChild(child);
+          setCurrentTab("speak");
+          go("main");
+        }}
+        onSkipToNormal={() => go("face-scan")}
+      />
+    );
   } else if (screen === "face-scan") {
     body = (
       <FaceScanScreen
@@ -124,6 +141,7 @@ function AppInner() {
           tab={currentTab}
           onTabChange={(t) => setCurrentTab(t)}
           onOpenMore={() => go("more")}
+          onOpenSocialStories={() => go("social-stories")}
           labels={TAB_LABEL}
         />
       );
@@ -134,6 +152,11 @@ function AppInner() {
           tab={currentTab}
           onTabChange={(t) => setCurrentTab(t)}
           labels={TAB_LABEL}
+          onOpenCategories={(catId) => {
+            setCategoryReturnScreen("speak");
+            setCategoryInitialId(catId ?? null);
+            go("my-categories");
+          }}
         />
       );
     } else if (currentTab === "schedule") {
@@ -165,6 +188,8 @@ function AppInner() {
         />
       );
     }
+  } else if (screen === "social-stories") {
+    body = <SocialStoriesScreen onBack={() => go(currentChild ? "main" : "more")} />;
   } else if (screen === "more") {
     body = (
       <MoreMenu
@@ -173,14 +198,32 @@ function AppInner() {
           setCurrentTab(t);
           go("main");
         }}
-        onNavigate={go}
+        onNavigate={(targetScreen) => {
+          if (targetScreen === "my-categories") {
+            setCategoryReturnScreen("more");
+            setCategoryInitialId(null);
+          }
+          go(targetScreen);
+        }}
         onBack={() => go(currentChild ? "main" : "face-scan")}
       />
     );
   } else if (screen === "my-categories") {
+    const handleCategoryBack = () => {
+      if (categoryReturnScreen === "speak") {
+        setCurrentTab("speak");
+        go("main");
+      } else {
+        go("more");
+      }
+    };
     body = (
-      <PinGate title={t("pgBoardEditorTitle", lang)} onCancel={() => go("more")}>
-        <MyCategoriesScreen onBack={() => go("more")} onCreate={() => go("category-builder")} />
+      <PinGate title={t("pgBoardEditorTitle", lang)} onCancel={handleCategoryBack}>
+        <MyCategoriesScreen
+          initialCategoryId={categoryInitialId ?? undefined}
+          onBack={handleCategoryBack}
+          onCreate={() => go("category-builder")}
+        />
       </PinGate>
     );
   } else if (screen === "category-builder") {
@@ -247,8 +290,10 @@ function MoreMenu({
   ];
 
   const adminRows: { key: Screen; label: string; icon: keyof typeof Ionicons.glyphMap; color: string; desc: string }[] = [
+    { key: "social-stories", label: "Visual Social Stories", icon: "book", color: "#f59e0b", desc: "Read-aloud guides for dentist, haircut, school, & emotions" },
+    { key: "onboarding-quick", label: "90s Board Personalizer", icon: "sparkles", color: "#0ea5e9", desc: "Re-build board with child's real favorite foods, family & toys" },
     { key: "my-categories", label: "My Categories & Words", icon: "folder-open", color: "#10b981", desc: "Organize shelves, words, hide/show & delete" },
-    { key: "category-builder", label: "Category Builder & Generator", icon: "sparkles", color: "#0ea5e9", desc: "Build new categories from lists or AI presets" },
+    { key: "category-builder", label: "Category Builder & Generator", icon: "sparkles-outline", color: "#0ea5e9", desc: "Build new categories from lists or AI presets" },
     { key: "voice-command", label: "Voice Command Match", icon: "mic-circle", color: "#6366f1", desc: "Practice spoken phrases with live visual matching" },
     { key: "phrase-library", label: "Phrase Library", icon: "chatbubble-ellipses", color: "#8b5cf6", desc: "Manage trigger phrases, speech levels & targets" },
     { key: "review-queue", label: "Content Review Queue", icon: "checkmark-done-circle", color: "#f59e0b", desc: "Review, approve or reject vocabulary entries" },
@@ -265,10 +310,10 @@ function MoreMenu({
             <Ionicons name="arrow-back" size={22} color={colors.textDark} />
           </Pressable>
           <View style={{ alignItems: "center" }}>
-            <Text style={styles.moreTitle}>Menu & Navigation</Text>
+            <Text style={styles.moreTitle}>Angel Talk Hub</Text>
             {childName ? (
               <Text style={{ fontSize: 12, color: colors.textMid, fontWeight: "600" }}>
-                Active profile: {childName}
+                Active child: {childName}
               </Text>
             ) : null}
           </View>
