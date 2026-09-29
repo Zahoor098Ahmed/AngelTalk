@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { CustomCategory, CustomWord, TileSize, LanguageCode } from "../types";
 import { starterLabel, wordLabel } from "./i18n";
 import { getPictogramUrl } from "./aacPictograms";
+import { VERB_FORMS_LIST } from "./verbForms";
 
 const SEED_WORD_EN: Record<string, string[]> = {
   Core: ["I", "am", "is", "are", "was", "I want", "More", "Help", "No", "Yes", "All done", "I need", "I feel", "I like", "Can I have", "Please", "Thank you", "Stop", "Go", "to", "the", "Look", "Where"],
@@ -811,10 +812,10 @@ export const STARTER_SUBCATEGORIES: {
     name: "Health & Clinic",
     icon: "🏥",
     words: [
-      ["Doctor", "👨‍⚕️"],
-      ["Dentist", "🦷"],
+      ["Doctor Office", "🏥"],
+      ["Dentist Clinic", "🦷"],
       ["Hospital", "🏥"],
-      ["Therapy", "🩺"],
+      ["Therapy Clinic", "🩺"],
       ["Clinic", "🏥"],
       ["Pharmacy", "💊"],
     ],
@@ -1468,39 +1469,122 @@ export function cleanAndDeduplicateCategories() {
     }
   }
 
-  // 1. Separate Verbs vs Nouns/Places/Food/Things:
-  // Verbs with forms (e.g. Go, Went, Going, Eat, Eating, Drink, Drinking, Play, Playing, Sleep, Sleeping, Wash, etc.)
-  // must ONLY live in "Actions". Remove verb-form words from Places, Food, Things, Feelings, People.
-  const nonVerbCategories = ["places", "food", "things", "feelings", "people"];
-  const actionVerbLabels = new Set([
-    "go", "went", "going", "gone",
-    "eat", "eating", "ate", "eaten",
-    "play", "playing", "played",
-    "sleep", "sleeping", "slept",
-    "come", "coming", "came",
-    "wash", "washing", "washed",
-    "clean", "cleaning", "cleaned",
-    "open", "opening", "opened",
-    "close", "closing", "closed",
-    "give", "giving", "gave", "given",
-    "take", "taking", "took", "taken",
-    "run", "running", "ran",
-    "walk", "walking", "walked",
-    "read", "reading",
-    "watch", "watching", "watched",
-    "write", "writing", "wrote", "written",
+  // 1. Separate Verbs vs Places / Food / Things / People / Feelings:
+  // Words with 1st, 2nd, 3rd, 4th forms belong strictly in "Actions".
+  // Remove verb forms & action verbs from Places, Food, Things, Feelings, People.
+  // Clean all verbFormTag and verbForms outside Actions.
+
+  const getRootShelfName = (cat: CustomCategory): string => {
+    let curr: CustomCategory | undefined = cat;
+    let depth = 0;
+    while (curr && curr.parentCategoryId && depth < 10) {
+      const parentId: string = curr.parentCategoryId;
+      curr = cache.find((x) => x.id === parentId);
+      depth++;
+    }
+    const raw = curr?.name || cat.name || "";
+    return (FOLDER_EN_BY_LANG[raw.toLowerCase()] ?? raw).toLowerCase();
+  };
+
+  const allActionVerbs = new Set<string>();
+  for (const v of VERB_FORMS_LIST) {
+    allActionVerbs.add(v.base.toLowerCase().trim());
+    allActionVerbs.add(v.past.toLowerCase().trim());
+    allActionVerbs.add(v.participle.toLowerCase().trim());
+    allActionVerbs.add(v.continuous.toLowerCase().trim());
+  }
+  [
+    "go to", "come here", "want", "wanted", "needing", "needed", "liked", "liking",
+    "stop", "stopped", "stopping", "eating", "drank", "drinking", "chewing",
+    "cooking", "cooked", "baking", "baked", "washing", "washed", "cleaning", "cleaned",
+    "reading", "watching", "watched", "writing", "playing", "played", "sleeping", "slept"
+  ].forEach((v) => allActionVerbs.add(v));
+
+  const LEGIT_PLACES = new Set([
+    "home", "house", "park", "store", "shop", "school", "classroom", "playground",
+    "bathroom", "bedroom", "kitchen", "outside", "yard", "backyard", "living room",
+    "dining room", "bed", "couch", "car", "bus", "library", "gym", "cafeteria",
+    "hallway", "hospital", "clinic", "pharmacy", "doctor office", "doctor's office",
+    "dentist clinic", "dentist's office", "therapy clinic", "supermarket", "mall",
+    "restaurant", "zoo", "beach", "pool", "movie theater", "cinema"
+  ]);
+
+  const LEGIT_FOODS = new Set([
+    "water", "milk", "juice", "apple juice", "orange juice", "hot chocolate", "tea", "coffee",
+    "soda", "smoothie", "lemonade", "toast", "fish", "chicken", "meat", "beef", "egg", "eggs",
+    "cheese", "rice", "bread", "soup", "salad", "fruit", "fruits", "vegetable", "vegetables",
+    "apple", "banana", "orange", "strawberry", "grape", "grapes", "watermelon", "peach",
+    "mango", "pineapple", "pear", "cherry", "cherries", "carrot", "broccoli", "corn", "potato",
+    "potatoes", "cucumber", "tomato", "tomatoes", "peas", "lettuce", "onion", "pepper", "pizza",
+    "burger", "french fries", "fries", "hot dog", "chicken nuggets", "taco", "sandwich",
+    "fried chicken", "onion rings", "chips", "popcorn", "cookie", "cookies", "cake", "ice cream",
+    "donut", "candy", "chocolate", "cupcake", "pretzel", "snack", "snacks", "pancakes",
+    "waffles", "cereal", "noodles", "pasta", "grilled cheese"
   ]);
 
   for (const c of cache) {
-    const enName = (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase();
-    if (nonVerbCategories.includes(enName)) {
-      const beforeCount = c.words.length;
-      c.words = c.words.filter((w) => {
-        const lbl = (w.label || "").trim().toLowerCase();
-        return !actionVerbLabels.has(lbl);
-      });
-      if (c.words.length !== beforeCount) {
-        changed = true;
+    const shelf = getRootShelfName(c);
+    const isActionsShelf =
+      shelf.includes("action") ||
+      shelf.includes("verb") ||
+      (c.name || "").toLowerCase().includes("action") ||
+      (c.name || "").toLowerCase().includes("verb");
+
+    if (!isActionsShelf) {
+      // Strip any verb tags and verb forms outside Actions
+      for (const w of c.words) {
+        if (w.verbFormTag) {
+          delete w.verbFormTag;
+          changed = true;
+        }
+        if (w.verbForms) {
+          delete w.verbForms;
+          changed = true;
+        }
+      }
+
+      // If this is Places (shelf or subcategory of Places):
+      if (shelf === "places") {
+        const before = c.words.length;
+        c.words = c.words.filter((w) => {
+          const lbl = (w.label || "").trim().toLowerCase();
+          if (LEGIT_PLACES.has(lbl)) return true;
+          if (allActionVerbs.has(lbl)) return false;
+          return true;
+        });
+        if (c.words.length !== before) changed = true;
+      }
+
+      // If this is Food (shelf or subcategory of Food):
+      if (shelf === "food") {
+        const before = c.words.length;
+        c.words = c.words.filter((w) => {
+          const lbl = (w.label || "").trim().toLowerCase();
+          if (LEGIT_FOODS.has(lbl)) return true;
+          if (allActionVerbs.has(lbl)) return false;
+          return true;
+        });
+        if (c.words.length !== before) changed = true;
+      }
+
+      // If Things, People, Feelings: purge action verbs
+      if (shelf === "things" || shelf === "people" || shelf === "feelings") {
+        const before = c.words.length;
+        c.words = c.words.filter((w) => {
+          const lbl = (w.label || "").trim().toLowerCase();
+          if (shelf === "things" && (lbl === "book" || lbl === "watch" || lbl === "brush" || lbl === "toy" || lbl === "ball")) return true;
+          if (shelf === "people" && (lbl === "help" ? false : true)) {
+            if (allActionVerbs.has(lbl)) return false;
+            return true;
+          }
+          if (shelf === "feelings") {
+            if (allActionVerbs.has(lbl) && lbl !== "love" && lbl !== "like") return false;
+            return true;
+          }
+          if (allActionVerbs.has(lbl)) return false;
+          return true;
+        });
+        if (c.words.length !== before) changed = true;
       }
     }
   }

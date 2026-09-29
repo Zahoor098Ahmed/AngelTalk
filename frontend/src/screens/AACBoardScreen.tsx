@@ -254,9 +254,24 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   }, [current, currentId, isCoreGridMode, ready, tick]);
 
   const isActionsCategory = useMemo(() => {
-    const catName = (current?.name || "").toLowerCase();
-    return catName.includes("action") || catName.includes("verbs") || rawWords.some((w) => !!getVerbForms(w.label));
-  }, [current, rawWords]);
+    if (!current) return false;
+    const isActName = (str: string) => {
+      const n = (str || "").trim().toLowerCase();
+      return (
+        n.includes("action") ||
+        n.includes("verb") ||
+        n.includes("افعال") ||
+        n.includes("أفعال") ||
+        n.includes("کام")
+      );
+    };
+    if (isActName(current.name)) return true;
+    if (current.parentCategoryId) {
+      const parent = getCategory(current.parentCategoryId);
+      if (parent && isActName(parent.name)) return true;
+    }
+    return false;
+  }, [current]);
 
   const words: CustomWord[] = useMemo(() => {
     let list = rawWords;
@@ -652,7 +667,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
               })}
 
               {words.map((w) => {
-                const vTag = w.verbFormTag || (isActionsCategory ? detectVerbForm(w.label) : null);
+                const vTag = isActionsCategory ? (w.verbFormTag || detectVerbForm(w.label)) : null;
                 return (
                   <View key={w.id} style={[styles.cell, tileSize]}>
                     <Pressable
