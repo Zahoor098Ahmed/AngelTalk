@@ -27,6 +27,7 @@ import {
   setSeedLanguage,
   retranslateSeedBoard,
   recordWordUseByWordId,
+  subscribeCategories,
 } from "../modules/customCategories";
 import { playWord, playSentence, stopSentence, type SpokenWord } from "../modules/audio";
 import { dictUrl } from "../modules/imageLibrary";
@@ -274,12 +275,34 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   }, [current]);
 
   const words: CustomWord[] = useMemo(() => {
+    // If current shelf has child subcategories/folders, loose words belong strictly INSIDE those folders
+    if (folders.length > 0) return [];
     let list = rawWords;
     if (child.buttonDensity && child.buttonDensity > 0) {
       list = rawWords.slice(0, child.buttonDensity);
     }
     return list;
-  }, [rawWords, child.buttonDensity]);
+  }, [rawWords, folders.length, child.buttonDensity]);
+
+  // Real-time live sync: recompute whenever caregiver edits, adds, hides, or deletes any word or category
+  useEffect(() => {
+    const unsub = subscribeCategories(() => {
+      setTick((n) => n + 1);
+    });
+    return unsub;
+  }, []);
+
+  // If the open category was deleted or hidden by the caregiver, safely fall back to Core
+  useEffect(() => {
+    if (ready && currentId) {
+      const cat = getCategory(currentId);
+      if (!cat || cat.hidden) {
+        const tabs = bottomTabCategories();
+        const coreTab = tabs.find((t) => t.name.toLowerCase().includes("core")) ?? tabs[0];
+        setPath(coreTab?.id ? [coreTab.id] : []);
+      }
+    }
+  }, [currentId, ready, tick]);
 
   const bottomTabs = useMemo(() => (ready ? bottomTabCategories() : []), [ready, tick]);
 
@@ -720,13 +743,6 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                         <Text style={styles.wordLabelText} numberOfLines={1}>
                           {w.label}
                         </Text>
-                        {bilingual && (
-                          <Text style={styles.secondaryLabelText} numberOfLines={1}>
-                            {lang === "ar-SA"
-                              ? wordLabel(w.label, "en-US")
-                              : wordLabel(w.label, "ar-SA")}
-                          </Text>
-                        )}
                       </View>
                     </Pressable>
                   </View>

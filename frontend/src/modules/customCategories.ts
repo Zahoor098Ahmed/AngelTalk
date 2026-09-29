@@ -28,30 +28,96 @@ const FOLDER_COLORS = ["#2f6d62", "#4a7fe6", "#c98a3d", "#8a6bc9", "#5c9a58", "#
 let cache: CustomCategory[] = [];
 let loaded = false;
 
+type CategoriesListener = () => void;
+const listeners = new Set<CategoriesListener>();
+
+export function subscribeCategories(listener: CategoriesListener): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function notifyListeners() {
+  listeners.forEach((fn) => {
+    try {
+      fn();
+    } catch (e) {
+      console.error(e);
+    }
+  });
+}
+
+const DELETED_KEYS_STORAGE = "kiddocare_deleted_items_v2";
+let deletedItemKeys: Set<string> = new Set();
+let deletedKeysLoaded = false;
+
+async function ensureDeletedKeysLoaded() {
+  if (deletedKeysLoaded) return;
+  try {
+    const raw = await AsyncStorage.getItem(DELETED_KEYS_STORAGE);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        deletedItemKeys = new Set(arr);
+      }
+    }
+  } catch {}
+  deletedKeysLoaded = true;
+}
+
+function persistDeletedKeys() {
+  AsyncStorage.setItem(DELETED_KEYS_STORAGE, JSON.stringify([...deletedItemKeys])).catch(() => {});
+}
+
+export function isDeletedCategory(name: string, parentId?: string | null): boolean {
+  const norm = (name || "").trim().toLowerCase();
+  if (deletedItemKeys.has(`cat::${norm}`)) return true;
+  if (parentId && deletedItemKeys.has(`subcat::${parentId}::${norm}`)) return true;
+  return false;
+}
+
+export function isDeletedWord(catId: string, label: string): boolean {
+  const norm = (label || "").trim().toLowerCase();
+  if (deletedItemKeys.has(`word::${catId}::${norm}`)) return true;
+  if (deletedItemKeys.has(`word::label::${norm}`)) return true;
+  return false;
+}
+
 /** Bring older records up to the current shape without recreating anything. */
 function migrate(list: CustomCategory[]): CustomCategory[] {
-  return list.map((c, i) => ({
-    ...c,
-    color: c.color ?? FOLDER_COLORS[i % FOLDER_COLORS.length],
-    icon: c.icon ?? "📁",
-    hidden: c.hidden ?? false,
-    parentCategoryId: c.parentCategoryId ?? null,
-    order: typeof c.order === "number" ? c.order : i,
-    source: c.source ?? "manual",
-    words: (c.words ?? []).map((w, wi) => ({
-      ...w,
-      imageUri: w.imageUri || getPictogramUrl(w.label) || undefined,
-      size: w.size ?? "md",
-      useTextToSpeech: w.useTextToSpeech ?? !w.audioUri,
-      order: typeof w.order === "number" ? w.order : wi,
-      hidden: w.hidden ?? false,
-      useCount: w.useCount ?? 0,
-      lastUsedAt: w.lastUsedAt,
-    })),
-  }));
+  const parentsWithChildren = new Set(
+    list.filter((x) => !!x.parentCategoryId).map((x) => x.parentCategoryId!)
+  );
+
+  return list.map((c, i) => {
+    const hasChildren = parentsWithChildren.has(c.id);
+    return {
+      ...c,
+      color: c.color ?? FOLDER_COLORS[i % FOLDER_COLORS.length],
+      icon: c.icon ?? "📁",
+      hidden: c.hidden ?? false,
+      parentCategoryId: c.parentCategoryId ?? null,
+      order: typeof c.order === "number" ? c.order : i,
+      source: c.source ?? "manual",
+      words: hasChildren
+        ? []
+        : (c.words ?? []).map((w, wi) => ({
+            ...w,
+            imageUri: w.imageUri || getPictogramUrl(w.label) || undefined,
+            size: w.size ?? "md",
+            useTextToSpeech: w.useTextToSpeech ?? !w.audioUri,
+            order: typeof w.order === "number" ? w.order : wi,
+            hidden: w.hidden ?? false,
+            useCount: w.useCount ?? 0,
+            lastUsedAt: w.lastUsedAt,
+          })),
+    };
+  });
 }
 
 export async function ensureCategoriesLoaded(): Promise<void> {
+  await ensureDeletedKeysLoaded();
   if (loaded) return;
   try {
     const raw = await AsyncStorage.getItem(KEY);
@@ -926,6 +992,7 @@ function ensureAllStandardCategories() {
   const now = Date.now();
 
   STARTER.forEach((s, idx) => {
+    if (isDeletedCategory(s.name)) return;
     const sName = s.name.toLowerCase();
     const localizedName = folderName(s.name).toLowerCase();
     const hit = existingMap.get(sName) || existingMap.get(localizedName);
@@ -961,7 +1028,7 @@ function ensureAllStandardCategories() {
     } else if (s.name === "Core") {
       // Ensure Core has all the key starter words from the screenshot
       s.words.forEach(([label, emoji], wi) => {
-        if (!hit.words.some((w) => w.label.toLowerCase() === label.toLowerCase())) {
+        if (!isDeletedWord(hit.id, label) && !hit.words.some((w) => w.label.toLowerCase() === label.toLowerCase())) {
           hit.words.push({
             id: uid("w"),
             label,
@@ -1010,6 +1077,10 @@ function ensureAllStandardCategories() {
     );
     if (!parent) return;
 
+    if (isDeletedCategory(sub.name, parent.id)) {
+      return; // Never recreate a subcategory deleted by user
+    }
+
     let subCat = cache.find(
       (c) =>
         c.parentCategoryId === parent.id &&
@@ -1035,24 +1106,29 @@ function ensureAllStandardCategories() {
     }
 
     // Populate and synchronize words for this sub-category in strict sequential order
-    const targetWords = sub.words.map(([label, emoji, verbFormTag], wi) => {
-      const existing = subCat!.words.find(
-        (w) => w.label.toLowerCase() === label.toLowerCase()
-      );
-      const localized = starterLabel(label, seedLang) || label;
-      return {
-        id: existing?.id ?? uid("w"),
-        label: localized,
-        phrase: localized,
-        emoji: emoji || existing?.emoji || "🔹",
-        imageUri: existing?.imageUri || getPictogramUrl(label) || undefined,
-        useTextToSpeech: true,
-        size: "md" as TileSize,
-        order: wi,
-        useCount: existing?.useCount ?? 0,
-        verbFormTag: verbFormTag ?? existing?.verbFormTag,
-      };
-    });
+    const targetWords = sub.words
+      .filter(([label]) => !isDeletedWord(subCat!.id, label))
+      .map(([label, emoji, verbFormTag], wi) => {
+        const existing = subCat!.words.find(
+          (w) => w.label.toLowerCase() === label.toLowerCase()
+        );
+        const localized = starterLabel(label, seedLang) || label;
+        return {
+          id: existing?.id ?? uid("w"),
+          label: localized,
+          phrase: localized,
+          emoji: emoji || existing?.emoji || "🔹",
+          imageUri: existing?.imageUri || getPictogramUrl(label) || undefined,
+          color: existing?.color,
+          audioUri: existing?.audioUri,
+          useTextToSpeech: existing?.useTextToSpeech ?? true,
+          size: existing?.size ?? "md",
+          order: wi,
+          useCount: existing?.useCount ?? 0,
+          verbFormTag: verbFormTag ?? existing?.verbFormTag,
+          hidden: existing?.hidden ?? false,
+        };
+      });
 
     // Preserve any custom words the parent added to this category
     const customParentWords = subCat.words.filter(
@@ -1068,7 +1144,8 @@ function ensureAllStandardCategories() {
       subCat.words.some(
         (w, i) =>
           w.label !== combinedWords[i]?.label ||
-          w.verbFormTag !== combinedWords[i]?.verbFormTag
+          w.verbFormTag !== combinedWords[i]?.verbFormTag ||
+          w.hidden !== combinedWords[i]?.hidden
       )
     ) {
       subCat.words = combinedWords;
@@ -1126,6 +1203,7 @@ function seedStarterBoard() {
 
 function persist(): void {
   AsyncStorage.setItem(KEY, JSON.stringify(cache)).catch(() => {});
+  notifyListeners();
 }
 
 export function listCategories(): CustomCategory[] {
@@ -1219,6 +1297,15 @@ export function updateCategory(
 }
 
 export function deleteCategory(id: string) {
+  const cat = cache.find((c) => c.id === id);
+  if (cat) {
+    deletedItemKeys.add(`cat::${(cat.name || "").trim().toLowerCase()}`);
+    deletedItemKeys.add(`cat::id::${cat.id}`);
+    if (cat.parentCategoryId) {
+      deletedItemKeys.add(`subcat::${cat.parentCategoryId}::${(cat.name || "").trim().toLowerCase()}`);
+    }
+    persistDeletedKeys();
+  }
   cache = cache.filter((c) => c.id !== id);
   persist();
 }
@@ -1232,7 +1319,7 @@ export function setGrouping(id: string, grouping: CustomCategory["grouping"]) {
 export function updateWord(
   catId: string,
   wordId: string,
-  patch: Partial<Pick<CustomWord, "label" | "phrase" | "emoji" | "imageUri" | "audioUri" | "useTextToSpeech" | "size" | "color">>,
+  patch: Partial<Pick<CustomWord, "label" | "phrase" | "emoji" | "imageUri" | "audioUri" | "useTextToSpeech" | "size" | "color" | "hidden">>,
 ) {
   return mutate(catId, (c) => {
     const w = c.words.find((x) => x.id === wordId);
@@ -1242,6 +1329,13 @@ export function updateWord(
 
 export function removeWord(catId: string, wordId: string) {
   return mutate(catId, (c) => {
+    const targetWord = c.words.find((w) => w.id === wordId);
+    if (targetWord) {
+      const normLabel = (targetWord.label || "").trim().toLowerCase();
+      deletedItemKeys.add(`word::${catId}::${normLabel}`);
+      deletedItemKeys.add(`word::id::${targetWord.id}`);
+      persistDeletedKeys();
+    }
     c.words = c.words.filter((w) => w.id !== wordId).map((w, i) => ({ ...w, order: i }));
   });
 }
@@ -1361,7 +1455,52 @@ export function cleanAndDeduplicateCategories() {
             sc.words.some((sw) => (sw.label || "").trim().toLowerCase() === wLower)
           );
           if (!alreadyInSub) {
-            const targetSub = subCatsOfParent[0];
+            let targetSub = subCatsOfParent[0];
+            const pName = (c.name || "").toLowerCase();
+            if (pName.includes("people") || pName.includes("لوگ") || pName.includes("أشخاص")) {
+              if (["mom", "dad", "brother", "sister", "baby", "grandma", "grandpa", "aunt", "uncle", "cousin", "pet"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("family")) || targetSub;
+              } else if (["teacher", "friend", "classmate", "principal", "aide", "student", "me", "you"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("friend") || sc.name.toLowerCase().includes("school")) || targetSub;
+              } else {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("helper") || sc.name.toLowerCase().includes("therapist")) || targetSub;
+              }
+            } else if (pName.includes("food") || pName.includes("کھانا") || pName.includes("طعام")) {
+              if (["water", "milk", "juice", "tea", "coffee", "soda", "smoothie", "lemonade", "drink"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("drink")) || targetSub;
+              } else if (["pizza", "burger", "fries", "taco", "nuggets", "hot dog"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("fast")) || targetSub;
+              } else if (["apple", "banana", "orange", "berry", "grape", "melon", "peach", "fruit"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("fruit")) || targetSub;
+              } else if (["carrot", "broccoli", "corn", "potato", "cucumber", "tomato", "veg", "peas", "lettuce"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("veg")) || targetSub;
+              } else if (["cookie", "ice cream", "cake", "donut", "candy", "chocolate", "chips", "snack", "sweet"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("snack") || sc.name.toLowerCase().includes("sweet")) || targetSub;
+              } else {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("meal") || sc.name.toLowerCase().includes("breakfast")) || targetSub;
+              }
+            } else if (pName.includes("place") || pName.includes("مقام") || pName.includes("أماكن")) {
+              if (["home", "bedroom", "kitchen", "bed", "couch", "bathroom", "house", "backyard"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("home")) || targetSub;
+              } else if (["school", "playground", "park", "library", "gym", "class", "pool", "beach", "zoo"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("school") || sc.name.toLowerCase().includes("community")) || targetSub;
+              } else {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("errand") || sc.name.toLowerCase().includes("health")) || targetSub;
+              }
+            } else if (pName.includes("thing") || pName.includes("چیز") || pName.includes("أشياء")) {
+              if (["toy", "ball", "doll", "blocks", "puzzle", "car", "train", "game", "bubbles"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("toy") || sc.name.toLowerCase().includes("play")) || targetSub;
+              } else if (["book", "tablet", "phone", "backpack", "paper", "pencil", "tech"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("school") || sc.name.toLowerCase().includes("tech")) || targetSub;
+              } else if (["shirt", "pants", "shoes", "socks", "jacket", "hat", "clothes", "blanket"].some((k) => wLower.includes(k))) {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("clothe")) || targetSub;
+              } else {
+                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("hygiene") || sc.name.toLowerCase().includes("bath")) || targetSub;
+              }
+            } else if (pName.includes("action") || pName.includes("verb") || pName.includes("کام") || pName.includes("أفعال")) {
+              const letter = (w.label.trim()[0] || "A").toUpperCase();
+              targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase() === `verbs ${letter.toLowerCase()}`) || targetSub;
+            }
             targetSub.words.push({ ...w, order: targetSub.words.length });
           }
         }
@@ -1890,6 +2029,17 @@ export function deleteCategoryDeep(id: string) {
       }
     }
   }
+  for (const cid of ids) {
+    const cat = cache.find((c) => c.id === cid);
+    if (cat) {
+      deletedItemKeys.add(`cat::${(cat.name || "").trim().toLowerCase()}`);
+      deletedItemKeys.add(`cat::id::${cat.id}`);
+      if (cat.parentCategoryId) {
+        deletedItemKeys.add(`subcat::${cat.parentCategoryId}::${(cat.name || "").trim().toLowerCase()}`);
+      }
+    }
+  }
+  persistDeletedKeys();
   cache = cache.filter((c) => !ids.has(c.id));
   persist();
 }
