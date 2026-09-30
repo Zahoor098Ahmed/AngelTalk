@@ -922,18 +922,25 @@ const FOLDER_NAMES: Partial<Record<LanguageCode, Record<string, string>>> = {
     Schools: "مدرسة", Sentences: "جمل", Tools: "أدوات", Emotion: "مشاعر", Attributes: "صفات",
     Sports: "رياضة", Hygiene: "نظافة", Music: "موسيقى", "Say It For Me": "قلها لي",
     "My Words": "كلماتي", "New Folder": "مجلد جديد",
-    Animals: "حيوانات", Fruits: "فواكه", Vegetables: "خضروات", Colors: "ألوان", Shapes: "أشكال",
-    Vehicles: "مركبات", "Body Parts": "أجزاء الجسم", Clothes: "ملابس", Weather: "الطقس", Family: "العائلة",
-    Jobs: "وظائف", Instruments: "آلات موسيقية", "School Supplies": "أدوات مدرسية",
+    // Subcategories
+    Drinks: "مشروبات", "Fast Food": "وجبات سريعة", Fruits: "فواكه", Vegetables: "خضروات",
+    "Breakfast & Meals": "فطور ووجبات", "Snacks & Sweets": "وجبات خفيفة وحلويات",
+    Family: "العائلة", "Friends & School": "الأصدقاء والمدرسة", "Helpers & Therapists": "المساعدون والمعالجون",
+    "Happy & Calm": "سعيد وهادئ", "Hard Feelings": "مشاعر صعبة", "Body Sensations": "أحاسيس الجسد",
+    Home: "منزل", "School & Community": "المدرسة والمجتمع", "Health & Clinic": "الصحة والعيادة", "Fun Outings": "نزهات ممتعة",
+    "Toys & Tech": "ألعاب وتكنولوجيا", "School Supplies": "أدوات مدرسية", Clothes: "ملابس", "Bathroom & Hygiene": "حمام ونظافة",
+    Animals: "حيوانات", Colors: "ألوان", Shapes: "أشكال",
+    Vehicles: "مركبات", "Body Parts": "أجزاء الجسم", Weather: "الطقس",
+    Jobs: "وظائف", Instruments: "آلات موسيقية",
     Furniture: "أثاث", Feelings2: "مشاعر", "Days of the Week": "أيام الأسبوع", Months: "الشهور", Numbers: "أرقام", Letters: "حروف",
-    Drinks: "مشروبات", Snacks: "وجبات خفيفة", Toys: "ألعاب", Dessert: "حلويات",
+    Snacks: "وجبات خفيفة", Toys: "ألعاب", Dessert: "حلويات",
     Breakfast: "فطور", Lunch: "غداء", Dinner: "عشاء", Kitchen: "مطبخ", Bedroom: "غرفة نوم",
-    Home: "منزل", Park: "حديقة", Hospital: "مستشفى", Store: "متجر", Mall: "مركز تسوق",
+    Park: "حديقة", Hospital: "مستشفى", Store: "متجر", Mall: "مركز تسوق",
     Airport: "مطار", Playground: "ملعب", Garden: "حديقة", Beach: "شاطئ", Farm: "مزرعة",
     Zoo: "حديقة حيوان", Classroom: "فصل دراسي", Office: "مكتب", Bathroom: "حمام",
     "Wild Animals": "حيوانات برية", "Farm Animals": "حيوانات المزرعة", "Sea Animals": "حيوانات بحرية",
     Pets: "حيوانات أليفة", "Hot Drinks": "مشروبات ساخنة", "Cold Drinks": "مشروبات باردة",
-    "Outdoor Toys": "ألعاب خارجية", "Indoor Toys": "ألعاب داخلية", "Fast Food": "وجبات سريعة",
+    "Outdoor Toys": "ألعاب خارجية", "Indoor Toys": "ألعاب داخلية",
     Dairy: "منتجات ألبان", Sweets: "حلويات", Meat: "لحوم", Tech: "تكنولوجيا",
     Electronics: "إلكترونيات", Art: "فنون", Books: "كتب",
     ...Object.fromEntries("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((L) => [`Verbs ${L}`, `أفعال ${L}`])),
@@ -944,17 +951,24 @@ const FOLDER_NAMES: Partial<Record<LanguageCode, Record<string, string>>> = {
     Schools: "اسکول", Sentences: "جملے", Tools: "اوزار", Emotion: "جذبات", Attributes: "خصوصیات",
     Sports: "کھیل", Hygiene: "صفائی", Music: "موسیقی", "Say It For Me": "میرے لیے کہو",
     "My Words": "میرے الفاظ", "New Folder": "نیا فولڈر",
-    Animals: "جانور", Fruits: "پھل", Vegetables: "سبزیاں", Colors: "رنگ", Shapes: "شکلیں",
-    Vehicles: "گاڑیاں", "Body Parts": "جسم کے حصے", Clothes: "کپڑے", Weather: "موسم", Family: "خاندان",
-    Jobs: "پیشے", "School Supplies": "اسکول کا سامان", "Days of the Week": "ہفتے کے دن", Months: "مہینے",
-    Drinks: "مشروبات", Snacks: "ناشتہ", Toys: "کھلونے", Dessert: "میٹھے کھانے",
+    // Subcategories
+    Drinks: "مشروبات", "Fast Food": "فاسٹ فوڈ", Fruits: "پھل", Vegetables: "سبزیاں",
+    "Breakfast & Meals": "ناشتہ اور کھانا", "Snacks & Sweets": "ناشتہ اور مٹھائیاں",
+    Family: "خاندان", "Friends & School": "دوست اور اسکول", "Helpers & Therapists": "مددگار اور معالج",
+    "Happy & Calm": "خوش اور پرسکون", "Hard Feelings": "مشکل احساسات", "Body Sensations": "جسمانی احساسات",
+    Home: "گھر", "School & Community": "اسکول اور کمیونٹی", "Health & Clinic": "صحت اور کلینک", "Fun Outings": "تفریحی مقامات",
+    "Toys & Tech": "کھلونے اور ٹیک", "School Supplies": "اسکول کا سامان", Clothes: "کپڑے", "Bathroom & Hygiene": "بیت الخلاء اور صفائی",
+    Animals: "جانور", Colors: "رنگ", Shapes: "شکلیں",
+    Vehicles: "گاڑیاں", "Body Parts": "جسم کے حصے", Weather: "موسم",
+    Jobs: "پیشے", "Days of the Week": "ہفتے کے دن", Months: "مہینے",
+    Snacks: "ناشتہ", Toys: "کھلونے", Dessert: "میٹھے کھانے",
     Breakfast: "ناشتہ", Lunch: "دوپہر کا کھانا", Dinner: "رات کا کھانا", Kitchen: "باورچی خانہ", Bedroom: "سونے کا کمرہ",
-    Home: "گھر", Park: "پارک", Hospital: "ہسپتال", Store: "دکان", Mall: "شاپنگ مال",
+    Park: "پارک", Hospital: "ہسپتال", Store: "دکان", Mall: "شاپنگ مال",
     Airport: "ہوائی اڈہ", Playground: "کھیل کا میدان", Garden: "باغ", Beach: "ساحل", Farm: "فارم",
     Zoo: "چڑیا گھر", Classroom: "کلاس روم", Office: "دفتر", Bathroom: "بیت الخلاء",
     "Wild Animals": "جنگلی جانور", "Farm Animals": "پالتو جانور", "Sea Animals": "سمندری جانور",
     Pets: "پالتو جانور", "Hot Drinks": "گرم مشروبات", "Cold Drinks": "ٹھنڈے مشروبات",
-    "Outdoor Toys": "باہر کے کھلونے", "Indoor Toys": "گھر کے کھلونے", "Fast Food": "فاسٹ فوڈ",
+    "Outdoor Toys": "باہر کے کھلونے", "Indoor Toys": "گھر کے کھلونے",
     Dairy: "ڈیری", Sweets: "مٹھائیاں", Meat: "گوشت", Tech: "ٹیکنالوجی",
     Electronics: "الیکٹرانکس", Art: "آرٹ", Books: "کتابیں",
     ...Object.fromEntries("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((L) => [`Verbs ${L}`, `کام ${L}`])),
@@ -1046,10 +1060,7 @@ export function retranslateSeedBoard(lang: LanguageCode) {
     }
 
     // 2. Words translation
-    const enShelfName = FOLDER_EN_BY_LANG[cat.name.toLowerCase()] ?? cat.name;
-    const enWords = SEED_WORD_EN[enShelfName];
-
-    cat.words.forEach((w, i) => {
+    cat.words.forEach((w) => {
       const rawWordLabel = w.label.trim();
       if (lang === "en-US") {
         const en = canonicalWordEn(rawWordLabel);
@@ -1059,9 +1070,8 @@ export function retranslateSeedBoard(lang: LanguageCode) {
           changed = true;
         }
       } else {
-        const enMatch = enWords?.find((e) => e.toLowerCase() === rawWordLabel.toLowerCase()) ?? enWords?.[i];
-        const en = enMatch || canonicalWordEn(rawWordLabel);
-        const localized = (enMatch ? starterLabel(enMatch, lang) : null) || wordLabel(en, lang);
+        const en = canonicalWordEn(rawWordLabel);
+        const localized = wordLabel(en, lang);
 
         if (localized && localized.toLowerCase() !== rawWordLabel.toLowerCase()) {
           w.label = localized;
@@ -1183,13 +1193,15 @@ function ensureAllStandardCategories() {
     let subCat = cache.find(
       (c) =>
         c.parentCategoryId === parent.id &&
-        c.name.toLowerCase() === sub.name.toLowerCase()
+        ((canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).toLowerCase() === sub.name.toLowerCase() ||
+          c.name.toLowerCase() === sub.name.toLowerCase() ||
+          c.name.toLowerCase() === folderName(sub.name).toLowerCase())
     );
 
     if (!subCat) {
       subCat = {
         id: uid("cat"),
-        name: sub.name,
+        name: folderName(sub.name),
         createdAt: now,
         updatedAt: now,
         source: "seed",
@@ -1202,16 +1214,23 @@ function ensureAllStandardCategories() {
       };
       cache.push(subCat);
       changed = true;
+    } else {
+      const targetName = folderName(sub.name);
+      if (subCat.name !== targetName && (canonicalWordEn(subCat.name) || FOLDER_EN_BY_LANG[subCat.name.toLowerCase()] || subCat.name).toLowerCase() === sub.name.toLowerCase()) {
+        subCat.name = targetName;
+        changed = true;
+      }
     }
 
     // Populate and synchronize words for this sub-category in strict sequential order
     const targetWords = sub.words
       .filter(([label]) => !isDeletedWord(subCat!.id, label))
       .map(([label, emoji, verbFormTag], wi) => {
-        const existing = subCat!.words.find(
-          (w) => w.label.toLowerCase() === label.toLowerCase()
-        );
-        const localized = starterLabel(label, seedLang) || label;
+        const existing = subCat!.words.find((w) => {
+          const en = (canonicalWordEn(w.label) || w.label).toLowerCase();
+          return en === label.toLowerCase() || w.label.toLowerCase() === label.toLowerCase();
+        });
+        const localized = wordLabel(label, seedLang) || label;
         return {
           id: existing?.id ?? uid("w"),
           label: localized,
@@ -1230,9 +1249,10 @@ function ensureAllStandardCategories() {
       });
 
     // Preserve any custom words the parent added to this category
-    const customParentWords = subCat.words.filter(
-      (w) => !sub.words.some(([swLabel]) => swLabel.toLowerCase() === w.label.toLowerCase())
-    );
+    const customParentWords = subCat.words.filter((w) => {
+      const en = (canonicalWordEn(w.label) || w.label).toLowerCase();
+      return !sub.words.some(([swLabel]) => swLabel.toLowerCase() === en || swLabel.toLowerCase() === w.label.toLowerCase());
+    });
     const combinedWords = [
       ...targetWords,
       ...customParentWords.map((cw, i) => ({ ...cw, order: targetWords.length + i })),
@@ -1466,16 +1486,19 @@ export function cleanAndDeduplicateCategories() {
   const uniqueCats: CustomCategory[] = [];
   for (const c of cache) {
     const parentKey = c.parentCategoryId ? c.parentCategoryId : "root";
-    const key = `${parentKey}::${(c.name || "").trim().toLowerCase()}`;
+    const enName = (canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).trim().toLowerCase();
+    const key = `${parentKey}::${enName}`;
     if (!key) continue;
     if (seenCatNames.has(key)) {
       const existing = uniqueCats.find((ec) => {
         const ecParentKey = ec.parentCategoryId ? ec.parentCategoryId : "root";
-        return `${ecParentKey}::${ec.name.trim().toLowerCase()}` === key;
+        const ecEn = (canonicalWordEn(ec.name) || FOLDER_EN_BY_LANG[ec.name.toLowerCase()] || ec.name).trim().toLowerCase();
+        return `${ecParentKey}::${ecEn}` === key;
       });
       if (existing) {
         c.words.forEach((w) => {
-          if (!existing.words.some((ew) => ew.label.toLowerCase() === w.label.toLowerCase())) {
+          const wEn = (canonicalWordEn(w.label) || w.label).toLowerCase();
+          if (!existing.words.some((ew) => (canonicalWordEn(ew.label) || ew.label).toLowerCase() === wEn)) {
             existing.words.push(w);
           }
         });
@@ -1488,12 +1511,12 @@ export function cleanAndDeduplicateCategories() {
   }
   cache = uniqueCats;
 
-  // Deduplicate words in each category
+  // Deduplicate words in each category canonically
   for (const c of cache) {
     const seenWords = new Set<string>();
     const uniqueWords: CustomWord[] = [];
     for (const w of c.words) {
-      const key = (w.label || "").trim().toLowerCase();
+      const key = (canonicalWordEn(w.label) || w.label).trim().toLowerCase();
       if (!key) continue;
       if (!seenWords.has(key)) {
         seenWords.add(key);
@@ -1554,56 +1577,56 @@ export function cleanAndDeduplicateCategories() {
       if (subCatsOfParent.length > 0) {
         // Move any words from parent into appropriate child subcategory or first child if not already present
         for (const w of c.words) {
-          const wLower = (w.label || "").trim().toLowerCase();
+          const wLower = (canonicalWordEn(w.label) || w.label).trim().toLowerCase();
           const alreadyInSub = subCatsOfParent.some((sc) =>
-            sc.words.some((sw) => (sw.label || "").trim().toLowerCase() === wLower)
+            sc.words.some((sw) => (canonicalWordEn(sw.label) || sw.label).trim().toLowerCase() === wLower)
           );
           if (!alreadyInSub) {
             let targetSub = subCatsOfParent[0];
-            const pName = (c.name || "").toLowerCase();
+            const pName = (canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).toLowerCase();
             if (pName.includes("people") || pName.includes("لوگ") || pName.includes("أشخاص")) {
               if (["mom", "dad", "brother", "sister", "baby", "grandma", "grandpa", "aunt", "uncle", "cousin", "pet"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("family")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("family")) || targetSub;
               } else if (["teacher", "friend", "classmate", "principal", "aide", "student", "me", "you"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("friend") || sc.name.toLowerCase().includes("school")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("friend") || (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("school")) || targetSub;
               } else {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("helper") || sc.name.toLowerCase().includes("therapist")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("helper") || (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("therapist")) || targetSub;
               }
             } else if (pName.includes("food") || pName.includes("کھانا") || pName.includes("طعام")) {
               if (["water", "milk", "juice", "tea", "coffee", "soda", "smoothie", "lemonade", "drink"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("drink")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("drink")) || targetSub;
               } else if (["pizza", "burger", "fries", "taco", "nuggets", "hot dog"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("fast")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("fast")) || targetSub;
               } else if (["apple", "banana", "orange", "berry", "grape", "melon", "peach", "fruit"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("fruit")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("fruit")) || targetSub;
               } else if (["carrot", "broccoli", "corn", "potato", "cucumber", "tomato", "veg", "peas", "lettuce"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("veg")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("veg")) || targetSub;
               } else if (["cookie", "ice cream", "cake", "donut", "candy", "chocolate", "chips", "snack", "sweet"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("snack") || sc.name.toLowerCase().includes("sweet")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("snack") || (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("sweet")) || targetSub;
               } else {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("meal") || sc.name.toLowerCase().includes("breakfast")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("meal") || (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("breakfast")) || targetSub;
               }
             } else if (pName.includes("place") || pName.includes("مقام") || pName.includes("أماكن")) {
               if (["home", "bedroom", "kitchen", "bed", "couch", "bathroom", "house", "backyard"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("home")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("home")) || targetSub;
               } else if (["school", "playground", "park", "library", "gym", "class", "pool", "beach", "zoo"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("school") || sc.name.toLowerCase().includes("community")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("school") || (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("community")) || targetSub;
               } else {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("errand") || sc.name.toLowerCase().includes("health")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("errand") || (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("health")) || targetSub;
               }
             } else if (pName.includes("thing") || pName.includes("چیز") || pName.includes("أشياء")) {
               if (["toy", "ball", "doll", "blocks", "puzzle", "car", "train", "game", "bubbles"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("toy") || sc.name.toLowerCase().includes("play")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("toy") || (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("play")) || targetSub;
               } else if (["book", "tablet", "phone", "backpack", "paper", "pencil", "tech"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("school") || sc.name.toLowerCase().includes("tech")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("school") || (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("tech")) || targetSub;
               } else if (["shirt", "pants", "shoes", "socks", "jacket", "hat", "clothes", "blanket"].some((k) => wLower.includes(k))) {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("clothe")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("clothe")) || targetSub;
               } else {
-                targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase().includes("hygiene") || sc.name.toLowerCase().includes("bath")) || targetSub;
+                targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("hygiene") || (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("bath")) || targetSub;
               }
             } else if (pName.includes("action") || pName.includes("verb") || pName.includes("کام") || pName.includes("أفعال")) {
-              const letter = (w.label.trim()[0] || "A").toUpperCase();
-              targetSub = subCatsOfParent.find((sc) => sc.name.toLowerCase() === `verbs ${letter.toLowerCase()}`) || targetSub;
+              const letter = (wLower[0] || "a").toUpperCase();
+              targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase() === `verbs ${letter.toLowerCase()}`) || targetSub;
             }
             targetSub.words.push({ ...w, order: targetSub.words.length });
           }
@@ -2301,17 +2324,20 @@ export function bottomTabCategories(): { id: string; name: string; icon: string;
     ) {
       continue;
     }
-    const hit = top.find(
-      (c) =>
+    const hit = top.find((c) => {
+      const en = (canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).toLowerCase();
+      return (
+        en === tab.key.toLowerCase() ||
         c.name.toLowerCase() === tab.key.toLowerCase() ||
         c.name.toLowerCase() === tab.label.toLowerCase() ||
         c.name.toLowerCase() === tab.enFallback.toLowerCase() ||
         c.name.toLowerCase() === folderName(tab.key).toLowerCase()
-    );
+      );
+    });
     if (hit && !hit.hidden) {
       out.push({
         id: hit.id,
-        name: hit.name,
+        name: wordLabel(tab.key, seedLang),
         icon: hit.icon || tab.icon,
         color: hit.color || tab.color,
       });
@@ -2323,7 +2349,7 @@ export function bottomTabCategories(): { id: string; name: string; icon: string;
     if (!out.some((x) => x.id === c.id)) {
       out.push({
         id: c.id,
-        name: c.name,
+        name: wordLabel(c.name, seedLang),
         icon: c.icon || "📁",
         color: c.color || "#2f6d62",
       });
@@ -2334,13 +2360,18 @@ export function bottomTabCategories(): { id: string; name: string; icon: string;
 }
 
 export function coreWords(): CustomWord[] {
-  const coreCat = topLevelCategories().find((c) => (c.name || "").toLowerCase() === "core");
+  const coreCat = topLevelCategories().find((c) => {
+    const en = (canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).toLowerCase();
+    return en === "core" || c.name === "أساسي" || c.name === "بنیادی";
+  });
   if (!coreCat) return [];
   const priority = ["I", "am", "want", "is", "are", "you", "more", "stop", "help", "yes", "no", "go", "like"];
   const sorted = coreCat.words.filter((w) => !w.hidden).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const p = [...sorted].sort((a, b) => {
-    const ai = priority.indexOf(a.label);
-    const bi = priority.indexOf(b.label);
+    const aEn = canonicalWordEn(a.label);
+    const bEn = canonicalWordEn(b.label);
+    const ai = priority.indexOf(aEn);
+    const bi = priority.indexOf(bEn);
     if (ai === -1 && bi === -1) return 0;
     if (ai === -1) return 1;
     if (bi === -1) return -1;

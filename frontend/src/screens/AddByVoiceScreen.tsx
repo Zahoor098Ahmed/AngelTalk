@@ -23,7 +23,7 @@ import { topLevelCategories, createBlankCategory, addWord, addWordsBulk, childCa
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { generateAllVerbForms } from "../modules/verbForms";
 import { resolveEmoji } from "../modules/wordImage";
-import { t, type TKey } from "../modules/i18n";
+import { t, type TKey, wordLabel } from "../modules/i18n";
 import { colors, radius } from "../theme";
 
 interface Props {
@@ -403,7 +403,7 @@ export default function AddByVoiceScreen({ visible, onClose, onSaved, presetCate
                   {cats.map((c) => (
                     <Pressable key={c.id} onPress={() => saveToCategory(c.id)} style={[styles.catCard, { borderColor: (c.color ?? colors.forest) + "66" }]}>
                       <Text style={{ fontSize: 26 }}>{c.icon ?? "📁"}</Text>
-                      <Text style={styles.catCardText} numberOfLines={1}>{c.name}</Text>
+                      <Text style={styles.catCardText} numberOfLines={1}>{wordLabel(c.name, settings.language)}</Text>
                     </Pressable>
                   ))}
                   <Pressable onPress={() => setNewCatOpen(true)} style={[styles.catCard, styles.catCardNew]}>

@@ -34,7 +34,7 @@ import { dictUrl } from "../modules/imageLibrary";
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { recordWordUsage, recordSentencePlayed, recordCorrectionUsed } from "../modules/storage";
 import { tapFeedback, selectFeedback } from "../modules/haptics";
-import { t, wordLabel } from "../modules/i18n";
+import { t, wordLabel, canonicalWordEn } from "../modules/i18n";
 import LangBadge from "../components/LangBadge";
 import Mascot from "../components/Mascot";
 import TabBar from "../components/TabBar";
@@ -145,9 +145,15 @@ function CardPic({
   size?: number;
 }) {
   const [imgError, setImgError] = useState(false);
+  const enLabel = canonicalWordEn(label) || label;
   const uri = useMemo(() => {
-    return imageUri || getPictogramUrl(label) || (!imgError ? dictUrl(label) : null);
-  }, [imageUri, label, imgError]);
+    return (
+      imageUri ||
+      getPictogramUrl(enLabel) ||
+      getPictogramUrl(label) ||
+      (!imgError ? dictUrl(enLabel) || dictUrl(label) : null)
+    );
+  }, [imageUri, label, enLabel, imgError]);
 
   if (uri && !imgError) {
     return (
@@ -206,12 +212,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       // Auto-select "Core" (or first category) on load so communication cards appear immediately
       const tabs = bottomTabCategories();
       const coreTab =
-        tabs.find(
-          (t) =>
-            t.name.toLowerCase().includes("core") ||
-            t.name === "بنیادی" ||
-            t.name === "أساسي"
-        ) ?? tabs[0];
+        tabs.find((t) => {
+          const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
+          return en === "core" || t.name === "بنیادی" || t.name === "أساسي";
+        }) ?? tabs[0];
       if (coreTab?.id) {
         setPath([coreTab.id]);
       }
@@ -244,15 +248,21 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   );
   const isCoreGridMode = child.pageSetStyle === "core-grid";
 
+  const isCore = useMemo(() => {
+    if (!current) return true;
+    const en = (canonicalWordEn(current.name) || current.name).toLowerCase();
+    return en === "core" || current.name === "أساسي" || current.name === "بنیادی";
+  }, [current]);
+
   const rawWords: CustomWord[] = useMemo(() => {
-    if (isCoreGridMode && (!currentId || current?.name.toLowerCase() === "core")) {
+    if (isCoreGridMode && (!currentId || isCore)) {
       // Fixed-position core words locked at top slots for motor-memory
       const cores = coreWords();
-      const nonCores = current ? current.words.filter((w: CustomWord) => !w.hidden && !cores.some((c) => c.label === w.label)) : [];
+      const nonCores = current ? current.words.filter((w: CustomWord) => !w.hidden && !cores.some((c) => canonicalWordEn(c.label).toLowerCase() === canonicalWordEn(w.label).toLowerCase())) : [];
       return [...cores, ...nonCores];
     }
     return current ? [...current.words].filter((w) => !w.hidden).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) : [];
-  }, [current, currentId, isCoreGridMode, ready, tick]);
+  }, [current, currentId, isCoreGridMode, isCore, ready, tick]);
 
   const isActionsCategory = useMemo(() => {
     if (!current) return false;
@@ -298,7 +308,11 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       const cat = getCategory(currentId);
       if (!cat || cat.hidden) {
         const tabs = bottomTabCategories();
-        const coreTab = tabs.find((t) => t.name.toLowerCase().includes("core")) ?? tabs[0];
+        const coreTab =
+          tabs.find((t) => {
+            const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
+            return en === "core" || t.name === "بنیادی" || t.name === "أساسي";
+          }) ?? tabs[0];
         setPath(coreTab?.id ? [coreTab.id] : []);
       }
     }
@@ -308,7 +322,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
 
   function speakWords(): SpokenWord[] {
     return sentence.map((c) => ({
-      label: c.label,
+      label: wordLabel(c.label, lang),
       audioUri: c.audioUri,
       useTextToSpeech: c.useTextToSpeech,
     }));
@@ -333,9 +347,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     recordWordUsage(child.id, w.label);
     recordWordUseByWordId(w.id);
     const isPhraseMode = boardMode === "phrase";
+    const spokenText = wordLabel(w.phrase || w.label, lang);
     // Instant clear pronunciation of tapped card in selected voice
     void playWord(
-      { label: w.phrase || w.label, phrase: w.phrase, audioUri: w.audioUri, useTextToSpeech: w.useTextToSpeech },
+      { label: spokenText, phrase: spokenText, audioUri: w.audioUri, useTextToSpeech: w.useTextToSpeech },
       lang,
       settings.speechRate,
       voiceType,
@@ -346,9 +361,9 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       ...prev,
       {
         id: `${w.id}-${prev.length}-${Date.now().toString(36).slice(-4)}`,
-        label: w.phrase || w.label,
+        label: spokenText,
         emoji: w.emoji,
-        imageUri: w.imageUri || getPictogramUrl(w.phrase || w.label) || undefined,
+        imageUri: w.imageUri || getPictogramUrl(canonicalWordEn(w.phrase || w.label)) || undefined,
         audioUri: w.audioUri,
         useTextToSpeech: w.useTextToSpeech,
       },
@@ -395,7 +410,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     if (sentence.length === 0 || speaking) return;
     tapFeedback();
     setSpeaking(true);
-    const labels = sentence.map((c) => c.label);
+    const labels = sentence.map((c) => wordLabel(c.label, lang));
     recordSentencePlayed(child.id, labels);
 
     // Natural English formatting across categories for daily routine sentences
@@ -420,12 +435,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     }
     const tabs = bottomTabCategories();
     const coreTab =
-      tabs.find(
-        (t) =>
-          t.name.toLowerCase().includes("core") ||
-          t.name === "بنیادی" ||
-          t.name === "أساسي"
-      ) ?? tabs[0];
+      tabs.find((t) => {
+        const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
+        return en === "core" || t.name === "بنیادی" || t.name === "أساسي";
+      }) ?? tabs[0];
     if (coreTab?.id && path[0] !== coreTab.id) {
       setPath([coreTab.id]);
       return;
@@ -440,7 +453,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   }
 
   const tileSize = { width: `${100 / cols}%` as const };
-  const title = current?.name ?? t("talk", lang);
+  const title = current ? wordLabel(current.name, lang) : t("talk", lang);
 
   return (
     <View style={styles.container}>
@@ -465,12 +478,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
               tapFeedback();
               const tabs = bottomTabCategories();
               const coreTab =
-                tabs.find(
-                  (t) =>
-                    t.name.toLowerCase().includes("core") ||
-                    t.name === "بنیادی" ||
-                    t.name === "أساسي"
-                ) ?? tabs[0];
+                tabs.find((t) => {
+                  const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
+                  return en === "core" || t.name === "بنیادی" || t.name === "أساسي";
+                }) ?? tabs[0];
               if (coreTab?.id) setPath([coreTab.id]);
               else setPath([]);
             }}
@@ -523,7 +534,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
               <View style={styles.liveSentenceTextWrap}>
                 <Ionicons name="chatbubble-ellipses" size={13} color={colors.forest} />
                 <Text style={styles.liveSentenceText} numberOfLines={1}>
-                  "{formatNaturalEnglishSentence(sentence.map((c) => c.label))}"
+                  "{lang === "en-US" ? formatNaturalEnglishSentence(sentence.map((c) => wordLabel(c.label, "en-US"))) : sentence.map((c) => wordLabel(c.label, lang)).join(" ")}"
                 </Text>
               </View>
             )}
@@ -545,13 +556,13 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       <CardPic label={c.label} imageUri={c.imageUri} emoji={c.emoji} size={30} />
                     </View>
                     <Text style={styles.miniCardText} numberOfLines={1}>
-                      {c.label}
+                      {wordLabel(c.label, lang)}
                     </Text>
                     <Pressable
                       onPress={() => removeChipAt(idx)}
                       style={styles.miniCardClose}
                       hitSlop={{ top: 8, left: 8, right: 8, bottom: 8 }}
-                      accessibilityLabel={`Remove ${c.label}`}
+                      accessibilityLabel={`Remove ${wordLabel(c.label, lang)}`}
                     >
                       <Ionicons name="close" size={12} color="#ffffff" />
                     </Pressable>
@@ -610,7 +621,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 color={colors.forest}
               />
               <Text style={styles.breadcrumbBackText}>
-                {getCategory(path[path.length - 2])?.name ?? t("back", lang)}
+                {wordLabel(getCategory(path[path.length - 2])?.name ?? t("back", lang), lang)}
               </Text>
             </Pressable>
             <Ionicons
@@ -620,7 +631,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
             />
             <View style={styles.breadcrumbCurrentPill}>
               <Text style={styles.breadcrumbCurrentText} numberOfLines={1}>
-                {current?.icon ? `${current.icon} ` : ""}{current?.name}
+                {current?.icon ? `${current.icon} ` : ""}{wordLabel(current?.name ?? "", lang)}
               </Text>
               {words.length > 0 && (
                 <View style={styles.breadcrumbCountBadge}>
@@ -656,7 +667,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       <View style={styles.folderTopTab}>
                         <View style={[styles.folderTabPill, { backgroundColor: c }]}>
                           <Ionicons name="folder-open" size={9} color="#ffffff" />
-                          <Text style={styles.folderTabPillText}>Folder</Text>
+                          <Text style={styles.folderTabPillText}>{wordLabel("Folder", lang)}</Text>
                         </View>
                         {childCount > 0 && (
                           <View style={[styles.folderCountPill, { borderColor: c + "40" }]}>
@@ -680,7 +691,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       </View>
                       <View style={[styles.folderLabelBar, { backgroundColor: c }]}>
                         <Text style={styles.folderLabelText} numberOfLines={1}>
-                          {f.name}
+                          {wordLabel(f.name, lang)}
                         </Text>
                       </View>
                     </Pressable>
@@ -720,7 +731,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                               vTag === "4th" && styles.verbFormBadgeText4th,
                             ]}
                           >
-                            {vTag} Form
+                            {vTag} {lang === "ar-SA" ? "تصريف" : lang === "ur-PK" ? "فارم" : "Form"}
                           </Text>
                         </View>
                       )}
@@ -740,7 +751,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       </View>
                       <View style={styles.wordLabelBar}>
                         <Text style={styles.wordLabelText} numberOfLines={1}>
-                          {w.label}
+                          {wordLabel(w.label, lang)}
                         </Text>
                       </View>
                     </Pressable>
@@ -791,7 +802,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                   ]}
                   numberOfLines={1}
                 >
-                  {bt.name}
+                  {wordLabel(bt.name, lang)}
                 </Text>
                 {active && (
                   <View

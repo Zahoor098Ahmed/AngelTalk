@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { CustomCategory, CustomWord, TileSize } from "../types";
 import { useSettings } from "../context/SettingsContext";
-import { t, type TKey } from "../modules/i18n";
+import { t, type TKey, wordLabel, canonicalWordEn } from "../modules/i18n";
 import { playWord } from "../modules/audio";
 import {
   ensureCategoriesLoaded,
@@ -171,7 +171,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     setCats(list);
     setTick((t) => t + 1);
     if (!selectedShelfId && list.length > 0) {
-      const core = list.find((c) => c.name.toLowerCase() === "core");
+      const core = list.find((c) => {
+        const en = (canonicalWordEn(c.name) || c.name).toLowerCase();
+        return en === "core" || c.name === "أساسي" || c.name === "بنیادی";
+      });
       const chosen = core ? core : list[0];
       setSelectedShelfId(chosen.id);
       const subs = childCategories(chosen.id);
@@ -571,8 +574,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       // If currentShelf or target is Actions, route into Verbs A-Z subcategory
       let actualTargetCatId = targetCat.id;
       const isActionsShelf =
-        (targetCat.name || "").toLowerCase().includes("action") ||
-        (currentShelf?.name || "").toLowerCase().includes("action");
+        (canonicalWordEn(targetCat.name) || targetCat.name).toLowerCase().includes("action") ||
+        (canonicalWordEn(currentShelf?.name || "") || currentShelf?.name || "").toLowerCase().includes("action");
 
       if (isActionsShelf) {
         const letter = (detectedVerbForms.base[0] || "A").toUpperCase();
@@ -581,7 +584,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         if (existingSub) {
           actualTargetCatId = existingSub.id;
         } else {
-          const actionsShelf = currentShelf?.name.toLowerCase().includes("action") ? currentShelf : targetCat;
+          const actionsShelf = (canonicalWordEn(currentShelf?.name || "") || currentShelf?.name || "").toLowerCase().includes("action") ? currentShelf : targetCat;
           const allSubs = childCategories(actionsShelf.id);
           const found = allSubs.find((sc) => sc.name.toLowerCase() === subName.toLowerCase());
           if (found) {
@@ -1238,7 +1241,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             ]}
                             numberOfLines={1}
                           >
-                            {cat.name}
+                            {wordLabel(cat.name, lang)}
                           </Text>
                           {cat.hidden && (
                             <Text style={styles.hiddenTag}>(Hidden)</Text>
@@ -1314,7 +1317,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                                     ]}
                                     numberOfLines={1}
                                   >
-                                    {sc.name}
+                                    {wordLabel(sc.name, lang)}
                                   </Text>
                                   <Text style={styles.sidebarSubCatCount}>({sc.words.length})</Text>
                                 </View>
@@ -1395,14 +1398,14 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Pressable onPress={() => setSelectedSubCatId(null)}>
                       <Text style={[styles.selectedShelfTitle, selectedSubCatId ? { color: "#235E50" } : null]}>
-                        {currentShelf ? currentShelf.name : "Core"}
+                        {currentShelf ? wordLabel(currentShelf.name, lang) : wordLabel("Core", lang)}
                       </Text>
                     </Pressable>
                     {selectedSubCatId && (
                       <>
                         <Ionicons name="chevron-forward" size={16} color="#8A9590" />
                         <Text style={styles.selectedShelfTitle}>
-                          {activeCategory?.name}
+                          {wordLabel(activeCategory?.name || "", lang)}
                         </Text>
                       </>
                     )}
@@ -1467,7 +1470,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                           onPress={() => {
                             playWord(
                               {
-                                label: w.phrase || w.label,
+                                label: wordLabel(w.phrase || w.label, lang),
                                 audioUri: w.audioUri,
                                 useTextToSpeech: w.useTextToSpeech,
                               },
@@ -1498,7 +1501,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                               ]}
                               numberOfLines={1}
                             >
-                              {w.label}
+                              {wordLabel(w.label, lang)}
                             </Text>
                             {w.hidden && (
                               <Text style={styles.wordHiddenNote}>Hidden from child</Text>
@@ -1634,7 +1637,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                           cat.hidden && styles.textHiddenDim,
                         ]}
                       >
-                        {cat.name}
+                        {wordLabel(cat.name, lang)}
                       </Text>
 
                       {/* Pencil Edit button */}
@@ -1689,8 +1692,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 <View style={{ flex: 1 }}>
                   <Text style={styles.selectedShelfTitle}>
                     {selectedSubCatId
-                      ? `${currentShelf ? currentShelf.name : "Core"} › ${activeCategory?.name}`
-                      : (currentShelf ? currentShelf.name : "Core")}
+                      ? `${currentShelf ? wordLabel(currentShelf.name, lang) : wordLabel("Core", lang)} › ${wordLabel(activeCategory?.name || "", lang)}`
+                      : (currentShelf ? wordLabel(currentShelf.name, lang) : wordLabel("Core", lang))}
                   </Text>
                   <Text style={styles.selectedShelfMeta}>
                     {displayWords.length} words · {selectedSubCatId ? `sub-category "${activeCategory?.name}"` : "on device"}
@@ -1758,7 +1761,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         !selectedSubCatId && styles.subCatTabPillTextActive,
                       ]}
                     >
-                      {currentShelf?.name} (All)
+                      {currentShelf ? wordLabel(currentShelf.name, lang) : wordLabel("Core", lang)} (All)
                     </Text>
                     <View
                       style={[
@@ -1797,7 +1800,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             sc.hidden && styles.textHiddenDim,
                           ]}
                         >
-                          {sc.name}
+                          {wordLabel(sc.name, lang)}
                         </Text>
                         <View
                           style={[
@@ -1898,7 +1901,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         onPress={() => {
                           playWord(
                             {
-                              label: w.phrase || w.label,
+                              label: wordLabel(w.phrase || w.label, lang),
                               audioUri: w.audioUri,
                               useTextToSpeech: w.useTextToSpeech,
                             },
@@ -1929,7 +1932,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             ]}
                             numberOfLines={1}
                           >
-                            {w.label}
+                            {wordLabel(w.label, lang)}
                           </Text>
                           {w.hidden && (
                             <Text style={styles.wordHiddenNote}>Hidden</Text>
