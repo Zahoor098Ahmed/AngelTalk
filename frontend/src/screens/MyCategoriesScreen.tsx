@@ -3234,10 +3234,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                               </Pressable>
 
                               <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                                  <Text style={{ fontSize: 14 }}>{sh.icon}</Text>
-                                  <Text style={styles.bulkWordItemName}>{sh.name}</Text>
-                                </View>
+                                <Text style={styles.bulkWordItemName}>{sh.name}</Text>
                                 {sh.subcats.length > 0 ? (
                                   <Text style={styles.bulkShelfSubList}>
                                     Includes {sh.subcats.length} sub-categories: {sh.subcats.join(", ")}
@@ -3427,10 +3424,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                               </Pressable>
 
                               <View style={{ flex: 1 }}>
-                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                                  <Text style={{ fontSize: 14 }}>{icon}</Text>
-                                  <Text style={styles.bulkWordItemName}>{sc}</Text>
-                                </View>
+                                <Text style={styles.bulkWordItemName}>{sc}</Text>
                                 <Text style={styles.bulkShelfSubListEmpty}>
                                   Under parent shelf: {parentShelf?.name || "Shelf"}
                                 </Text>
