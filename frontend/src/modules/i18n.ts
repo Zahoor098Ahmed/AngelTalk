@@ -1,4 +1,5 @@
 import { I18nManager } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Language, LanguageCode } from '../types';
 
 export const LANGUAGES: Language[] = [
@@ -2321,7 +2322,73 @@ export function diagnosisLabel(key: string, englishFallback: string, lang: Langu
  * original text — a caregiver's custom word is never guessed at.
  */
 const WORD_AR: Record<string, string> = {
-  // days & months
+  // Common Everyday & Extended Food & Drinks
+  Coffee: 'قهوة', Tea: 'شاي', 'Hot Chocolate': 'شوكولاتة ساخنة', Soda: 'مشروب غازي', Milkshake: 'ميلك شيك',
+  Smoothie: 'سموذي', Lemonade: 'عصير ليمون', 'Water Bottle': 'زجاجة ماء', Burger: 'برغر', Hamburger: 'هامبرغر',
+  Cheeseburger: 'تشيز برغر', 'French Fries': 'بطاطا مقلية', 'Hot Dog': 'هوت دوغ',
+  Taco: 'تاكو', Nuggets: 'قطع دجاج', 'Chicken Nuggets': 'قطع دجاج', Pasta: 'معكرونة', Noodles: 'نودلز',
+  Spaghetti: 'سباغيتي', Meat: 'لحم', Beef: 'لحم بقري', Steak: 'شريحة لحم', Shrimp: 'روبيان', Toast: 'خبز محمص',
+  Butter: 'زبدة', Jam: 'مربى', Honey: 'عسل', Pancake: 'بان كيك', Pancakes: 'بان كيك', Waffle: 'وافل',
+  Waffles: 'وافل', Cereal: 'حبوب إفطار', Yogurt: 'زبادي', Oatmeal: 'شوفان', Bacon: 'لحم مقدد',
+  Sausage: 'نقانق', Snacks: 'وجبات خفيفة', Chips: 'رقائق بطاطس', Popcorn: 'فشار', Pretzel: 'بريتزل',
+  Crackers: 'بسكويت مالح', Nuts: 'مكسرات', Candy: 'حلوى', Chocolate: 'شوكولاتة', Donut: 'دونات',
+  Donuts: 'دونات', Cupcake: 'كب كيك', 'Ice Cream': 'آيس كريم', Cheesecake: 'تشيز كيك',
+  'Strawberry Cheesecake': 'تشيز كيك الفراولة', Pie: 'فطيرة', Pudding: 'بودينغ', Ketchup: 'كاتشب',
+  Mustard: 'خردل', Mayonnaise: 'مايونيز', Sauce: 'صلصة', Salt: 'ملح', Sugar: 'سكر',
+
+  // Extended Fruits & Vegetables
+  Apples: 'تفاح', Bananas: 'موز', Blackberry: 'توت أسود', Blueberry: 'توت أزرق', Blueberries: 'توت أزرق',
+  Cherries: 'كرز', Dates: 'تمر', Fig: 'تين', Grapes: 'عنب', Guava: 'جوافة', Lime: 'ليمون أخضر',
+  Papaya: 'بابايا', Plum: 'برقوق', Pomegranate: 'رمان', Raspberry: 'توت العليق', Strawberries: 'فراولة',
+  Beans: 'فاصولياء', 'Green Beans': 'فاصولياء خضراء', 'Bell Pepper': 'فلفل رومي', Broccoli: 'بروكلي',
+  Cabbage: 'ملفوف', Carrots: 'جزر', Cauliflower: 'قرنبيط', Celery: 'كرفس', Chili: 'فلفل حار',
+  Eggplant: 'باذنجان', Lettuce: 'خس', Mushrooms: 'فطر', Onions: 'بصل', Peas: 'بازلاء',
+  Potatoes: 'بطاطا', 'Sweet Potato': 'بطاطا حلوة', Spinach: 'سبانخ', Tomatoes: 'طماطم', Zucchini: 'كوسة',
+
+  // Extended Animals & Insects
+  'Polar Bear': 'دب قطبي', Kitten: 'قطة صغيرة', Cheetah: 'فهد', Bull: 'ثور', Calf: 'عجل',
+  Alligator: 'تمساح', Dinosaur: 'ديناصور', Puppy: 'جرو', Dragonfly: 'يعسوب', Flamingo: 'فلامنغو',
+  Toad: 'علجوم', Goose: 'إوزة', 'Guinea Pig': 'خنزير غينيا', Hamster: 'هامستر', Hawk: 'صقر',
+  Pony: 'مهر', Jellyfish: 'قنديل البحر', Ladybug: 'دعسوقة', Leopard: 'نمر منقط', Chameleon: 'حرباء',
+  Llama: 'لاما', Lobster: 'كركند', Chimpanzee: 'شمبانزي', Mosquito: 'بعوضة', Rat: 'جرذ',
+  Peacock: 'طاووس', Piglet: 'خنزير صغير', Pigeon: 'حمامة', Bunny: 'أرنب صغير', 'Sea Lion': 'أسد البحر',
+  Seagull: 'نورس', Lamb: 'حمل', Squid: 'حبار', Starfish: 'نجم البحر', Turkey: 'ديك رومي',
+  'Sea Turtle': 'سلحفاة بحرية', Walrus: 'فظ', Worm: 'دودة',
+
+  // Toys & Everyday Items
+  Toy: 'لعبة', Toys: 'ألعاب', Doll: 'دمية', Lego: 'ليغو', Puzzle: 'أحجية', Ball: 'كرة',
+  Football: 'كرة قدم', Balloon: 'بالون', Bubbles: 'فقاعات', 'Play Dough': 'صلصال', Slime: 'سلايم',
+  'Teddy Bear': 'دبدوب', 'Action Figure': 'مجسم', 'Video Game': 'لعبة فيديو', Robot: 'روبوت',
+  Drone: 'طائرة بدون طيار', Kite: 'طائرة ورقية', Trampoline: 'ترامبولين',
+  House: 'منزل', Home: 'بيت', Room: 'غرفة', Bedroom: 'غرفة نوم', Bathroom: 'حمام', Kitchen: 'مطبخ',
+  'Living Room': 'غرفة الجلوس', 'Dining Room': 'غرفة الطعام', Garden: 'حديقة', Yard: 'فناء',
+  Backyard: 'حديقة خلفية', Garage: 'مرآب', Door: 'باب', Window: 'نافذة', Floor: 'أرضية',
+  Ceiling: 'سقف', Wall: 'جدار', Bed: 'سرير', Pillow: 'وسادة', Sofa: 'أريكة', Couch: 'كنبة',
+  Lamp: 'مصباح', Light: 'ضوء', Mirror: 'مرآة', Television: 'تلفزيون', TV: 'تلفاز',
+  Remote: 'جهاز تحكم', Computer: 'حاسوب', Laptop: 'كمبيوتر محمول', Phone: 'هاتف',
+  Refrigerator: 'ثلاجة', Fridge: 'براد', Microwave: 'ميكروويف', Oven: 'فرن', Stove: 'موقد',
+  Sink: 'مغسلة', Bathtub: 'حوض استحمام', 'Toilet Paper': 'ورق تواليت',
+  Towel: 'منشفة', Soap: 'صابون', Shampoo: 'شامبو', Toothbrush: 'فرشاة أسنان', Toothpaste: 'معجون أسنان',
+  Hairbrush: 'فرشاة شعر', Comb: 'مشط', Cup: 'كوب', Glass: 'كأس', Plate: 'صحن', Bowl: 'وعاء',
+  Spoon: 'ملعقة', Fork: 'شوكة', Knife: 'سكين',
+
+  // Extended Places
+  Park: 'حديقة عامة', Beach: 'شاطئ', Pool: 'مسبح', 'Swimming Pool': 'حمام سباحة',
+  Store: 'متجر', Supermarket: 'سوبرماركت', Mall: 'مركز تسوق', Bakery: 'مخبز',
+  Restaurant: 'مطعم', Cafe: 'مقهى', Hospital: 'مستشفى', Clinic: 'عيادة', Pharmacy: 'صيدلية',
+  Library: 'مكتبة', Zoo: 'حديقة حيوان', Aquarium: 'متحف مائي', Museum: 'متحف', Cinema: 'سينما',
+  'Movie Theater': 'سينما', Airport: 'مطار', 'Train Station': 'محطة قطار', 'Bus Stop': 'موقف باص',
+  Hotel: 'فندق', Bank: 'بنك', 'Post Office': 'مكتب بريد', 'Fire Station': 'محطة إطفاء',
+  'Police Station': 'مركز شرطة', Mosque: 'مسجد', Church: 'كنيسة',
+
+  // Extended Actions
+  Bake: 'أخبز', Cook: 'أطبخ', Boil: 'أغلي', Buy: 'أشتري', Build: 'أبني',
+  Draw: 'أرسم', Paint: 'ألون', Color: 'ألون', Cut: 'أقص', Shout: 'أصرخ',
+  Laugh: 'أضحك', Smile: 'أبتسم', Cry: 'أبكي', Touch: 'ألمس', Push: 'أدفع', Pull: 'أسحب',
+  Throw: 'أرمي', Kick: 'أركل', Ride: 'أركب', Drive: 'أقود', Swim: 'أسبح', Climb: 'أتسلق',
+  Jump: 'أقفز', Stand: 'أقف', Wait: 'أنتظر', Give: 'أعطي', Take: 'آخذ', Find: 'أجد',
+
+  // Days & Months
   Monday: 'الإثنين', Tuesday: 'الثلاثاء', Wednesday: 'الأربعاء', Thursday: 'الخميس', Friday: 'الجمعة', Saturday: 'السبت', Sunday: 'الأحد',
   January: 'يناير', February: 'فبراير', March: 'مارس', April: 'أبريل', May: 'مايو', June: 'يونيو', July: 'يوليو',
   August: 'أغسطس', September: 'سبتمبر', October: 'أكتوبر', November: 'نوفمبر', December: 'ديسمبر',
@@ -2489,10 +2556,62 @@ const WORD_UR: Record<string, string> = {
   'I am scared': 'میں ڈرا ہوا ہوں',
 };
 
-// Reverse lookups (Arabic/Urdu text -> English) so a word already translated
-// one way can be recovered and re-translated the other way. Without this,
-// switching a category from Arabic back to English left every non-core word
-// stuck in Arabic, because wordLabel() only ever matched by English key.
+// Normalized lowercase maps for case-insensitive instant lookup
+const WORD_AR_NORM: Record<string, string> = {};
+const WORD_UR_NORM: Record<string, string> = {};
+const WORD_AR_REV_NORM: Record<string, string> = {};
+const WORD_UR_REV_NORM: Record<string, string> = {};
+
+function initNormalizedDictionaries() {
+  for (const [k, v] of Object.entries(WORD_AR)) {
+    const kNorm = k.trim().toLowerCase();
+    WORD_AR_NORM[kNorm] = v;
+    WORD_AR_REV_NORM[v.trim().toLowerCase()] = k.trim();
+  }
+  for (const [k, v] of Object.entries(WORD_UR)) {
+    const kNorm = k.trim().toLowerCase();
+    WORD_UR_NORM[kNorm] = v;
+    WORD_UR_REV_NORM[v.trim().toLowerCase()] = k.trim();
+  }
+  for (const [k, v] of Object.entries(STARTER_WORDS['ar-SA'] ?? {})) {
+    const kNorm = k.trim().toLowerCase();
+    if (!WORD_AR_NORM[kNorm]) WORD_AR_NORM[kNorm] = v;
+    WORD_AR_REV_NORM[v.trim().toLowerCase()] = k.trim();
+  }
+  for (const [k, v] of Object.entries(STARTER_WORDS['ur-PK'] ?? {})) {
+    const kNorm = k.trim().toLowerCase();
+    if (!WORD_UR_NORM[kNorm]) WORD_UR_NORM[kNorm] = v;
+    WORD_UR_REV_NORM[v.trim().toLowerCase()] = k.trim();
+  }
+}
+initNormalizedDictionaries();
+
+// Dynamic Persistent Translation Cache
+const DYNAMIC_CACHE_KEY = '@bloomspeech_dynamic_translations_v2';
+const DYNAMIC_CACHE: Record<string, Record<string, string>> = {
+  'ar-SA': {},
+  'ur-PK': {},
+  'en-US': {},
+};
+
+AsyncStorage.getItem(DYNAMIC_CACHE_KEY)
+  .then((raw) => {
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed['ar-SA']) Object.assign(DYNAMIC_CACHE['ar-SA'], parsed['ar-SA']);
+        if (parsed['ur-PK']) Object.assign(DYNAMIC_CACHE['ur-PK'], parsed['ur-PK']);
+        if (parsed['en-US']) Object.assign(DYNAMIC_CACHE['en-US'], parsed['en-US']);
+      } catch {}
+    }
+  })
+  .catch(() => {});
+
+function persistDynamicCache() {
+  AsyncStorage.setItem(DYNAMIC_CACHE_KEY, JSON.stringify(DYNAMIC_CACHE)).catch(() => {});
+}
+
+// Backward-compatible reverse dictionaries
 function buildReverse(dict: Record<string, string>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [en, local] of Object.entries(dict)) out[local] = en;
@@ -2501,16 +2620,114 @@ function buildReverse(dict: Record<string, string>): Record<string, string> {
 const WORD_AR_REVERSE = buildReverse(WORD_AR);
 const WORD_UR_REVERSE = buildReverse(WORD_UR);
 
-/** Recover the canonical English form of a word, whatever language it's
- * currently displayed in (a no-op if it's already English or unknown). */
-/** Exported for the learning engine (skill-tree word matching): recovers a word's canonical English anchor whatever language it's currently displayed in. */
+/**
+ * Recover the canonical English form of a word, whatever language it's
+ * currently displayed in (a no-op if it's already English or unknown).
+ */
 export function canonicalWordEn(label: string): string {
-  return WORD_AR_REVERSE[label] ?? WORD_UR_REVERSE[label] ?? label;
+  const clean = (label || '').trim();
+  if (!clean) return '';
+  // If no Arabic/Urdu unicode characters, it is already English/Latin
+  if (!/[\u0600-\u06FF]/.test(clean)) {
+    return clean;
+  }
+  const lower = clean.toLowerCase();
+  return (
+    WORD_AR_REV_NORM[lower] ??
+    WORD_UR_REV_NORM[lower] ??
+    DYNAMIC_CACHE['en-US']?.[lower] ??
+    WORD_AR_REVERSE[clean] ??
+    WORD_UR_REVERSE[clean] ??
+    clean
+  );
 }
 
+/**
+ * Synchronous dictionary lookup. Returns translated word in current language,
+ * or recovers original English word if lang is 'en-US'.
+ */
 export function wordLabel(label: string, lang: LanguageCode): string {
-  const en = canonicalWordEn(label);
-  if (lang === 'ar-SA') return WORD_AR[en] ?? starterLabel(en, lang) ?? en;
-  if (lang === 'ur-PK') return WORD_UR[en] ?? starterLabel(en, lang) ?? en;
+  const clean = (label || '').trim();
+  if (!clean) return '';
+  if (lang === 'en-US') {
+    return canonicalWordEn(clean);
+  }
+
+  const en = canonicalWordEn(clean);
+  const enLower = en.toLowerCase();
+
+  if (lang === 'ar-SA') {
+    if (WORD_AR_NORM[enLower]) return WORD_AR_NORM[enLower];
+    if (DYNAMIC_CACHE['ar-SA']?.[enLower]) return DYNAMIC_CACHE['ar-SA'][enLower];
+    const starter = starterLabel(en, lang);
+    if (starter && starter !== en) return starter;
+    if (/[\u0600-\u06FF]/.test(clean)) return clean;
+    return en;
+  }
+
+  if (lang === 'ur-PK') {
+    if (WORD_UR_NORM[enLower]) return WORD_UR_NORM[enLower];
+    if (DYNAMIC_CACHE['ur-PK']?.[enLower]) return DYNAMIC_CACHE['ur-PK'][enLower];
+    const starter = starterLabel(en, lang);
+    if (starter && starter !== en) return starter;
+    if (/[\u0600-\u06FF]/.test(clean)) return clean;
+    return en;
+  }
+
   return en;
+}
+
+/**
+ * Asynchronously translates any word or phrase into the target language.
+ * Checks dictionary and cache first. If missing, dynamically translates
+ * via online service, caches both forward & reverse, and persists to AsyncStorage.
+ */
+export async function translateDynamic(text: string, targetLang: LanguageCode): Promise<string> {
+  const clean = (text || '').trim();
+  if (!clean) return clean;
+
+  if (targetLang === 'en-US') {
+    return canonicalWordEn(clean);
+  }
+
+  // 1. Try synchronous dictionary & cache lookup first
+  const syncMatch = wordLabel(clean, targetLang);
+  if (syncMatch && syncMatch.toLowerCase() !== clean.toLowerCase()) {
+    return syncMatch;
+  }
+
+  const enLower = clean.toLowerCase();
+  if (DYNAMIC_CACHE[targetLang]?.[enLower]) {
+    return DYNAMIC_CACHE[targetLang][enLower];
+  }
+
+  // If already in Arabic script, keep it
+  if (['ar-SA', 'ur-PK'].includes(targetLang) && /[\u0600-\u06FF]/.test(clean)) {
+    return clean;
+  }
+
+  // 2. Fetch from Google Translate API
+  const tl = targetLang === 'ar-SA' ? 'ar' : targetLang === 'ur-PK' ? 'ur' : 'en';
+  try {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${tl}&dt=t&q=${encodeURIComponent(clean)}`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      const translated = data?.[0]?.[0]?.[0];
+      if (translated && typeof translated === 'string') {
+        const transTrim = translated.trim();
+        if (!DYNAMIC_CACHE[targetLang]) DYNAMIC_CACHE[targetLang] = {};
+        DYNAMIC_CACHE[targetLang][enLower] = transTrim;
+        // Save reverse as well for seamless switching back to English
+        if (!DYNAMIC_CACHE['en-US']) DYNAMIC_CACHE['en-US'] = {};
+        DYNAMIC_CACHE['en-US'][transTrim.toLowerCase()] = clean;
+        persistDynamicCache();
+        return transTrim;
+      }
+    }
+  } catch (e) {
+    // Network unavailable or offline: fallback to clean
+  }
+
+  return clean;
 }

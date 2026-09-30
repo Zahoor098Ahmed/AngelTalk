@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { CustomCategory, CustomWord, TileSize, LanguageCode } from "../types";
-import { starterLabel, wordLabel } from "./i18n";
+import { starterLabel, wordLabel, canonicalWordEn, translateDynamic } from "./i18n";
 import { getPictogramUrl } from "./aacPictograms";
 import { VERB_FORMS_LIST } from "./verbForms";
 
@@ -926,6 +926,17 @@ const FOLDER_NAMES: Partial<Record<LanguageCode, Record<string, string>>> = {
     Vehicles: "مركبات", "Body Parts": "أجزاء الجسم", Clothes: "ملابس", Weather: "الطقس", Family: "العائلة",
     Jobs: "وظائف", Instruments: "آلات موسيقية", "School Supplies": "أدوات مدرسية",
     Furniture: "أثاث", Feelings2: "مشاعر", "Days of the Week": "أيام الأسبوع", Months: "الشهور", Numbers: "أرقام", Letters: "حروف",
+    Drinks: "مشروبات", Snacks: "وجبات خفيفة", Toys: "ألعاب", Dessert: "حلويات",
+    Breakfast: "فطور", Lunch: "غداء", Dinner: "عشاء", Kitchen: "مطبخ", Bedroom: "غرفة نوم",
+    Home: "منزل", Park: "حديقة", Hospital: "مستشفى", Store: "متجر", Mall: "مركز تسوق",
+    Airport: "مطار", Playground: "ملعب", Garden: "حديقة", Beach: "شاطئ", Farm: "مزرعة",
+    Zoo: "حديقة حيوان", Classroom: "فصل دراسي", Office: "مكتب", Bathroom: "حمام",
+    "Wild Animals": "حيوانات برية", "Farm Animals": "حيوانات المزرعة", "Sea Animals": "حيوانات بحرية",
+    Pets: "حيوانات أليفة", "Hot Drinks": "مشروبات ساخنة", "Cold Drinks": "مشروبات باردة",
+    "Outdoor Toys": "ألعاب خارجية", "Indoor Toys": "ألعاب داخلية", "Fast Food": "وجبات سريعة",
+    Dairy: "منتجات ألبان", Sweets: "حلويات", Meat: "لحوم", Tech: "تكنولوجيا",
+    Electronics: "إلكترونيات", Art: "فنون", Books: "كتب",
+    ...Object.fromEntries("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((L) => [`Verbs ${L}`, `أفعال ${L}`])),
   },
   "ur-PK": {
     Core: "بنیادی", Food: "کھانا", Feelings: "احساسات", People: "لوگ", Actions: "کام",
@@ -936,6 +947,17 @@ const FOLDER_NAMES: Partial<Record<LanguageCode, Record<string, string>>> = {
     Animals: "جانور", Fruits: "پھل", Vegetables: "سبزیاں", Colors: "رنگ", Shapes: "شکلیں",
     Vehicles: "گاڑیاں", "Body Parts": "جسم کے حصے", Clothes: "کپڑے", Weather: "موسم", Family: "خاندان",
     Jobs: "پیشے", "School Supplies": "اسکول کا سامان", "Days of the Week": "ہفتے کے دن", Months: "مہینے",
+    Drinks: "مشروبات", Snacks: "ناشتہ", Toys: "کھلونے", Dessert: "میٹھے کھانے",
+    Breakfast: "ناشتہ", Lunch: "دوپہر کا کھانا", Dinner: "رات کا کھانا", Kitchen: "باورچی خانہ", Bedroom: "سونے کا کمرہ",
+    Home: "گھر", Park: "پارک", Hospital: "ہسپتال", Store: "دکان", Mall: "شاپنگ مال",
+    Airport: "ہوائی اڈہ", Playground: "کھیل کا میدان", Garden: "باغ", Beach: "ساحل", Farm: "فارم",
+    Zoo: "چڑیا گھر", Classroom: "کلاس روم", Office: "دفتر", Bathroom: "بیت الخلاء",
+    "Wild Animals": "جنگلی جانور", "Farm Animals": "پالتو جانور", "Sea Animals": "سمندری جانور",
+    Pets: "پالتو جانور", "Hot Drinks": "گرم مشروبات", "Cold Drinks": "ٹھنڈے مشروبات",
+    "Outdoor Toys": "باہر کے کھلونے", "Indoor Toys": "گھر کے کھلونے", "Fast Food": "فاسٹ فوڈ",
+    Dairy: "ڈیری", Sweets: "مٹھائیاں", Meat: "گوشت", Tech: "ٹیکنالوجی",
+    Electronics: "الیکٹرانکس", Art: "آرٹ", Books: "کتابیں",
+    ...Object.fromEntries("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((L) => [`Verbs ${L}`, `کام ${L}`])),
   },
 };
 function folderName(en: string) {
@@ -952,50 +974,114 @@ const FOLDER_EN_BY_LANG: Record<string, string> = (() => {
   return m;
 })();
 
+let isTranslatingPending = false;
+async function translatePendingAsync(
+  items: { type: "cat" | "word"; id: string; catId?: string; originalText: string }[],
+  targetLang: LanguageCode
+) {
+  if (isTranslatingPending || items.length === 0) return;
+  isTranslatingPending = true;
+  let hasUpdates = false;
+
+  try {
+    for (const item of items) {
+      if (targetLang !== seedLang) break; // language changed in the meantime
+      const translated = await translateDynamic(item.originalText, targetLang);
+      if (translated && translated.toLowerCase() !== item.originalText.toLowerCase()) {
+        if (item.type === "cat") {
+          const targetCat = cache.find((c) => c.id === item.id);
+          if (targetCat && targetCat.name === item.originalText) {
+            targetCat.name = translated;
+            hasUpdates = true;
+          }
+        } else if (item.type === "word" && item.catId) {
+          const targetCat = cache.find((c) => c.id === item.catId);
+          const targetWord = targetCat?.words.find((w) => w.id === item.id);
+          if (targetWord && targetWord.label === item.originalText) {
+            targetWord.label = translated;
+            targetWord.phrase = translated;
+            hasUpdates = true;
+          }
+        }
+      }
+    }
+  } finally {
+    isTranslatingPending = false;
+    if (hasUpdates) {
+      cache = [...cache];
+      persist();
+    }
+  }
+}
+
 /**
- * Re-translate the built-in vocabulary (starter board + bulk-generated
- * categories, PLUS the individual words inside any user-created category)
- * into the given language. Words come from a fixed dictionary, so a
- * caregiver's own genuinely custom word (not in the dictionary) is left
- * untouched — only text that matches a known AAC word/phrase translates.
- * Call this whenever the language changes.
+ * Re-translate vocabulary and categories across the entire board.
+ * Covers all categories (built-in + caregiver created) and words.
+ * Performs instantaneous synchronous translation with comprehensive dictionaries & cache,
+ * and dynamically translates any remaining custom items in the background.
  */
 export function retranslateSeedBoard(lang: LanguageCode) {
   let changed = false;
-  for (const cat of cache) {
-    const isSeedFamily = ["seed", "generated", "list", "voice"].includes(cat.source);
+  const isTargetArabic = lang === "ar-SA" || lang === "ur-PK";
+  const pendingAsyncItems: { type: "cat" | "word"; id: string; catId?: string; originalText: string }[] = [];
 
-    // folder name — only rename folders we generated ourselves; a caregiver's
-    // own custom folder name (e.g. "Zahoor's Favorites") is left alone.
-    if (isSeedFamily) {
-      const enName = FOLDER_EN_BY_LANG[cat.name.toLowerCase()] ?? cat.name;
-      const newName = FOLDER_NAMES[lang]?.[enName] ?? (lang === "en-US" ? enName : cat.name);
-      if (newName !== cat.name) {
-        cat.name = newName;
+  for (const cat of cache) {
+    // 1. Category name translation
+    const rawCatName = cat.name.trim();
+    if (lang === "en-US") {
+      const enCat = canonicalWordEn(rawCatName) || FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || rawCatName;
+      if (enCat !== cat.name) {
+        cat.name = enCat;
         changed = true;
+      }
+    } else {
+      const enCat = canonicalWordEn(rawCatName) || FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || rawCatName;
+      const localizedName = FOLDER_NAMES[lang]?.[enCat] || wordLabel(enCat, lang);
+      if (localizedName && localizedName.toLowerCase() !== rawCatName.toLowerCase()) {
+        cat.name = localizedName;
+        changed = true;
+      } else if (isTargetArabic && !/[\u0600-\u06FF]/.test(cat.name)) {
+        pendingAsyncItems.push({ type: "cat", id: cat.id, originalText: cat.name });
       }
     }
 
-    // words — always attempt translation. Seed folders map by position for
-    // perfect accuracy; any other category (including a "manual" folder
-    // built via quick-start templates, pasted lists, or voice-add) falls
-    // back to dictionary lookup, which is a safe no-op for genuinely
-    // custom text that isn't recognized AAC vocabulary.
-    const enName2 = isSeedFamily ? (FOLDER_EN_BY_LANG[cat.name.toLowerCase()] ?? cat.name) : null;
-    const enWords = enName2 ? SEED_WORD_EN[enName2] : undefined;
+    // 2. Words translation
+    const enShelfName = FOLDER_EN_BY_LANG[cat.name.toLowerCase()] ?? cat.name;
+    const enWords = SEED_WORD_EN[enShelfName];
+
     cat.words.forEach((w, i) => {
-      const en = enWords?.find((e) => e.toLowerCase() === w.label.toLowerCase()) ?? enWords?.[i];
-      const localized = en ? starterLabel(en, lang) : wordLabel(w.label, lang);
-      if (localized && localized !== w.label) {
-        w.label = localized;
-        w.phrase = localized;
-        changed = true;
+      const rawWordLabel = w.label.trim();
+      if (lang === "en-US") {
+        const en = canonicalWordEn(rawWordLabel);
+        if (en && en !== w.label) {
+          w.label = en;
+          w.phrase = en;
+          changed = true;
+        }
+      } else {
+        const enMatch = enWords?.find((e) => e.toLowerCase() === rawWordLabel.toLowerCase()) ?? enWords?.[i];
+        const en = enMatch || canonicalWordEn(rawWordLabel);
+        const localized = (enMatch ? starterLabel(enMatch, lang) : null) || wordLabel(en, lang);
+
+        if (localized && localized.toLowerCase() !== rawWordLabel.toLowerCase()) {
+          w.label = localized;
+          w.phrase = localized;
+          changed = true;
+        } else if (isTargetArabic && !/[\u0600-\u06FF]/.test(w.label)) {
+          pendingAsyncItems.push({ type: "word", id: w.id, catId: cat.id, originalText: w.label });
+        }
       }
     });
   }
+
   if (changed) {
     cache = [...cache];
     persist();
+  }
+
+  // 3. Dynamic background translation for any remaining custom words/categories
+  if (pendingAsyncItems.length > 0 && isTargetArabic) {
+    translatePendingAsync(pendingAsyncItems, lang);
   }
 }
 
@@ -1701,11 +1787,35 @@ export function addWord(
     verbFormTag?: CustomWord["verbFormTag"];
   },
 ) {
+  let cleanLabel = word.label.trim();
+  let cleanPhrase = (word.phrase ?? word.label).trim() || cleanLabel;
+
+  if (["ar-SA", "ur-PK"].includes(seedLang) && !/[\u0600-\u06FF]/.test(cleanLabel) && /[a-zA-Z]/.test(cleanLabel)) {
+    const sync = wordLabel(cleanLabel, seedLang);
+    if (sync && sync.toLowerCase() !== cleanLabel.toLowerCase()) {
+      cleanLabel = sync;
+      cleanPhrase = sync;
+    } else {
+      const orig = cleanLabel;
+      translateDynamic(orig, seedLang).then((t) => {
+        if (t && t !== orig) {
+          mutate(catId, (c) => {
+            const w = c.words.find((x) => x.label === orig);
+            if (w) {
+              w.label = t;
+              w.phrase = t;
+            }
+          });
+        }
+      });
+    }
+  }
+
   return mutate(catId, (c) => {
     c.words.push({
       id: uid("w"),
-      label: word.label.trim(),
-      phrase: (word.phrase ?? word.label).trim() || word.label.trim(),
+      label: cleanLabel,
+      phrase: cleanPhrase,
       emoji: word.emoji || "🔹",
       imageUri: word.imageUri,
       color: word.color,
@@ -1736,8 +1846,48 @@ export function addWordsBulk(
     verbFormTag?: CustomWord["verbFormTag"];
   }[],
 ) {
+  const pendingWords: string[] = [];
+
+  const processedWords = words.map((word) => {
+    let cleanLabel = word.label.trim();
+    let cleanPhrase = (word.phrase ?? cleanLabel).trim() || cleanLabel;
+
+    if (["ar-SA", "ur-PK"].includes(seedLang) && !/[\u0600-\u06FF]/.test(cleanLabel) && /[a-zA-Z]/.test(cleanLabel)) {
+      const sync = wordLabel(cleanLabel, seedLang);
+      if (sync && sync.toLowerCase() !== cleanLabel.toLowerCase()) {
+        cleanLabel = sync;
+        cleanPhrase = sync;
+      } else {
+        pendingWords.push(cleanLabel);
+      }
+    }
+
+    return {
+      ...word,
+      label: cleanLabel,
+      phrase: cleanPhrase,
+    };
+  });
+
+  if (pendingWords.length > 0) {
+    (async () => {
+      for (const orig of pendingWords) {
+        const t = await translateDynamic(orig, seedLang);
+        if (t && t !== orig) {
+          mutate(catId, (c) => {
+            const w = c.words.find((x) => x.label === orig);
+            if (w) {
+              w.label = t;
+              w.phrase = t;
+            }
+          });
+        }
+      }
+    })();
+  }
+
   return mutate(catId, (c) => {
-    words.forEach((word) => {
+    processedWords.forEach((word) => {
       const cleanLabel = word.label.trim();
       if (!cleanLabel) return;
       c.words.push({

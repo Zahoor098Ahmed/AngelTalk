@@ -332,6 +332,7 @@ export default function UniversalImagePickerModal({
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
+                  style={styles.categoryPillsScroll}
                   contentContainerStyle={styles.categoryPillsRow}
                 >
                   {SYMBOL_CATEGORIES.map((cat) => {
@@ -727,18 +728,26 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
   },
+  categoryPillsScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+    height: 40,
+    marginBottom: 8,
+  },
   categoryPillsRow: {
     flexDirection: "row",
-    gap: 6,
-    paddingBottom: 8,
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
   },
   categoryPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 999,
+    gap: 5,
+    paddingHorizontal: 12,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#f0f0f0",
   },
   categoryPillActive: {
