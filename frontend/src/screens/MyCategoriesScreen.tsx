@@ -20,6 +20,7 @@ import {
   ensureCategoriesLoaded,
   topLevelCategories,
   childCategories,
+  getCategory,
   deleteCategoryDeep,
   createBlankCategory,
   createBlankCategoriesBulk,
@@ -136,17 +137,20 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   const [bulkShelvesText, setBulkShelvesText] = useState("");
   const [bulkSubCatsText, setBulkSubCatsText] = useState("");
   const [bulkTargetShelfId, setBulkTargetShelfId] = useState<string | null>(null);
+  const [bulkWordsShelfId, setBulkWordsShelfId] = useState<string | null>(null);
 
   // Universal 3-Option Image Picker Target (Gallery, App Library, Chrome Search)
   const [imagePickerTarget, setImagePickerTarget] = useState<{
-    type: "word" | "shelf" | "tableWord" | "bulkWord" | "editCat" | "voiceCat";
+    type: "word" | "shelf" | "tableWord" | "bulkWord" | "bulkShelf" | "bulkSubCat" | "editCat" | "voiceCat";
     wordId?: string;
     label: string;
     currentUri?: string;
   } | null>(null);
 
-  // Bulk Words Custom Images Mapping: word -> imageUri
+  // Bulk Custom Images Mapping: name -> imageUri
   const [bulkWordsImages, setBulkWordsImages] = useState<Record<string, string>>({});
+  const [bulkShelvesImages, setBulkShelvesImages] = useState<Record<string, string>>({});
+  const [bulkSubCatsImages, setBulkSubCatsImages] = useState<Record<string, string>>({});
 
   // Working Delete Confirmation Modal
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -208,6 +212,21 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     if (!currentShelf) return [];
     return childCategories(currentShelf.id);
   }, [currentShelf, tick]);
+
+  // Selected shelf for Bulk Words tab
+  const targetWordsShelf = useMemo(() => {
+    if (bulkWordsShelfId) {
+      const found = cats.find((c) => c.id === bulkWordsShelfId);
+      if (found) return found;
+    }
+    return currentShelf || cats[0] || null;
+  }, [bulkWordsShelfId, cats, currentShelf]);
+
+  // Sub-categories of selected shelf for Bulk Words tab
+  const targetWordsSubCats = useMemo(() => {
+    if (!targetWordsShelf) return [];
+    return childCategories(targetWordsShelf.id);
+  }, [targetWordsShelf, tick]);
 
   // Active category being viewed/edited (either a selected sub-category or the main shelf)
   const activeCategory = useMemo(() => {
@@ -317,11 +336,12 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
     let firstCreatedId: string | null = null;
     for (const shelf of parsedBulkShelves) {
+      const shelfImg = bulkShelvesImages[shelf.name] || getPictogramUrl(shelf.name) || undefined;
       const createdShelf = createBlankCategory({
         name: shelf.name,
         icon: shelf.icon,
         color: shelf.color,
-        imageUri: getPictogramUrl(shelf.name) || undefined,
+        imageUri: shelfImg,
       });
       if (!firstCreatedId) firstCreatedId = createdShelf.id;
 
@@ -332,7 +352,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             parentCategoryId: createdShelf.id,
             icon: getCategoryIconForName(scName),
             color: shelf.color,
-            imageUri: getPictogramUrl(scName) || undefined,
+            imageUri: bulkSubCatsImages[scName] || getPictogramUrl(scName) || undefined,
           }))
         );
       }
@@ -343,6 +363,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       setSelectedSubCatId(null);
     }
     setBulkShelvesText("");
+    setBulkShelvesImages({});
+    setBulkSubCatsImages({});
     setBulkModalOpen(false);
     refresh();
   }
@@ -357,14 +379,16 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         parentCategoryId: targetShelf.id,
         icon: getCategoryIconForName(scName),
         color: targetShelf.color,
-        imageUri: getPictogramUrl(scName) || undefined,
+        imageUri: bulkSubCatsImages[scName] || getPictogramUrl(scName) || undefined,
       }))
     );
 
     if (createdList.length > 0) {
+      setSelectedShelfId(targetShelf.id);
       setSelectedSubCatId(createdList[0].id);
     }
     setBulkSubCatsText("");
+    setBulkSubCatsImages({});
     setBulkModalOpen(false);
     setBulkWordsOpen(false);
     refresh();
@@ -373,7 +397,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   function openBulkModal(tab: "words" | "shelves" | "subcats" = "words") {
     setBulkModalTab(tab);
     if (tab === "words") {
-      setModalTargetCatId(activeCategory?.id || currentShelf?.id || null);
+      const initialShelfId = currentShelf?.id || cats[0]?.id || null;
+      setBulkWordsShelfId(initialShelfId);
+      setModalTargetCatId(activeCategory?.id || initialShelfId);
     } else if (tab === "subcats") {
       setBulkTargetShelfId(currentShelf?.id || (cats[0] ? cats[0].id : null));
     }
@@ -583,18 +609,14 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   }
 
   function handleBulkAddWords() {
-    let targetCat =
-      (modalTargetCatId
-        ? subCats.find((s) => s.id === modalTargetCatId) ||
-          (currentShelf?.id === modalTargetCatId ? currentShelf : null)
-        : null) ||
-      activeCategory ||
-      currentShelf;
-    if (!bulkWordsText.trim() || !targetCat) return;
-
-    if (subCats.length > 0 && targetCat.id === currentShelf?.id) {
-      targetCat = subCats[0];
+    let targetCat: CustomCategory | undefined = undefined;
+    if (modalTargetCatId) {
+      targetCat = getCategory(modalTargetCatId);
     }
+    if (!targetCat) {
+      targetCat = targetWordsShelf || currentShelf || undefined;
+    }
+    if (!bulkWordsText.trim() || !targetCat) return;
 
     const items = bulkWordsText
       .split(/[\n,;]+/)
@@ -668,7 +690,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     }
 
     addWordsBulk(targetCat.id, wordsToInsert);
-    setSelectedSubCatId(targetCat.id);
+    if (targetWordsShelf) {
+      setSelectedShelfId(targetWordsShelf.id);
+      setSelectedSubCatId(targetCat.id === targetWordsShelf.id ? null : targetCat.id);
+    }
 
     setBulkWordsOpen(false);
     setBulkWordsText("");
@@ -715,6 +740,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       refresh();
     } else if (imagePickerTarget.type === "bulkWord") {
       setBulkWordsImages((prev) => ({ ...prev, [imagePickerTarget.label]: uri }));
+    } else if (imagePickerTarget.type === "bulkShelf") {
+      setBulkShelvesImages((prev) => ({ ...prev, [imagePickerTarget.label]: uri }));
+    } else if (imagePickerTarget.type === "bulkSubCat") {
+      setBulkSubCatsImages((prev) => ({ ...prev, [imagePickerTarget.label]: uri }));
     }
   }
 
@@ -733,6 +762,18 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       refresh();
     } else if (imagePickerTarget.type === "bulkWord") {
       setBulkWordsImages((prev) => {
+        const next = { ...prev };
+        delete next[imagePickerTarget.label];
+        return next;
+      });
+    } else if (imagePickerTarget.type === "bulkShelf") {
+      setBulkShelvesImages((prev) => {
+        const next = { ...prev };
+        delete next[imagePickerTarget.label];
+        return next;
+      });
+    } else if (imagePickerTarget.type === "bulkSubCat") {
+      setBulkSubCatsImages((prev) => {
         const next = { ...prev };
         delete next[imagePickerTarget.label];
         return next;
@@ -2769,7 +2810,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   <Text style={styles.modalTitle}>Bulk Creator Center</Text>
                   <Text style={styles.modalSubtitle}>
                     {bulkModalTab === "words"
-                      ? `Add words to ${currentShelf ? currentShelf.name : "Shelf"}`
+                      ? `Add words to ${modalTargetCatId ? (getCategory(modalTargetCatId)?.name || targetWordsShelf?.name) : (targetWordsShelf?.name || "Shelf")}`
                       : bulkModalTab === "shelves"
                       ? "Create multiple main shelves and sub-categories"
                       : `Add sub-categories to ${(bulkTargetShelfId ? cats.find((c) => c.id === bulkTargetShelfId)?.name : null) || currentShelf?.name || "Shelf"}`}
@@ -2858,53 +2899,104 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               <View style={{ flex: 1, flexDirection: "column", minHeight: 0 }}>
                 {/* Fixed Top Controls */}
                 <View style={{ flexShrink: 0 }}>
-                  {/* Target Category / Sub-Category Selector */}
-                  {subCats.length > 0 && (
-                    <View style={{ marginBottom: 6 }}>
-                      <Text style={styles.fieldLabel}>Save words to</Text>
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.modalTargetRow}
-                      >
-                        <Pressable
-                          onPress={() => setModalTargetCatId(currentShelf?.id || null)}
-                          style={[
-                            styles.modalTargetPill,
-                            modalTargetCatId === currentShelf?.id && styles.modalTargetPillActive,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.modalTargetPillText,
-                              modalTargetCatId === currentShelf?.id && styles.modalTargetPillTextActive,
-                            ]}
-                          >
-                            🏠 {currentShelf?.name} (Main)
-                          </Text>
-                        </Pressable>
-                        {subCats.map((sc) => (
+                  {/* Step 1: Choose Main Category / Shelf */}
+                  <View style={{ marginBottom: 6 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                      <Text style={styles.fieldLabel}>1. Choose Shelf (Category)</Text>
+                      <Text style={{ fontSize: 11, color: "#235E50", fontWeight: "700" }}>
+                        Active: {targetWordsShelf?.icon || "📁"} {targetWordsShelf?.name || "Shelf"}
+                      </Text>
+                    </View>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.modalTargetRow}
+                    >
+                      {cats.map((c) => {
+                        const isSelected = (bulkWordsShelfId || currentShelf?.id) === c.id;
+                        return (
                           <Pressable
-                            key={sc.id}
-                            onPress={() => setModalTargetCatId(sc.id)}
+                            key={c.id}
+                            onPress={() => {
+                              setBulkWordsShelfId(c.id);
+                              setModalTargetCatId(c.id);
+                            }}
                             style={[
                               styles.modalTargetPill,
-                              modalTargetCatId === sc.id && styles.modalTargetPillActive,
+                              isSelected && styles.modalTargetPillActive,
                             ]}
                           >
                             <Text
                               style={[
                                 styles.modalTargetPillText,
-                                modalTargetCatId === sc.id && styles.modalTargetPillTextActive,
+                                isSelected && styles.modalTargetPillTextActive,
                               ]}
                             >
-                              {sc.icon || "📁"} {sc.name}
+                              {c.icon || "📁"} {c.name}
                             </Text>
                           </Pressable>
-                        ))}
-                      </ScrollView>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+
+                  {/* Step 2: Choose Sub-category in this Shelf */}
+                  <View style={{ marginBottom: 6 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                      <Text style={styles.fieldLabel}>
+                        2. Choose Sub-category in "{targetWordsShelf?.name || "Shelf"}"
+                      </Text>
+                      {modalTargetCatId && (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#E7F3EE", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
+                          <Ionicons name="checkmark-circle" size={11} color="#235E50" />
+                          <Text style={{ fontSize: 10, color: "#235E50", fontWeight: "700" }}>
+                            Target: {getCategory(modalTargetCatId)?.name || targetWordsShelf?.name}
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                  )}
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.modalTargetRow}
+                    >
+                      <Pressable
+                        onPress={() => setModalTargetCatId(targetWordsShelf?.id || null)}
+                        style={[
+                          styles.modalTargetPill,
+                          modalTargetCatId === targetWordsShelf?.id && styles.modalTargetPillActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.modalTargetPillText,
+                            modalTargetCatId === targetWordsShelf?.id && styles.modalTargetPillTextActive,
+                          ]}
+                        >
+                          🏠 {targetWordsShelf?.name} (Main Shelf)
+                        </Text>
+                      </Pressable>
+                      {targetWordsSubCats.map((sc) => (
+                        <Pressable
+                          key={sc.id}
+                          onPress={() => setModalTargetCatId(sc.id)}
+                          style={[
+                            styles.modalTargetPill,
+                            modalTargetCatId === sc.id && styles.modalTargetPillActive,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.modalTargetPillText,
+                              modalTargetCatId === sc.id && styles.modalTargetPillTextActive,
+                            ]}
+                          >
+                            {sc.icon || "📁"} {sc.name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
 
                   <Text style={styles.fieldLabel}>Type or paste words</Text>
                   <TextInput
@@ -3073,33 +3165,87 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 {/* The Scrolling List Area (ONLY this list scrolls) */}
                 {parsedBulkShelves.length > 0 ? (
                   <View style={{ flex: 1, minHeight: 0, marginTop: 4 }}>
-                    <Text style={[styles.bulkPreviewTitle, { marginBottom: 6 }]}>
-                      Ready to create {parsedBulkShelves.length} Shelves in Bulk:
-                    </Text>
+                    <View style={styles.bulkPreviewHeaderRow}>
+                      <Text style={styles.bulkPreviewTitle}>
+                        Ready to create {parsedBulkShelves.length} Shelves in Bulk:
+                      </Text>
+                      <Text style={styles.bulkImageTip}>
+                        Tap 🖼️ to pick custom photo
+                      </Text>
+                    </View>
                     <ScrollView
                       style={{ flex: 1 }}
-                      contentContainerStyle={{ gap: 8, paddingBottom: 6 }}
+                      contentContainerStyle={{ paddingBottom: 6 }}
                       showsVerticalScrollIndicator={true}
                     >
-                      {parsedBulkShelves.map((sh, idx) => (
-                        <View key={`${sh.name}-${idx}`} style={styles.bulkShelfPreviewCard}>
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                            <Text style={{ fontSize: 22 }}>{sh.icon}</Text>
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.bulkShelfPreviewName}>{sh.name}</Text>
-                              {sh.subcats.length > 0 ? (
-                                <Text style={styles.bulkShelfSubList}>
-                                  Includes {sh.subcats.length} sub-categories: {sh.subcats.join(", ")}
+                      <View style={styles.bulkItemsList}>
+                        {parsedBulkShelves.map((sh, idx) => {
+                          const customImg = bulkShelvesImages[sh.name];
+                          const autoImg = getPictogramUrl(sh.name);
+                          const displayImg = customImg || autoImg || undefined;
+
+                          return (
+                            <View key={`${sh.name}-${idx}`} style={styles.bulkWordItemCard}>
+                              <Pressable
+                                onPress={() =>
+                                  setImagePickerTarget({
+                                    type: "bulkShelf",
+                                    label: sh.name,
+                                    currentUri: displayImg,
+                                  })
+                                }
+                                style={styles.bulkWordItemThumbWrap}
+                                accessibilityLabel={`Choose picture for ${sh.name}`}
+                              >
+                                {displayImg ? (
+                                  <Image source={{ uri: displayImg }} style={styles.bulkWordItemThumb} resizeMode="contain" />
+                                ) : (
+                                  <Text style={{ fontSize: 20 }}>{sh.icon}</Text>
+                                )}
+                                <View style={styles.bulkWordThumbBadge}>
+                                  <Ionicons name="camera" size={9} color="#FFFFFF" />
+                                </View>
+                              </Pressable>
+
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                  <Text style={{ fontSize: 14 }}>{sh.icon}</Text>
+                                  <Text style={styles.bulkWordItemName}>{sh.name}</Text>
+                                </View>
+                                {sh.subcats.length > 0 ? (
+                                  <Text style={styles.bulkShelfSubList}>
+                                    Includes {sh.subcats.length} sub-categories: {sh.subcats.join(", ")}
+                                  </Text>
+                                ) : (
+                                  <Text style={styles.bulkShelfSubListEmpty}>
+                                    Main shelf (ready to hold words or sub-categories)
+                                  </Text>
+                                )}
+                              </View>
+
+                              <Pressable
+                                onPress={() =>
+                                  setImagePickerTarget({
+                                    type: "bulkShelf",
+                                    label: sh.name,
+                                    currentUri: displayImg,
+                                  })
+                                }
+                                style={[styles.bulkPickImgBtn, customImg ? styles.bulkPickImgBtnActive : null]}
+                              >
+                                <Ionicons
+                                  name={customImg ? "checkmark-circle" : "image"}
+                                  size={13}
+                                  color={customImg ? "#1F594A" : "#FFFFFF"}
+                                />
+                                <Text style={[styles.bulkPickImgBtnText, customImg ? styles.bulkPickImgBtnTextActive : null]}>
+                                  {customImg ? "Photo set" : "Picture"}
                                 </Text>
-                              ) : (
-                                <Text style={styles.bulkShelfSubListEmpty}>
-                                  Main shelf (ready to hold words or sub-categories)
-                                </Text>
-                              )}
+                              </Pressable>
                             </View>
-                          </View>
-                        </View>
-                      ))}
+                          );
+                        })}
+                      </View>
                     </ScrollView>
                   </View>
                 ) : (
@@ -3210,21 +3356,82 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 {/* The Scrolling List Area (ONLY this list scrolls) */}
                 {parsedBulkSubCats.length > 0 ? (
                   <View style={{ flex: 1, minHeight: 0, marginTop: 4 }}>
-                    <Text style={[styles.bulkPreviewTitle, { marginBottom: 6 }]}>
-                      Ready to add {parsedBulkSubCats.length} Sub-categories in Bulk:
-                    </Text>
+                    <View style={styles.bulkPreviewHeaderRow}>
+                      <Text style={styles.bulkPreviewTitle}>
+                        Ready to add {parsedBulkSubCats.length} Sub-categories in Bulk:
+                      </Text>
+                      <Text style={styles.bulkImageTip}>
+                        Tap 🖼️ to pick custom photo
+                      </Text>
+                    </View>
                     <ScrollView
                       style={{ flex: 1 }}
                       contentContainerStyle={{ paddingBottom: 6 }}
                       showsVerticalScrollIndicator={true}
                     >
-                      <View style={styles.voiceBulkChipsWrap}>
-                        {parsedBulkSubCats.map((sc, idx) => (
-                          <View key={`${sc}-${idx}`} style={styles.voiceBulkChip}>
-                            <Text style={{ fontSize: 13 }}>{getCategoryIconForName(sc)}</Text>
-                            <Text style={styles.voiceBulkChipText}>{sc}</Text>
-                          </View>
-                        ))}
+                      <View style={styles.bulkItemsList}>
+                        {parsedBulkSubCats.map((sc, idx) => {
+                          const customImg = bulkSubCatsImages[sc];
+                          const autoImg = getPictogramUrl(sc);
+                          const displayImg = customImg || autoImg || undefined;
+                          const icon = getCategoryIconForName(sc);
+                          const parentShelf = (bulkTargetShelfId ? cats.find((c) => c.id === bulkTargetShelfId) : null) || currentShelf;
+
+                          return (
+                            <View key={`${sc}-${idx}`} style={styles.bulkWordItemCard}>
+                              <Pressable
+                                onPress={() =>
+                                  setImagePickerTarget({
+                                    type: "bulkSubCat",
+                                    label: sc,
+                                    currentUri: displayImg,
+                                  })
+                                }
+                                style={styles.bulkWordItemThumbWrap}
+                                accessibilityLabel={`Choose picture for ${sc}`}
+                              >
+                                {displayImg ? (
+                                  <Image source={{ uri: displayImg }} style={styles.bulkWordItemThumb} resizeMode="contain" />
+                                ) : (
+                                  <Text style={{ fontSize: 20 }}>{icon}</Text>
+                                )}
+                                <View style={styles.bulkWordThumbBadge}>
+                                  <Ionicons name="camera" size={9} color="#FFFFFF" />
+                                </View>
+                              </Pressable>
+
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                  <Text style={{ fontSize: 14 }}>{icon}</Text>
+                                  <Text style={styles.bulkWordItemName}>{sc}</Text>
+                                </View>
+                                <Text style={styles.bulkShelfSubListEmpty}>
+                                  Under parent shelf: {parentShelf?.name || "Shelf"}
+                                </Text>
+                              </View>
+
+                              <Pressable
+                                onPress={() =>
+                                  setImagePickerTarget({
+                                    type: "bulkSubCat",
+                                    label: sc,
+                                    currentUri: displayImg,
+                                  })
+                                }
+                                style={[styles.bulkPickImgBtn, customImg ? styles.bulkPickImgBtnActive : null]}
+                              >
+                                <Ionicons
+                                  name={customImg ? "checkmark-circle" : "image"}
+                                  size={13}
+                                  color={customImg ? "#1F594A" : "#FFFFFF"}
+                                />
+                                <Text style={[styles.bulkPickImgBtnText, customImg ? styles.bulkPickImgBtnTextActive : null]}>
+                                  {customImg ? "Photo set" : "Picture"}
+                                </Text>
+                              </Pressable>
+                            </View>
+                          );
+                        })}
                       </View>
                     </ScrollView>
                   </View>
@@ -3269,8 +3476,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       <UniversalImagePickerModal
         visible={imagePickerTarget !== null}
         title={
-          imagePickerTarget?.type === "shelf"
-            ? "Choose Shelf Picture"
+          imagePickerTarget?.type === "shelf" || imagePickerTarget?.type === "bulkShelf"
+            ? `Choose Shelf Picture for "${imagePickerTarget?.label || "Shelf"}"`
+            : imagePickerTarget?.type === "bulkSubCat"
+            ? `Choose Picture for Sub-category "${imagePickerTarget?.label || "Sub-category"}"`
             : `Picture for "${imagePickerTarget?.label || "Word"}"`
         }
         currentImageUri={imagePickerTarget?.currentUri}
