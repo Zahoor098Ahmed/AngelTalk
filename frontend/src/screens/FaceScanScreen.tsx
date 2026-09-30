@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile } from "../types";
-import { loadChildren } from "../modules/storage";
+import { loadChildren, deleteChild } from "../modules/storage";
 import { captureEmbedding, findMatch } from "../modules/faceEngine";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../modules/i18n";
@@ -174,6 +174,12 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
     onMatch(child);
   }
 
+  function handleDeleteChild(e: any, childId: string) {
+    e?.stopPropagation?.();
+    deleteChild(childId);
+    setChildrenList(loadChildren());
+  }
+
   const hour = new Date().getHours();
   const greeting =
     hour < 12
@@ -278,25 +284,32 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
         </Text>
         <Text style={styles.statusSub}>{statusMsg}</Text>
 
-        {phase === "scanning" && childrenList.length > 0 && (
-          <Pressable
-            onPress={() => setChildSelectModal(true)}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              backgroundColor: "rgba(45,95,79,0.1)",
-              paddingVertical: 8,
-              paddingHorizontal: 16,
-              borderRadius: 20,
-              marginTop: 10,
-            }}
-          >
-            <Ionicons name="people-circle" size={18} color={colors.forest} />
-            <Text style={{ color: colors.forest, fontSize: 13, fontWeight: "700" }}>
-              {t("selectChildProfileBtn", lang)}
-            </Text>
-          </Pressable>
+        {phase === "scanning" && (
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 10, flexWrap: "wrap", justifyContent: "center" }}>
+            {childrenList.length > 0 && (
+              <Pressable
+                onPress={() => {
+                  setChildrenList(loadChildren());
+                  setChildSelectModal(true);
+                }}
+                style={styles.pillBtn}
+              >
+                <Ionicons name="people-circle" size={18} color={colors.forest} />
+                <Text style={{ color: colors.forest, fontSize: 13, fontWeight: "700" }}>
+                  {t("selectChildProfileBtn", lang)}
+                </Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => (onEnrollChild ? onEnrollChild() : onParentArea())}
+              style={styles.pillBtnPrimary}
+            >
+              <Ionicons name="person-add" size={16} color="white" />
+              <Text style={{ color: "white", fontSize: 13, fontWeight: "700" }}>
+                {t("addChild", lang)}
+              </Text>
+            </Pressable>
+          </View>
         )}
       </View>
 
@@ -315,33 +328,56 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
               </BigButton>
             </>
           ) : (
-            <View style={styles.actionRow}>
-              <BigButton variant="mint" onPress={restartScan} style={{ flex: 1 }}>
-                <Ionicons name="refresh" size={18} color="white" style={{ marginRight: 6 }} />
-                <Text style={styles.btnText}>{t("scanAgainBtn", lang)}</Text>
+            <>
+              <View style={styles.actionRow}>
+                <BigButton variant="mint" onPress={restartScan} style={{ flex: 1 }}>
+                  <Ionicons name="refresh" size={18} color="white" style={{ marginRight: 6 }} />
+                  <Text style={styles.btnText}>{t("scanAgainBtn", lang)}</Text>
+                </BigButton>
+                <BigButton
+                  variant="primary"
+                  onPress={() => {
+                    setChildrenList(loadChildren());
+                    setChildSelectModal(true);
+                  }}
+                  style={{ flex: 1 }}
+                >
+                  <Ionicons name="person" size={18} color="white" style={{ marginRight: 6 }} />
+                  <Text style={styles.btnText}>{t("selectChildBtn", lang)}</Text>
+                </BigButton>
+              </View>
+              <BigButton
+                variant="ghost"
+                onPress={onEnrollChild ?? onParentArea}
+                style={{ width: "100%", borderWidth: 1.5, borderColor: colors.forest }}
+              >
+                <Ionicons name="person-add" size={18} color={colors.forest} style={{ marginRight: 6 }} />
+                <Text style={{ color: colors.forest, fontWeight: "700", fontSize: 15 }}>{t("addChild", lang)}</Text>
               </BigButton>
-              <BigButton variant="primary" onPress={() => setChildSelectModal(true)} style={{ flex: 1 }}>
-                <Ionicons name="person" size={18} color="white" style={{ marginRight: 6 }} />
-                <Text style={styles.btnText}>{t("selectChildBtn", lang)}</Text>
-              </BigButton>
-            </View>
+            </>
           )}
         </View>
       )}
 
       {(phase === "error" || cameraUnavailable) && (
         <View style={{ width: "100%", maxWidth: 360, gap: 10, paddingHorizontal: 20 }}>
-          {childrenList.length > 0 ? (
-            <BigButton variant="primary" onPress={() => setChildSelectModal(true)} style={{ width: "100%" }}>
+          {childrenList.length > 0 && (
+            <BigButton
+              variant="primary"
+              onPress={() => {
+                setChildrenList(loadChildren());
+                setChildSelectModal(true);
+              }}
+              style={{ width: "100%" }}
+            >
               <Ionicons name="person" size={18} color="white" style={{ marginRight: 6 }} />
               <Text style={styles.btnText}>{t("selectChildBtn", lang)}</Text>
             </BigButton>
-          ) : (
-            <BigButton variant="mint" onPress={onEnrollChild ?? onParentArea} style={{ width: "100%" }}>
-              <Ionicons name="person-add" size={18} color="white" style={{ marginRight: 6 }} />
-              <Text style={styles.btnText}>{t("addChild", lang)}</Text>
-            </BigButton>
           )}
+          <BigButton variant="mint" onPress={onEnrollChild ?? onParentArea} style={{ width: "100%" }}>
+            <Ionicons name="person-add" size={18} color="white" style={{ marginRight: 6 }} />
+            <Text style={styles.btnText}>{t("addChild", lang)}</Text>
+          </BigButton>
           <BigButton variant="ghost" onPress={onNoMatch} style={{ width: "100%" }}>
             <Text style={{ color: colors.forest, fontWeight: "700" }}>{t("continueWithoutCamera", lang)}</Text>
           </BigButton>
@@ -350,10 +386,19 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
 
       {/* Footer controls */}
       <View style={styles.footer}>
-        <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-          {childrenList.length > 0 && phase === "scanning" && (
-            <Pressable onPress={() => setChildSelectModal(true)} style={styles.parentBtn}>
-              <Text style={styles.parentBtnText}>{t("selectChildProfileBtn", lang)}</Text>
+        <View style={{ flexDirection: "row", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+          <Pressable onPress={onEnrollChild ?? onParentArea} style={styles.parentBtn}>
+            <Text style={styles.parentBtnText}>➕ {t("addChild", lang)}</Text>
+          </Pressable>
+          {childrenList.length > 0 && (
+            <Pressable
+              onPress={() => {
+                setChildrenList(loadChildren());
+                setChildSelectModal(true);
+              }}
+              style={styles.parentBtn}
+            >
+              <Text style={styles.parentBtnText}>👤 {t("selectChildProfileBtn", lang)}</Text>
             </Pressable>
           )}
           <Pressable onPress={onParentArea} style={styles.parentBtn}>
@@ -389,27 +434,63 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
 
             <ScrollView contentContainerStyle={styles.childGrid} showsVerticalScrollIndicator={false}>
               {childrenList.map((child) => (
-                <Pressable
-                  key={child.id}
-                  style={styles.childCard}
-                  onPress={() => handleManualSelect(child)}
-                >
-                  {child.photoUrl ? (
-                    <Image source={{ uri: child.photoUrl }} style={styles.childAvatar} />
-                  ) : (
-                    <View style={[styles.childAvatar, styles.avatarPlaceholder]}>
-                      <Text style={{ fontSize: 28 }}>👦</Text>
+                <View key={child.id} style={styles.childCard}>
+                  <Pressable
+                    style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 14 }}
+                    onPress={() => handleManualSelect(child)}
+                  >
+                    {child.photoUrl ? (
+                      <Image source={{ uri: child.photoUrl }} style={styles.childAvatar} />
+                    ) : (
+                      <View style={[styles.childAvatar, styles.avatarPlaceholder]}>
+                        <Text style={{ fontSize: 28 }}>👦</Text>
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.childName}>{child.name}</Text>
+                      <Text style={styles.childMeta}>
+                        {t("ageLabel", lang)} {child.age} · ⭐ {child.stars ?? 0}
+                      </Text>
                     </View>
-                  )}
-                  <Text style={styles.childName}>{child.name}</Text>
-                  <Text style={styles.childMeta}>{t("ageLabel", lang)} {child.age} · ⭐ {child.stars ?? 0}</Text>
-                </Pressable>
+                  </Pressable>
+                  <Pressable
+                    onPress={(e) => handleDeleteChild(e, child.id)}
+                    hitSlop={10}
+                    style={{ padding: 8, borderRadius: 8, backgroundColor: "rgba(239, 68, 68, 0.08)" }}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  </Pressable>
+                </View>
               ))}
+              {childrenList.length === 0 && (
+                <View style={{ alignItems: "center", paddingVertical: 18, gap: 8 }}>
+                  <Text style={{ fontSize: 32 }}>👶</Text>
+                  <Text style={{ color: colors.textLight, fontSize: 14 }}>{t("noChildEnrolled", lang)}</Text>
+                </View>
+              )}
             </ScrollView>
 
-            <BigButton variant="ghost" onPress={() => setChildSelectModal(false)} style={{ marginTop: 12 }}>
-              <Text style={{ color: colors.textLight, fontWeight: "700" }}>{t("cancel", lang)}</Text>
-            </BigButton>
+            <View style={{ marginTop: 14, gap: 8 }}>
+              <BigButton
+                variant="mint"
+                onPress={() => {
+                  setChildSelectModal(false);
+                  if (onEnrollChild) {
+                    onEnrollChild();
+                  } else {
+                    onParentArea();
+                  }
+                }}
+                style={{ width: "100%" }}
+              >
+                <Ionicons name="person-add" size={18} color="white" style={{ marginRight: 6 }} />
+                <Text style={styles.btnText}>+ {t("addChild", lang)}</Text>
+              </BigButton>
+
+              <BigButton variant="ghost" onPress={() => setChildSelectModal(false)} style={{ width: "100%" }}>
+                <Text style={{ color: colors.textLight, fontWeight: "700" }}>{t("cancel", lang)}</Text>
+              </BigButton>
+            </View>
           </View>
         </View>
       </Modal>
@@ -553,4 +634,22 @@ const styles = StyleSheet.create({
   },
   childName: { fontSize: 17, fontWeight: "800", color: colors.textDark, flex: 1 },
   childMeta: { fontSize: 13, color: colors.textLight, fontWeight: "600" },
+  pillBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(45,95,79,0.1)",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  pillBtnPrimary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.forest,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
 });

@@ -131,6 +131,17 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
     setStep("done");
   }
 
+  function handleAddAnother() {
+    setStep("info");
+    setName("");
+    setAge("");
+    setDiagnoses([]);
+    setEmbedding([]);
+    setCapturePhase(0);
+    setCaptured(false);
+    setNewChild(null);
+  }
+
   const stepLabels = [t("enrollStep1", lang), t("enrollStep2", lang), t("enrollStep3", lang)];
 
   return (
@@ -138,7 +149,15 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <ScrollView contentContainerStyle={styles.container}>
           <View style={{ width: "100%", maxWidth: 440 }}>
-            <Pressable onPress={onBack}>
+            <Pressable
+              onPress={() => {
+                if (step === "camera") {
+                  setStep("info");
+                } else {
+                  onBack();
+                }
+              }}
+            >
               <Text style={styles.backText}>← {t("back", lang)}</Text>
             </Pressable>
           </View>
@@ -237,7 +256,7 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
               <BigButton variant="mint" onPress={() => onDone(newChild ?? undefined)} style={{ width: "100%", maxWidth: 320 }}>
                 {newChild ? `${t("startWithChild", lang)} ${newChild.name} →` : t("doneCheck", lang)}
               </BigButton>
-              <Pressable onPress={() => onDone()} style={{ paddingVertical: 10 }}>
+              <Pressable onPress={handleAddAnother} style={{ paddingVertical: 10 }}>
                 <Text style={{ color: colors.textMid, fontSize: 14 }}>{t("addAnotherChild", lang)}</Text>
               </Pressable>
             </View>

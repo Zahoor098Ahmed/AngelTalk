@@ -59,6 +59,7 @@ function AppInner() {
   const [currentChild, setCurrentChild] = useState<ChildProfile | null>(null);
   const [categoryReturnScreen, setCategoryReturnScreen] = useState<"speak" | "more">("more");
   const [categoryInitialId, setCategoryInitialId] = useState<string | null>(null);
+  const [enrollReturnScreen, setEnrollReturnScreen] = useState<Screen>("face-scan");
   const lang = settings.language;
   const go = (s: Screen) => setScreen(s);
 
@@ -95,17 +96,23 @@ function AppInner() {
         }}
         onNoMatch={() => go("parent-setup")}
         onParentArea={() => go("parent-setup")}
-        onEnrollChild={() => go("enroll-child")}
+        onEnrollChild={() => {
+          setEnrollReturnScreen("face-scan");
+          go("enroll-child");
+        }}
       />
     );
   } else if (screen === "parent-setup") {
     body = (
       <ParentSetupScreen
-        onNavigate={(s) =>
+        onNavigate={(s) => {
+          if (s === "enroll-child") {
+            setEnrollReturnScreen("parent-setup");
+            go("enroll-child");
+            return;
+          }
           go(
-            s === "enroll-child"
-              ? "enroll-child"
-              : s === "my-categories"
+            s === "my-categories"
               ? "my-categories"
               : s === "phrase-library"
               ? "phrase-library"
@@ -114,8 +121,8 @@ function AppInner() {
               : s === "accessibility"
               ? "accessibility"
               : "face-scan"
-          )
-        }
+          );
+        }}
         onBack={() => go(currentChild ? "main" : "face-scan")}
       />
     );
@@ -128,10 +135,10 @@ function AppInner() {
             setCurrentTab("home");
             go("main");
           } else {
-            go("parent-setup");
+            go(enrollReturnScreen);
           }
         }}
-        onBack={() => go("parent-setup")}
+        onBack={() => go(enrollReturnScreen)}
       />
     );
   } else if (screen === "main" && currentChild) {
@@ -204,6 +211,9 @@ function AppInner() {
           if (targetScreen === "my-categories") {
             setCategoryReturnScreen("more");
             setCategoryInitialId(null);
+          }
+          if (targetScreen === "enroll-child") {
+            setEnrollReturnScreen("more");
           }
           go(targetScreen);
         }}
@@ -293,7 +303,7 @@ function MoreMenu({
 
   const adminRows: { key: Screen; label: string; icon: keyof typeof Ionicons.glyphMap; color: string; desc: string }[] = [
     { key: "social-stories", label: "Visual Social Stories", icon: "book", color: "#f59e0b", desc: "Read-aloud guides for dentist, haircut, school, & emotions" },
-    // { key: "onboarding-quick", label: "90s Board Personalizer", icon: "sparkles", color: "#0ea5e9", desc: "Re-build board with child's real favorite foods, family & toys" },
+    { key: "enroll-child", label: "Add Child Profile", icon: "person-add", color: colors.forest, desc: "Enroll child with face recognition, age & diagnosis" },
     { key: "my-categories", label: "My Categories & Words", icon: "folder-open", color: "#10b981", desc: "Organize shelves, words, hide/show & delete" },
     { key: "category-builder", label: "Category Builder & Generator", icon: "sparkles-outline", color: "#0ea5e9", desc: "Build new categories from lists or AI presets" },
     { key: "voice-command", label: "Voice Command Match", icon: "mic-circle", color: "#6366f1", desc: "Practice spoken phrases with live visual matching" },
