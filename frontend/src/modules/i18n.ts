@@ -151,11 +151,14 @@ export type TKey =
   | 'pLegendExcellent' | 'pLegendGood' | 'pLegendNeeds'
   | 'pSummaryNone' | 'pSummaryUsing' | 'pSummaryOften' | 'pSummaryAnd'
   | 'pRoutinesStrong' | 'pRoutinesTrack' | 'pRoutinesMore' | 'pSummaryTail'
-  // --- home screen: mood check-in + quick-express bar ---
+  // --- home screen: mood check-in + quick-express bar + hero ---
   | 'moodQuestion' | 'quickExpressHeading' | 'feelingTag' | 'sayIAmFeeling'
   | 'bathroom' | 'needHelpPhrase' | 'needWaterPhrase' | 'needBathroomPhrase' | 'pleaseStopPhrase'
   | 'completedToday' | 'startExercise' | 'therapyTargetBadge' | 'tapToPracticeNow' | 'doctorsPlan'
   | 'unitWords' | 'viewFullSchedule' | 'defaultSpeechGoalTitle' | 'doctorsDailyGoal'
+  | 'heroBadge' | 'heroHeadline' | 'heroSubhead' | 'heroOpenBoard' | 'heroOpenSchedule'
+  | 'heroSpeechPrompt' | 'heroMascotSay' | 'heroWordsCount' | 'heroStarsCount' | 'heroDailyGoal'
+  | 'quickExpressSub'
   // --- visual schedule screen ---
   | 'visualRoutineSubtitle' | 'readAloudBtn' | 'activitiesCompletedSuffix'
   | 'statusCompleted' | 'statusHappeningNow' | 'statusUpcoming'
@@ -807,6 +810,17 @@ const T: AllTranslations = {
     pRoutinesStrong: 'Daily routines are strong.', pRoutinesTrack: 'Daily routines are on track.', pRoutinesMore: 'Daily routines could use more consistency.',
     pSummaryTail: 'Consider encouraging more question words.',
     moodQuestion: 'HOW ARE YOU FEELING TODAY?', quickExpressHeading: 'QUICK EXPRESS COMMUNICATION',
+    quickExpressSub: 'Instant 1-Tap Emergency Speech',
+    heroBadge: '✨ SMART AAC & SPEECH COMPANION',
+    heroHeadline: 'Every Voice Deserves to Bloom 🌱',
+    heroSubhead: 'Pediatric picture communication, daily visual routines & doctor therapy targets — helping children express with joy.',
+    heroOpenBoard: 'Open Talking Board',
+    heroOpenSchedule: 'Daily Routine',
+    heroSpeechPrompt: 'Welcome to BloomSpeech! Tap any picture to speak, practice your therapy words, and share your feelings!',
+    heroMascotSay: 'Tap me to talk! 💬',
+    heroWordsCount: 'Words Spoken',
+    heroStarsCount: 'Therapy Stars',
+    heroDailyGoal: 'Daily Target',
     feelingTag: 'Feeling', sayIAmFeeling: 'I am feeling', bathroom: 'Bathroom',
     needHelpPhrase: 'I need help please!', needWaterPhrase: 'I want water please.',
     needBathroomPhrase: 'I need to use the bathroom.', pleaseStopPhrase: 'Please stop.',
@@ -1552,6 +1566,17 @@ const T: AllTranslations = {
     pRoutinesStrong: 'الروتين اليومي قوي.', pRoutinesTrack: 'الروتين اليومي على المسار.', pRoutinesMore: 'الروتين اليومي يحتاج ثباتاً أكثر.',
     pSummaryTail: 'فكّروا في تشجيع المزيد من كلمات الأسئلة.',
     moodQuestion: 'كيف تشعر اليوم؟', quickExpressHeading: 'تواصل سريع',
+    quickExpressSub: 'نطق فوري بلمسة واحدة لطلب المساعدة',
+    heroBadge: '✨ رفيق النطق والتواصل الذكي',
+    heroHeadline: 'صوتك ينمو ويزهر كل يوم 🌱',
+    heroSubhead: 'لوحة تواصل بالصور، وجداول روتينية بصرية، وأهداف علاج النطق — لمساعدة طفلك على التعبير بثقة وسعادة.',
+    heroOpenBoard: 'فتح لوحة النطق',
+    heroOpenSchedule: 'الجدول اليومي',
+    heroSpeechPrompt: 'أهلاً بك في بلوم سبيتش! اضغط على أي صورة لتتحدث، وتدرب على كلماتك اليومية، وعبّر عن مشاعرك بكل سهولة!',
+    heroMascotSay: 'اضغطني لنتحدث! 💬',
+    heroWordsCount: 'كلمات منطوقة',
+    heroStarsCount: 'نجوم العلاج',
+    heroDailyGoal: 'الهدف اليومي',
     feelingTag: 'أشعر بـ', sayIAmFeeling: 'أشعر اليوم بأنني', bathroom: 'الحمام',
     needHelpPhrase: 'أحتاج مساعدة من فضلك!', needWaterPhrase: 'أريد الماء من فضلك.',
     needBathroomPhrase: 'أحتاج إلى استخدام الحمام.', pleaseStopPhrase: 'توقف من فضلك.',
@@ -1981,6 +2006,17 @@ const T: AllTranslations = {
     games: 'کھیل',
     progress: 'ترقی',
     moodQuestion: 'آج آپ کیسا محسوس کر رہے ہیں؟', quickExpressHeading: 'فوری اظہار',
+    quickExpressSub: 'ایک ٹچ سے فوری بولیں',
+    heroBadge: '✨ بولنے کا ہوشیار ساتھی',
+    heroHeadline: 'ہر بچے کی آواز کو کھلنے کا موقع دیں 🌱',
+    heroSubhead: 'تصویر سے بولنے کا بورڈ، روزمرہ شیڈول، اور اسپیچ تھراپی اہداف — بچے کو آسانی سے اظہار کرنے میں مددگار۔',
+    heroOpenBoard: 'بولنے کا بورڈ کھولیں',
+    heroOpenSchedule: 'روزمرہ شیڈول',
+    heroSpeechPrompt: 'بلوم اسپیچ میں خوش آمدید! کسی بھی تصویر کو دبا کر بولیں اور اپنے جذبات کا اظہار کریں!',
+    heroMascotSay: 'مجھ سے بات کریں! 💬',
+    heroWordsCount: 'بولے گئے الفاظ',
+    heroStarsCount: 'تھراپی کے ستارے',
+    heroDailyGoal: 'روزانہ کا ہدف',
     feelingTag: 'محسوس ہو رہا ہے', sayIAmFeeling: 'آج مجھے محسوس ہو رہا ہے', bathroom: 'باتھ روم',
     needHelpPhrase: 'مجھے مدد چاہیے، براہ کرم!', needWaterPhrase: 'مجھے پانی چاہیے، براہ کرم۔',
     needBathroomPhrase: 'مجھے باتھ روم جانا ہے۔', pleaseStopPhrase: 'براہ کرم رکیں۔',
