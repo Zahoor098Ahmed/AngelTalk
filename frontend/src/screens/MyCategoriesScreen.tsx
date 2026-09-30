@@ -1206,29 +1206,16 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             );
                           })}
 
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                            <Pressable
-                              onPress={() => {
-                                setSubCatName("");
-                                setSubCatOpen(true);
-                              }}
-                              style={[styles.sidebarAddSubCatRow, { flex: 1 }]}
-                            >
-                              <Ionicons name="add" size={13} color="#235E50" />
-                              <Text style={styles.sidebarAddSubCatText}>Add sub-category</Text>
-                            </Pressable>
-                            <Pressable
-                              onPress={() => {
-                                setBulkTargetShelfId(cat.id);
-                                openBulkModal("subcats");
-                              }}
-                              style={styles.sidebarAddSubCatBulkBtn}
-                              accessibilityLabel="Bulk add sub-categories"
-                            >
-                              <Ionicons name="flash-outline" size={11} color="#235E50" />
-                              <Text style={styles.sidebarAddSubCatBulkText}>Bulk</Text>
-                            </Pressable>
-                          </View>
+                          <Pressable
+                            onPress={() => {
+                              setSubCatName("");
+                              setSubCatOpen(true);
+                            }}
+                            style={styles.sidebarAddSubCatRow}
+                          >
+                            <Ionicons name="add" size={13} color="#235E50" />
+                            <Text style={styles.sidebarAddSubCatText}>Add sub-category</Text>
+                          </Pressable>
                         </View>
                       )}
                     </View>
@@ -1236,26 +1223,16 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 })}
               </ScrollView>
 
-              <View style={{ flexDirection: "row", gap: 6, marginTop: 12 }}>
-                <Pressable
-                  onPress={() => {
-                    setNewShelfName("");
-                    setNewShelfOpen(true);
-                  }}
-                  style={[styles.newShelfBtn, { flex: 1, marginTop: 0 }]}
-                >
-                  <Ionicons name="add" size={16} color="#1A3830" />
-                  <Text style={styles.newShelfBtnText}>New shelf</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => openBulkModal("shelves")}
-                  style={styles.newShelfBulkBtn}
-                  accessibilityLabel="Bulk add shelves"
-                >
-                  <Ionicons name="flash-outline" size={14} color="#235E50" />
-                  <Text style={styles.newShelfBulkBtnText}>⚡ Bulk</Text>
-                </Pressable>
-              </View>
+              <Pressable
+                onPress={() => {
+                  setNewShelfName("");
+                  setNewShelfOpen(true);
+                }}
+                style={styles.newShelfBtn}
+              >
+                <Ionicons name="add" size={16} color="#1A3830" />
+                <Text style={styles.newShelfBtnText}>New shelf</Text>
+              </Pressable>
             </View>
 
             {/* Right Column: Words Table for Selected Shelf / Sub-Category */}
@@ -1449,26 +1426,16 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             <View style={styles.mobileShelvesCard}>
               <View style={styles.mobileShelvesHeader}>
                 <Text style={styles.mobileShelvesTitle}>Shelves</Text>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Pressable
-                    onPress={() => openBulkModal("shelves")}
-                    style={styles.mobileBulkSmallBtn}
-                    accessibilityLabel="Bulk add shelves"
-                  >
-                    <Ionicons name="flash-outline" size={12} color="#1F594A" />
-                    <Text style={styles.mobileBulkSmallText}>⚡ Bulk</Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => {
-                      setNewShelfName("");
-                      setNewShelfOpen(true);
-                    }}
-                    style={styles.mobileNewShelfSmallBtn}
-                  >
-                    <Ionicons name="add" size={14} color="#1A3830" />
-                    <Text style={styles.mobileNewShelfSmallText}>New shelf</Text>
-                  </Pressable>
-                </View>
+                <Pressable
+                  onPress={() => {
+                    setNewShelfName("");
+                    setNewShelfOpen(true);
+                  }}
+                  style={styles.mobileNewShelfSmallBtn}
+                >
+                  <Ionicons name="add" size={14} color="#1A3830" />
+                  <Text style={styles.mobileNewShelfSmallText}>New shelf</Text>
+                </Pressable>
               </View>
 
               <ScrollView
@@ -1585,18 +1552,6 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   >
                     <Ionicons name="pencil" size={12} color="#1A3830" />
                     <Text style={styles.mobileEditCategoryBtnText}>Edit</Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => {
-                      setBulkTargetShelfId(currentShelf?.id || null);
-                      openBulkModal("subcats");
-                    }}
-                    style={styles.mobileBulkSmallBtn}
-                    accessibilityLabel="Bulk add sub-categories"
-                  >
-                    <Ionicons name="flash-outline" size={12} color="#1F594A" />
-                    <Text style={styles.mobileBulkSmallText}>⚡ Bulk</Text>
                   </Pressable>
 
                   <Pressable
@@ -2804,8 +2759,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         }}
       >
         <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { maxWidth: 540, maxHeight: "90%" }]}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalCard, { maxWidth: 540, height: "86%", maxHeight: 660, display: "flex", flexDirection: "column" }]}>
+            <View style={[styles.modalHeader, { flexShrink: 0 }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <View style={styles.bulkModalIconBadge}>
                   <Ionicons name="flash" size={18} color="#235E50" />
@@ -2834,7 +2789,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             </View>
 
             {/* Segmented Control Tabs */}
-            <View style={styles.bulkSegmentRow}>
+            <View style={[styles.bulkSegmentRow, { flexShrink: 0 }]}>
               <Pressable
                 onPress={() => setBulkModalTab("words")}
                 style={[styles.bulkSegmentBtn, bulkModalTab === "words" && styles.bulkSegmentBtnActive]}
@@ -2900,116 +2855,84 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
             {/* TAB 1: BULK WORDS */}
             {bulkModalTab === "words" && (
-              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                {/* Target Category / Sub-Category Selector */}
-                {subCats.length > 0 && (
-                  <View style={{ marginBottom: 14 }}>
-                    <Text style={styles.fieldLabel}>Save words to</Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.modalTargetRow}
-                    >
-                      <Pressable
-                        onPress={() => setModalTargetCatId(currentShelf?.id || null)}
-                        style={[
-                          styles.modalTargetPill,
-                          modalTargetCatId === currentShelf?.id && styles.modalTargetPillActive,
-                        ]}
+              <View style={{ flex: 1, flexDirection: "column", minHeight: 0 }}>
+                {/* Fixed Top Controls */}
+                <View style={{ flexShrink: 0 }}>
+                  {/* Target Category / Sub-Category Selector */}
+                  {subCats.length > 0 && (
+                    <View style={{ marginBottom: 6 }}>
+                      <Text style={styles.fieldLabel}>Save words to</Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.modalTargetRow}
                       >
-                        <Text
-                          style={[
-                            styles.modalTargetPillText,
-                            modalTargetCatId === currentShelf?.id && styles.modalTargetPillTextActive,
-                          ]}
-                        >
-                          🏠 {currentShelf?.name} (Main)
-                        </Text>
-                      </Pressable>
-                      {subCats.map((sc) => (
                         <Pressable
-                          key={sc.id}
-                          onPress={() => setModalTargetCatId(sc.id)}
+                          onPress={() => setModalTargetCatId(currentShelf?.id || null)}
                           style={[
                             styles.modalTargetPill,
-                            modalTargetCatId === sc.id && styles.modalTargetPillActive,
+                            modalTargetCatId === currentShelf?.id && styles.modalTargetPillActive,
                           ]}
                         >
                           <Text
                             style={[
                               styles.modalTargetPillText,
-                              modalTargetCatId === sc.id && styles.modalTargetPillTextActive,
+                              modalTargetCatId === currentShelf?.id && styles.modalTargetPillTextActive,
                             ]}
                           >
-                            {sc.icon || "📁"} {sc.name}
+                            🏠 {currentShelf?.name} (Main)
                           </Text>
                         </Pressable>
-                      ))}
-                    </ScrollView>
-                  </View>
-                )}
+                        {subCats.map((sc) => (
+                          <Pressable
+                            key={sc.id}
+                            onPress={() => setModalTargetCatId(sc.id)}
+                            style={[
+                              styles.modalTargetPill,
+                              modalTargetCatId === sc.id && styles.modalTargetPillActive,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.modalTargetPillText,
+                                modalTargetCatId === sc.id && styles.modalTargetPillTextActive,
+                              ]}
+                            >
+                              {sc.icon || "📁"} {sc.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
 
-                <Text style={styles.fieldLabel}>Type or paste words</Text>
-                <TextInput
-                  value={bulkWordsText}
-                  onChangeText={setBulkWordsText}
-                  placeholder={"e.g. apple, banana, milk, bread, eat, sleep\nor paste one word per line"}
-                  placeholderTextColor="#9E9E9E"
-                  style={[styles.inputBoxCoral, { height: 100, textAlignVertical: "top", paddingTop: 10 }]}
-                  multiline
-                  autoFocus
-                />
-                <Text style={styles.fieldHint}>
-                  Separate words with commas, semicolons, or new lines. A picture is matched automatically for each word.
-                </Text>
-
-                {/* Automatic Smart Detection Banner */}
-                <View style={styles.verbSmartBannerBulk}>
-                  <View style={styles.verbSmartIcon}>
-                    <Ionicons name="sparkles" size={16} color="#1F594A" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.verbSmartTitleBulk}>
-                      Automatic Smart Detection
-                    </Text>
-                    <Text style={styles.verbSmartSubBulk}>
-                      Verbs (eat, sleep, run) automatically get 4 forms. Nouns (car, apple, milk) automatically stay as single tiles.
-                    </Text>
-                  </View>
+                  <Text style={styles.fieldLabel}>Type or paste words</Text>
+                  <TextInput
+                    value={bulkWordsText}
+                    onChangeText={setBulkWordsText}
+                    placeholder={"e.g. apple, banana, milk, bread, eat, sleep\nor paste one word per line"}
+                    placeholderTextColor="#9E9E9E"
+                    style={[styles.inputBoxCoral, { height: 60, textAlignVertical: "top", paddingTop: 6 }]}
+                    multiline
+                  />
+                  <Text style={[styles.fieldHint, { marginBottom: 4 }]}>
+                    Separate words with commas, semicolons, or new lines. A picture is matched automatically.
+                  </Text>
                 </View>
 
-                {/* Tile color */}
-                <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Tile color</Text>
-                <View style={styles.colorSwatchesRow}>
-                  {PASTEL_PALETTE.map((c) => {
-                    const isSelected = bulkWordColor === c;
-                    return (
-                      <Pressable
-                        key={c}
-                        onPress={() => setBulkWordColor(c)}
-                        style={[
-                          styles.colorSwatch,
-                          { backgroundColor: c },
-                          isSelected && styles.colorSwatchSelected,
-                        ]}
-                      />
-                    );
-                  })}
-                </View>
-
-                {/* Parsed Items List with 3-Option Image Selection */}
-                {parsedBulkWords.length > 0 && (
-                  <View style={styles.bulkPreviewArea}>
+                {/* The Scrolling List Area (ONLY this list scrolls) */}
+                {parsedBulkWords.length > 0 ? (
+                  <View style={{ flex: 1, minHeight: 0, marginTop: 4 }}>
                     <View style={styles.bulkPreviewHeaderRow}>
                       <Text style={styles.bulkPreviewTitle}>
                         Words ({parsedBulkWords.length} items · {totalExpectedTiles} tiles)
                       </Text>
                       <Text style={styles.bulkImageTip}>
-                        Tap 🖼️ to pick custom photo for any word
+                        Tap 🖼️ to pick custom photo
                       </Text>
                     </View>
 
-                    <ScrollView style={styles.bulkItemsScroll} nestedScrollEnabled showsVerticalScrollIndicator={true}>
+                    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 6 }} showsVerticalScrollIndicator={true}>
                       <View style={styles.bulkItemsList}>
                         {parsedBulkWords.map((pw, i) => {
                           const vForms = generateAllVerbForms(pw);
@@ -3069,18 +2992,17 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                       </View>
                     </ScrollView>
                   </View>
-                )}
-
-                {parsedBulkWords.length === 0 && (
-                  <View style={styles.bulkPicHintBox}>
-                    <Ionicons name="images-outline" size={16} color="#1F594A" />
+                ) : (
+                  <View style={[styles.bulkPicHintBox, { flex: 1, justifyContent: "center", marginVertical: 8 }]}>
+                    <Ionicons name="images-outline" size={20} color="#1F594A" />
                     <Text style={styles.bulkPicHintText}>
                       Start typing words above — each one will show up here with its own picture, which you can customize from Gallery, App Library, or Chrome Search.
                     </Text>
                   </View>
                 )}
 
-                <View style={styles.modalFooter}>
+                {/* Fixed Footer at the bottom */}
+                <View style={[styles.modalFooter, { marginTop: "auto", paddingTop: 10, borderTopWidth: 1, borderTopColor: "#EAE5D8", flexShrink: 0 }]}>
                   <Pressable
                     onPress={() => {
                       setBulkModalOpen(false);
@@ -3101,93 +3023,96 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     </Text>
                   </Pressable>
                 </View>
-              </ScrollView>
+              </View>
             )}
 
             {/* TAB 2: BULK MAIN SHELVES */}
             {bulkModalTab === "shelves" && (
-              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                <Text style={styles.fieldLabel}>Type or paste shelf names</Text>
-                <TextInput
-                  value={bulkShelvesText}
-                  onChangeText={setBulkShelvesText}
-                  placeholder={"e.g. Animals, Vehicles, Food, Places, Daily Routine\n\nOr with sub-categories:\nFood: Breakfast, Lunch, Dinner\nAnimals: Jungle, Pets, Birds"}
-                  placeholderTextColor="#9E9E9E"
-                  style={[styles.inputBoxCoral, { height: 110, textAlignVertical: "top", paddingTop: 10 }]}
-                  multiline
-                  autoFocus
-                />
-                <Text style={styles.fieldHint}>
-                  Separate shelves with commas or new lines. You can also use "Category: Sub1, Sub2" syntax to create main shelves with sub-categories together!
-                </Text>
-
-                {/* Quick Shelf Presets */}
-                <View style={{ marginTop: 10 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#6A7B76", marginBottom: 6, textTransform: "uppercase" }}>
-                    Quick Templates (Tap to add):
+              <View style={{ flex: 1, flexDirection: "column", minHeight: 0 }}>
+                {/* Fixed Top Controls */}
+                <View style={{ flexShrink: 0 }}>
+                  <Text style={styles.fieldLabel}>Type or paste shelf names</Text>
+                  <TextInput
+                    value={bulkShelvesText}
+                    onChangeText={setBulkShelvesText}
+                    placeholder={"e.g. Animals, Vehicles, Food, Places\nOr: Food: Breakfast, Lunch, Dinner"}
+                    placeholderTextColor="#9E9E9E"
+                    style={[styles.inputBoxCoral, { height: 70, textAlignVertical: "top", paddingTop: 8 }]}
+                    multiline
+                  />
+                  <Text style={[styles.fieldHint, { marginBottom: 6 }]}>
+                    Separate shelves with commas or new lines. You can also use "Category: Sub1, Sub2" syntax to create main shelves with sub-categories together!
                   </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                    {[
-                      "Food: Breakfast, Lunch, Dinner, Snacks",
-                      "Places: Home, School, Park, Store",
-                      "Feelings: Happy, Sad, Tired, Excited",
-                      "Animals, Toys, Clothes, Vehicles",
-                    ].map((tmpl) => (
-                      <Pressable
-                        key={tmpl}
-                        onPress={() => {
-                          setBulkShelvesText((prev) => (prev ? `${prev}\n${tmpl}` : tmpl));
-                        }}
-                        style={styles.templateChip}
-                      >
-                        <Text style={styles.templateChipText}>+ {tmpl}</Text>
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </View>
 
-                {/* Parsed Shelves Live Preview */}
-                {parsedBulkShelves.length > 0 && (
-                  <View style={styles.bulkPreviewArea}>
-                    <Text style={styles.bulkPreviewTitle}>
-                      Ready to create {parsedBulkShelves.length} Shelves in Bulk:
+                  {/* Quick Shelf Presets */}
+                  <View style={{ marginBottom: 8 }}>
+                    <Text style={{ fontSize: 10, fontWeight: "700", color: "#6A7B76", marginBottom: 4, textTransform: "uppercase" }}>
+                      Quick Templates (Tap to add):
                     </Text>
-                    <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled showsVerticalScrollIndicator={true}>
-                      <View style={{ gap: 8, paddingVertical: 4 }}>
-                        {parsedBulkShelves.map((sh, idx) => (
-                          <View key={`${sh.name}-${idx}`} style={styles.bulkShelfPreviewCard}>
-                            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                              <Text style={{ fontSize: 22 }}>{sh.icon}</Text>
-                              <View style={{ flex: 1 }}>
-                                <Text style={styles.bulkShelfPreviewName}>{sh.name}</Text>
-                                {sh.subcats.length > 0 ? (
-                                  <Text style={styles.bulkShelfSubList}>
-                                    Includes {sh.subcats.length} sub-categories: {sh.subcats.join(", ")}
-                                  </Text>
-                                ) : (
-                                  <Text style={styles.bulkShelfSubListEmpty}>
-                                    Main shelf (ready to hold words or sub-categories)
-                                  </Text>
-                                )}
-                              </View>
-                            </View>
-                          </View>
-                        ))}
-                      </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                      {[
+                        "Food: Breakfast, Lunch, Dinner, Snacks",
+                        "Places: Home, School, Park, Store",
+                        "Feelings: Happy, Sad, Tired, Excited",
+                        "Animals, Toys, Clothes, Vehicles",
+                      ].map((tmpl) => (
+                        <Pressable
+                          key={tmpl}
+                          onPress={() => {
+                            setBulkShelvesText((prev) => (prev ? `${prev}\n${tmpl}` : tmpl));
+                          }}
+                          style={styles.templateChip}
+                        >
+                          <Text style={styles.templateChipText}>+ {tmpl}</Text>
+                        </Pressable>
+                      ))}
                     </ScrollView>
                   </View>
-                )}
+                </View>
 
-                {parsedBulkShelves.length === 0 && (
-                  <View style={styles.bulkPicHintBox}>
-                    <Ionicons name="folder-outline" size={16} color="#1F594A" />
+                {/* The Scrolling List Area (ONLY this list scrolls) */}
+                {parsedBulkShelves.length > 0 ? (
+                  <View style={{ flex: 1, minHeight: 0, marginTop: 4 }}>
+                    <Text style={[styles.bulkPreviewTitle, { marginBottom: 6 }]}>
+                      Ready to create {parsedBulkShelves.length} Shelves in Bulk:
+                    </Text>
+                    <ScrollView
+                      style={{ flex: 1 }}
+                      contentContainerStyle={{ gap: 8, paddingBottom: 6 }}
+                      showsVerticalScrollIndicator={true}
+                    >
+                      {parsedBulkShelves.map((sh, idx) => (
+                        <View key={`${sh.name}-${idx}`} style={styles.bulkShelfPreviewCard}>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                            <Text style={{ fontSize: 22 }}>{sh.icon}</Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.bulkShelfPreviewName}>{sh.name}</Text>
+                              {sh.subcats.length > 0 ? (
+                                <Text style={styles.bulkShelfSubList}>
+                                  Includes {sh.subcats.length} sub-categories: {sh.subcats.join(", ")}
+                                </Text>
+                              ) : (
+                                <Text style={styles.bulkShelfSubListEmpty}>
+                                  Main shelf (ready to hold words or sub-categories)
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                        </View>
+                      ))}
+                    </ScrollView>
+                  </View>
+                ) : (
+                  <View style={[styles.bulkPicHintBox, { flex: 1, justifyContent: "center", marginVertical: 8 }]}>
+                    <Ionicons name="folder-outline" size={20} color="#1F594A" />
                     <Text style={styles.bulkPicHintText}>
                       Type shelf names above. Icons and pictures are automatically detected for each shelf!
                     </Text>
                   </View>
                 )}
 
-                <View style={styles.modalFooter}>
+                {/* Fixed Footer at the bottom */}
+                <View style={[styles.modalFooter, { marginTop: "auto", paddingTop: 10, borderTopWidth: 1, borderTopColor: "#EAE5D8", flexShrink: 0 }]}>
                   <Pressable
                     onPress={() => {
                       setBulkModalOpen(false);
@@ -3208,108 +3133,112 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     </Text>
                   </Pressable>
                 </View>
-              </ScrollView>
+              </View>
             )}
 
             {/* TAB 3: BULK SUB-CATEGORIES */}
             {bulkModalTab === "subcats" && (
-              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                <Text style={styles.fieldLabel}>Choose Parent Shelf</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.modalTargetRow}
-                >
-                  {cats.map((c) => {
-                    const isSelected = (bulkTargetShelfId || currentShelf?.id) === c.id;
-                    return (
-                      <Pressable
-                        key={c.id}
-                        onPress={() => setBulkTargetShelfId(c.id)}
-                        style={[
-                          styles.modalTargetPill,
-                          isSelected && styles.modalTargetPillActive,
-                        ]}
-                      >
-                        <Text
+              <View style={{ flex: 1, flexDirection: "column", minHeight: 0 }}>
+                {/* Fixed Top Controls */}
+                <View style={{ flexShrink: 0 }}>
+                  <Text style={styles.fieldLabel}>Choose Parent Shelf</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={[styles.modalTargetRow, { marginBottom: 6 }]}
+                  >
+                    {cats.map((c) => {
+                      const isSelected = (bulkTargetShelfId || currentShelf?.id) === c.id;
+                      return (
+                        <Pressable
+                          key={c.id}
+                          onPress={() => setBulkTargetShelfId(c.id)}
                           style={[
-                            styles.modalTargetPillText,
-                            isSelected && styles.modalTargetPillTextActive,
+                            styles.modalTargetPill,
+                            isSelected && styles.modalTargetPillActive,
                           ]}
                         >
-                          {c.icon || "📁"} {c.name}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-
-                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Type or paste sub-categories</Text>
-                <TextInput
-                  value={bulkSubCatsText}
-                  onChangeText={setBulkSubCatsText}
-                  placeholder={"e.g. Breakfast, Lunch, Dinner, Snack, Drinks\nor one sub-category per line"}
-                  placeholderTextColor="#9E9E9E"
-                  style={[styles.inputBoxCoral, { height: 110, textAlignVertical: "top", paddingTop: 10 }]}
-                  multiline
-                  autoFocus
-                />
-                <Text style={styles.fieldHint}>
-                  Separate sub-categories with commas or new lines. They will all be added under the chosen parent shelf with matching icons & colors.
-                </Text>
-
-                {/* Quick Sub-category Presets */}
-                <View style={{ marginTop: 10 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#6A7B76", marginBottom: 6, textTransform: "uppercase" }}>
-                    Quick Templates (Tap to add):
-                  </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-                    {[
-                      "Breakfast, Lunch, Dinner, Snacks",
-                      "Drinks, Desserts, Fruit, Veggies",
-                      "Morning Routine, Evening Routine",
-                      "Indoor, Outdoor, School, Park",
-                    ].map((tmpl) => (
-                      <Pressable
-                        key={tmpl}
-                        onPress={() => {
-                          setBulkSubCatsText((prev) => (prev ? `${prev}\n${tmpl}` : tmpl));
-                        }}
-                        style={styles.templateChip}
-                      >
-                        <Text style={styles.templateChipText}>+ {tmpl}</Text>
-                      </Pressable>
-                    ))}
+                          <Text
+                            style={[
+                              styles.modalTargetPillText,
+                              isSelected && styles.modalTargetPillTextActive,
+                            ]}
+                          >
+                            {c.icon || "📁"} {c.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
                   </ScrollView>
+
+                  <Text style={[styles.fieldLabel, { marginTop: 4 }]}>Type or paste sub-categories</Text>
+                  <TextInput
+                    value={bulkSubCatsText}
+                    onChangeText={setBulkSubCatsText}
+                    placeholder={"e.g. Breakfast, Lunch, Dinner, Snack, Drinks\nor one sub-category per line"}
+                    placeholderTextColor="#9E9E9E"
+                    style={[styles.inputBoxCoral, { height: 70, textAlignVertical: "top", paddingTop: 8 }]}
+                    multiline
+                  />
+                  <Text style={[styles.fieldHint, { marginBottom: 6 }]}>
+                    Separate sub-categories with commas or new lines. They will all be added under the chosen parent shelf with matching icons & colors.
+                  </Text>
+
+                  {/* Quick Sub-category Presets */}
+                  <View style={{ marginBottom: 8 }}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                      {[
+                        "Breakfast, Lunch, Dinner, Snacks",
+                        "Drinks, Desserts, Fruit, Veggies",
+                        "Morning Routine, Evening Routine",
+                        "Indoor, Outdoor, School, Park",
+                      ].map((tmpl) => (
+                        <Pressable
+                          key={tmpl}
+                          onPress={() => {
+                            setBulkSubCatsText((prev) => (prev ? `${prev}\n${tmpl}` : tmpl));
+                          }}
+                          style={styles.templateChip}
+                        >
+                          <Text style={styles.templateChipText}>+ {tmpl}</Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
                 </View>
 
-                {/* Parsed Sub-categories Live Preview */}
-                {parsedBulkSubCats.length > 0 && (
-                  <View style={styles.bulkPreviewArea}>
-                    <Text style={styles.bulkPreviewTitle}>
+                {/* The Scrolling List Area (ONLY this list scrolls) */}
+                {parsedBulkSubCats.length > 0 ? (
+                  <View style={{ flex: 1, minHeight: 0, marginTop: 4 }}>
+                    <Text style={[styles.bulkPreviewTitle, { marginBottom: 6 }]}>
                       Ready to add {parsedBulkSubCats.length} Sub-categories in Bulk:
                     </Text>
-                    <View style={styles.voiceBulkChipsWrap}>
-                      {parsedBulkSubCats.map((sc, idx) => (
-                        <View key={`${sc}-${idx}`} style={styles.voiceBulkChip}>
-                          <Text style={{ fontSize: 13 }}>{getCategoryIconForName(sc)}</Text>
-                          <Text style={styles.voiceBulkChipText}>{sc}</Text>
-                        </View>
-                      ))}
-                    </View>
+                    <ScrollView
+                      style={{ flex: 1 }}
+                      contentContainerStyle={{ paddingBottom: 6 }}
+                      showsVerticalScrollIndicator={true}
+                    >
+                      <View style={styles.voiceBulkChipsWrap}>
+                        {parsedBulkSubCats.map((sc, idx) => (
+                          <View key={`${sc}-${idx}`} style={styles.voiceBulkChip}>
+                            <Text style={{ fontSize: 13 }}>{getCategoryIconForName(sc)}</Text>
+                            <Text style={styles.voiceBulkChipText}>{sc}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </ScrollView>
                   </View>
-                )}
-
-                {parsedBulkSubCats.length === 0 && (
-                  <View style={styles.bulkPicHintBox}>
-                    <Ionicons name="file-tray-stacked-outline" size={16} color="#1F594A" />
+                ) : (
+                  <View style={[styles.bulkPicHintBox, { flex: 1, justifyContent: "center", marginVertical: 8 }]}>
+                    <Ionicons name="file-tray-stacked-outline" size={20} color="#1F594A" />
                     <Text style={styles.bulkPicHintText}>
                       Type sub-categories above — each one will be created under the selected shelf with its own icon.
                     </Text>
                   </View>
                 )}
 
-                <View style={styles.modalFooter}>
+                {/* Fixed Footer at the bottom */}
+                <View style={[styles.modalFooter, { marginTop: "auto", paddingTop: 10, borderTopWidth: 1, borderTopColor: "#EAE5D8", flexShrink: 0 }]}>
                   <Pressable
                     onPress={() => {
                       setBulkModalOpen(false);
@@ -3330,7 +3259,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     </Text>
                   </Pressable>
                 </View>
-              </ScrollView>
+              </View>
             )}
           </View>
         </View>
