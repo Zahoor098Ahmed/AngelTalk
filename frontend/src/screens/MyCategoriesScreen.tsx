@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   Image,
+  Alert,
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -168,7 +169,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     setTick((t) => t + 1);
     if (!selectedShelfId && list.length > 0) {
       const core = list.find((c) => c.name.toLowerCase() === "core");
-      setSelectedShelfId(core ? core.id : list[0].id);
+      const chosen = core ? core : list[0];
+      setSelectedShelfId(chosen.id);
+      const subs = childCategories(chosen.id);
+      setSelectedSubCatId(subs.length > 0 ? subs[0].id : null);
     }
   };
 
@@ -397,9 +401,17 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   function openBulkModal(tab: "words" | "shelves" | "subcats" = "words") {
     setBulkModalTab(tab);
     if (tab === "words") {
-      const initialShelfId = currentShelf?.id || cats[0]?.id || null;
+      const initialShelf = currentShelf || cats[0] || null;
+      const initialShelfId = initialShelf?.id || null;
       setBulkWordsShelfId(initialShelfId);
-      setModalTargetCatId(activeCategory?.id || initialShelfId);
+      const subs = initialShelf ? childCategories(initialShelf.id) : [];
+      if (selectedSubCatId && subs.some((s) => s.id === selectedSubCatId)) {
+        setModalTargetCatId(selectedSubCatId);
+      } else if (subs.length > 0) {
+        setModalTargetCatId(subs[0].id);
+      } else {
+        setModalTargetCatId(null);
+      }
     } else if (tab === "subcats") {
       setBulkTargetShelfId(currentShelf?.id || (cats[0] ? cats[0].id : null));
     }
@@ -507,17 +519,15 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   function handleCreateWord() {
     const text = newWordText.trim();
     let targetCat =
-      (modalTargetCatId
-        ? subCats.find((s) => s.id === modalTargetCatId) ||
-          (currentShelf?.id === modalTargetCatId ? currentShelf : null)
-        : null) ||
-      activeCategory ||
-      currentShelf;
-    if (!text || !targetCat) return;
+      (modalTargetCatId ? subCats.find((s) => s.id === modalTargetCatId) : null) ||
+      (selectedSubCatId ? subCats.find((s) => s.id === selectedSubCatId) : null) ||
+      (subCats.length > 0 ? subCats[0] : null);
 
-    // Ensure words are NEVER saved loose outside subcategories
-    if (subCats.length > 0 && targetCat.id === currentShelf?.id) {
-      targetCat = subCats[0];
+    if (!text || !targetCat) {
+      if (!targetCat) {
+        Alert.alert("Sub-category Required", "Words must be added to a sub-category. Please create a sub-category first.");
+      }
+      return;
     }
 
     const imgUri = newWordImageUri || getPictogramUrl(text) || undefined;
@@ -613,8 +623,14 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     if (modalTargetCatId) {
       targetCat = getCategory(modalTargetCatId);
     }
-    if (!targetCat) {
-      targetCat = targetWordsShelf || currentShelf || undefined;
+    // Prevent adding to main shelf - words must belong to a sub-category
+    if (!targetCat || !targetCat.parentCategoryId || targetCat.id === targetWordsShelf?.id) {
+      if (targetWordsSubCats.length > 0) {
+        targetCat = targetWordsSubCats[0];
+      } else {
+        Alert.alert("Sub-category Required", "Words must be added to a sub-category. Please create a sub-category first.");
+        return;
+      }
     }
     if (!bulkWordsText.trim() || !targetCat) return;
 
@@ -1055,7 +1071,15 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
             <Pressable
               onPress={() => {
-                setModalTargetCatId(activeCategory?.id || currentShelf?.id || null);
+                if (subCats.length === 0) {
+                  setSubCatName("");
+                  setSubCatOpen(true);
+                  return;
+                }
+                const defaultSubId = (selectedSubCatId && subCats.some((s) => s.id === selectedSubCatId))
+                  ? selectedSubCatId
+                  : subCats[0].id;
+                setModalTargetCatId(defaultSubId);
                 setNewWordText("");
                 setNewWordColor(PASTEL_PALETTE[0]);
                 setAutoAddVerbForms(true);
@@ -1094,7 +1118,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                       <Pressable
                         onPress={() => {
                           setSelectedShelfId(cat.id);
-                          setSelectedSubCatId(null);
+                          const subs = childCategories(cat.id);
+                          setSelectedSubCatId(subs.length > 0 ? subs[0].id : null);
                         }}
                         style={[
                           styles.shelfRow,
@@ -1491,7 +1516,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                       key={cat.id}
                       onPress={() => {
                         setSelectedShelfId(cat.id);
-                        setSelectedSubCatId(null);
+                        const subs = childCategories(cat.id);
+                        setSelectedSubCatId(subs.length > 0 ? subs[0].id : null);
                       }}
                       style={[
                         styles.mobileShelfPill,
@@ -2495,30 +2521,14 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             </View>
 
             {/* Target Category / Sub-Category Selector */}
-            {subCats.length > 0 && (
+            {subCats.length > 0 ? (
               <View style={{ marginBottom: 14 }}>
-                <Text style={styles.fieldLabel}>Save word to</Text>
+                <Text style={styles.fieldLabel}>Save word to sub-category</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.modalTargetRow}
                 >
-                  <Pressable
-                    onPress={() => setModalTargetCatId(currentShelf?.id || null)}
-                    style={[
-                      styles.modalTargetPill,
-                      modalTargetCatId === currentShelf?.id && styles.modalTargetPillActive,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.modalTargetPillText,
-                        modalTargetCatId === currentShelf?.id && styles.modalTargetPillTextActive,
-                      ]}
-                    >
-                      🏠 {currentShelf?.name} (Main)
-                    </Text>
-                  </Pressable>
                   {subCats.map((sc) => (
                     <Pressable
                       key={sc.id}
@@ -2539,6 +2549,16 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     </Pressable>
                   ))}
                 </ScrollView>
+              </View>
+            ) : (
+              <View style={{ marginBottom: 14 }}>
+                <Text style={styles.fieldLabel}>Save word to sub-category</Text>
+                <View style={styles.noSubCatsBox}>
+                  <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
+                  <Text style={styles.noSubCatsText}>
+                    Please create a sub-category in "{currentShelf?.name}" first. Words cannot be added to main shelf.
+                  </Text>
+                </View>
               </View>
             )}
 
@@ -2810,7 +2830,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   <Text style={styles.modalTitle}>Bulk Creator Center</Text>
                   <Text style={styles.modalSubtitle}>
                     {bulkModalTab === "words"
-                      ? `Add words to ${modalTargetCatId ? (getCategory(modalTargetCatId)?.name || targetWordsShelf?.name) : (targetWordsShelf?.name || "Shelf")}`
+                      ? `Add words to sub-category: ${modalTargetCatId && targetWordsSubCats.some((s) => s.id === modalTargetCatId) ? getCategory(modalTargetCatId)?.name : targetWordsSubCats[0]?.name || "Select sub-category"}`
                       : bulkModalTab === "shelves"
                       ? "Create multiple main shelves and sub-categories"
                       : `Add sub-categories to ${(bulkTargetShelfId ? cats.find((c) => c.id === bulkTargetShelfId)?.name : null) || currentShelf?.name || "Shelf"}`}
@@ -2919,7 +2939,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             key={c.id}
                             onPress={() => {
                               setBulkWordsShelfId(c.id);
-                              setModalTargetCatId(c.id);
+                              const subs = childCategories(c.id);
+                              setModalTargetCatId(subs.length > 0 ? subs[0].id : null);
                             }}
                             style={[
                               styles.modalTargetPill,
@@ -2946,56 +2967,58 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                       <Text style={styles.fieldLabel}>
                         2. Choose Sub-category in "{targetWordsShelf?.name || "Shelf"}"
                       </Text>
-                      {modalTargetCatId && (
+                      {modalTargetCatId && targetWordsSubCats.some((s) => s.id === modalTargetCatId) && (
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#E7F3EE", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
                           <Ionicons name="checkmark-circle" size={11} color="#235E50" />
                           <Text style={{ fontSize: 10, color: "#235E50", fontWeight: "700" }}>
-                            Target: {getCategory(modalTargetCatId)?.name || targetWordsShelf?.name}
+                            Target: {getCategory(modalTargetCatId)?.name}
                           </Text>
                         </View>
                       )}
                     </View>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.modalTargetRow}
-                    >
-                      <Pressable
-                        onPress={() => setModalTargetCatId(targetWordsShelf?.id || null)}
-                        style={[
-                          styles.modalTargetPill,
-                          modalTargetCatId === targetWordsShelf?.id && styles.modalTargetPillActive,
-                        ]}
+                    {targetWordsSubCats.length > 0 ? (
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.modalTargetRow}
                       >
-                        <Text
-                          style={[
-                            styles.modalTargetPillText,
-                            modalTargetCatId === targetWordsShelf?.id && styles.modalTargetPillTextActive,
-                          ]}
-                        >
-                          🏠 {targetWordsShelf?.name} (Main Shelf)
-                        </Text>
-                      </Pressable>
-                      {targetWordsSubCats.map((sc) => (
-                        <Pressable
-                          key={sc.id}
-                          onPress={() => setModalTargetCatId(sc.id)}
-                          style={[
-                            styles.modalTargetPill,
-                            modalTargetCatId === sc.id && styles.modalTargetPillActive,
-                          ]}
-                        >
-                          <Text
+                        {targetWordsSubCats.map((sc) => (
+                          <Pressable
+                            key={sc.id}
+                            onPress={() => setModalTargetCatId(sc.id)}
                             style={[
-                              styles.modalTargetPillText,
-                              modalTargetCatId === sc.id && styles.modalTargetPillTextActive,
+                              styles.modalTargetPill,
+                              modalTargetCatId === sc.id && styles.modalTargetPillActive,
                             ]}
                           >
-                            {sc.icon || "📁"} {sc.name}
-                          </Text>
+                            <Text
+                              style={[
+                                styles.modalTargetPillText,
+                                modalTargetCatId === sc.id && styles.modalTargetPillTextActive,
+                              ]}
+                            >
+                              {sc.icon || "📁"} {sc.name}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    ) : (
+                      <View style={styles.noSubCatsBox}>
+                        <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
+                        <Text style={styles.noSubCatsText}>
+                          "{targetWordsShelf?.name}" has no sub-categories yet. Words can only be added to sub-categories.
+                        </Text>
+                        <Pressable
+                          onPress={() => {
+                            setBulkTargetShelfId(targetWordsShelf?.id || null);
+                            setBulkModalTab("subcats");
+                          }}
+                          style={styles.quickCreateSubCatBtn}
+                        >
+                          <Text style={styles.quickCreateSubCatBtnText}>+ Create sub-categories</Text>
                         </Pressable>
-                      ))}
-                    </ScrollView>
+                      </View>
+                    )}
                   </View>
 
                   <Text style={styles.fieldLabel}>Type or paste words</Text>
@@ -3106,8 +3129,11 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   </Pressable>
                   <Pressable
                     onPress={handleBulkAddWords}
-                    style={[styles.actionPillBtn, parsedBulkWords.length === 0 && { opacity: 0.5 }]}
-                    disabled={parsedBulkWords.length === 0}
+                    style={[
+                      styles.actionPillBtn,
+                      (parsedBulkWords.length === 0 || targetWordsSubCats.length === 0 || !modalTargetCatId) && { opacity: 0.5 },
+                    ]}
+                    disabled={parsedBulkWords.length === 0 || targetWordsSubCats.length === 0 || !modalTargetCatId}
                   >
                     <Ionicons name="flash" size={16} color="#FFFFFF" />
                     <Text style={styles.actionPillBtnText}>
@@ -4453,6 +4479,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: "#1A3830",
+  },
+  noSubCatsBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#FEF3C7",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
+  noSubCatsText: {
+    fontSize: 12,
+    color: "#92400E",
+    fontWeight: "500",
+    flex: 1,
+  },
+  quickCreateSubCatBtn: {
+    backgroundColor: "#235E50",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+  },
+  quickCreateSubCatBtnText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "700",
   },
   verbHintText: {
     fontSize: 11,
