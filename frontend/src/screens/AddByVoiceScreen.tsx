@@ -20,6 +20,7 @@ import {
   type ImageSource,
 } from "../modules/imageSearch";
 import { topLevelCategories, createBlankCategory, addWord, addWordsBulk, childCategories } from "../modules/customCategories";
+import { getPictogramUrl } from "../modules/aacPictograms";
 import { generateAllVerbForms } from "../modules/verbForms";
 import { resolveEmoji } from "../modules/wordImage";
 import { t, type TKey } from "../modules/i18n";
@@ -78,10 +79,7 @@ export default function AddByVoiceScreen({ visible, onClose, onSaved, presetCate
   function finishImage(uri: string | undefined) {
     setImageUri(uri);
     if (presetCategoryId) {
-      addWord(presetCategoryId, { label: word.trim(), emoji: resolveEmoji(word.trim()), imageUri: uri, useTextToSpeech: true, size: "md" });
-      speak(word.trim(), settings.language, settings.soundEnabled);
-      onSaved();
-      setStep("done");
+      saveToCategory(presetCategoryId, uri);
     } else {
       setStep("category");
     }
@@ -192,25 +190,57 @@ export default function AddByVoiceScreen({ visible, onClose, onSaved, presetCate
   }
 
   // --- step 4: category + save ---
-  function saveToCategory(catId: string) {
+  function saveToCategory(catId: string, overrideImg?: string) {
     let targetId = catId;
     const subs = childCategories(catId);
     if (subs.length > 0) {
       targetId = subs[0].id;
     }
     const cleanWord = word.trim();
-    const vForms = generateAllVerbForms(cleanWord);
-    if (vForms) {
-      addWordsBulk(targetId, [
-        { label: vForms.base, phrase: vForms.base, emoji: vForms.emoji, imageUri, useTextToSpeech: true, size: "md", verbFormTag: "1st", verbForms: vForms },
-        { label: vForms.past, phrase: vForms.past, emoji: vForms.emoji, imageUri, useTextToSpeech: true, size: "md", verbFormTag: "2nd", verbForms: vForms },
-        { label: vForms.participle, phrase: vForms.participle, emoji: vForms.emoji, imageUri, useTextToSpeech: true, size: "md", verbFormTag: "3rd", verbForms: vForms },
-        { label: vForms.continuous, phrase: vForms.continuous, emoji: vForms.emoji, imageUri, useTextToSpeech: true, size: "md", verbFormTag: "4th", verbForms: vForms },
-      ]);
+    const effectiveImg = overrideImg ?? imageUri;
+    const wordsList = cleanWord
+      .split(/(?:,|\n|;|\s+and\s+|\s+aur\s+|\s+اور\s+|\s+plus\s+)+/i)
+      .map((w) => w.trim())
+      .filter((w) => w.length > 0);
+
+    if (wordsList.length > 1) {
+      const toInsert: any[] = [];
+      for (const item of wordsList) {
+        const vForms = generateAllVerbForms(item);
+        if (vForms) {
+          toInsert.push(
+            { label: vForms.base, phrase: vForms.base, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "1st", verbForms: vForms },
+            { label: vForms.past, phrase: vForms.past, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "2nd", verbForms: vForms },
+            { label: vForms.participle, phrase: vForms.participle, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "3rd", verbForms: vForms },
+            { label: vForms.continuous, phrase: vForms.continuous, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "4th", verbForms: vForms },
+          );
+        } else {
+          toInsert.push({
+            label: item,
+            phrase: item,
+            emoji: resolveEmoji(item),
+            imageUri: getPictogramUrl(item) || effectiveImg,
+            useTextToSpeech: true,
+            size: "md",
+          });
+        }
+      }
+      addWordsBulk(targetId, toInsert);
+      speak(wordsList.join(", "), settings.language, settings.soundEnabled);
     } else {
-      addWord(targetId, { label: cleanWord, emoji: resolveEmoji(cleanWord), imageUri, useTextToSpeech: true, size: "md" });
+      const vForms = generateAllVerbForms(cleanWord);
+      if (vForms) {
+        addWordsBulk(targetId, [
+          { label: vForms.base, phrase: vForms.base, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "1st", verbForms: vForms },
+          { label: vForms.past, phrase: vForms.past, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "2nd", verbForms: vForms },
+          { label: vForms.participle, phrase: vForms.participle, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "3rd", verbForms: vForms },
+          { label: vForms.continuous, phrase: vForms.continuous, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "4th", verbForms: vForms },
+        ]);
+      } else {
+        addWord(targetId, { label: cleanWord, emoji: resolveEmoji(cleanWord), imageUri: effectiveImg, useTextToSpeech: true, size: "md" });
+      }
+      speak(cleanWord, settings.language, settings.soundEnabled);
     }
-    speak(cleanWord, settings.language, settings.soundEnabled);
     onSaved();
     setStep("done");
   }
