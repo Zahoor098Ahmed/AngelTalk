@@ -341,19 +341,18 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       voiceType,
       isPhraseMode
     );
-    if (!isPhraseMode) {
-      setSentence((prev) => [
-        ...prev,
-        {
-          id: `${w.id}-${prev.length}-${Date.now().toString(36).slice(-4)}`,
-          label: w.phrase || w.label,
-          emoji: w.emoji,
-          imageUri: w.imageUri || getPictogramUrl(w.phrase || w.label) || undefined,
-          audioUri: w.audioUri,
-          useTextToSpeech: w.useTextToSpeech,
-        },
-      ]);
-    }
+    // Always add tapped word to sentence strip at the top
+    setSentence((prev) => [
+      ...prev,
+      {
+        id: `${w.id}-${prev.length}-${Date.now().toString(36).slice(-4)}`,
+        label: w.phrase || w.label,
+        emoji: w.emoji,
+        imageUri: w.imageUri || getPictogramUrl(w.phrase || w.label) || undefined,
+        audioUri: w.audioUri,
+        useTextToSpeech: w.useTextToSpeech,
+      },
+    ]);
   }
 
   function removeChipAt(index: number) {
