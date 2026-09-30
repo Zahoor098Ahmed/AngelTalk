@@ -131,6 +131,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   const [voiceImageUri, setVoiceImageUri] = useState<string | undefined>();
   const [voiceItems, setVoiceItems] = useState<string[]>([]);
   const [voiceSubItems, setVoiceSubItems] = useState<string[]>([]);
+  const [voiceShelfId, setVoiceShelfId] = useState<string | null>(null);
+  const [voiceSubCatId, setVoiceSubCatId] = useState<string | null>(null);
+  const [bulkVoiceActive, setBulkVoiceActive] = useState<"words" | "shelves" | "subcats" | null>(null);
 
   // Unified Bulk Creator Modal (Words | Shelves | Sub-categories)
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
@@ -231,6 +234,21 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     if (!targetWordsShelf) return [];
     return childCategories(targetWordsShelf.id);
   }, [targetWordsShelf, tick]);
+
+  // Selected shelf for Voice Add modal
+  const voiceTargetShelf = useMemo(() => {
+    if (voiceShelfId) {
+      const found = cats.find((c) => c.id === voiceShelfId);
+      if (found) return found;
+    }
+    return currentShelf || cats[0] || null;
+  }, [voiceShelfId, cats, currentShelf]);
+
+  // Sub-categories of selected shelf for Voice Add modal
+  const voiceTargetSubCats = useMemo(() => {
+    if (!voiceTargetShelf) return [];
+    return childCategories(voiceTargetShelf.id);
+  }, [voiceTargetShelf, tick]);
 
   // Active category being viewed/edited (either a selected sub-category or the main shelf)
   const activeCategory = useMemo(() => {
@@ -806,6 +824,16 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     setVoiceItems([]);
     setVoiceSubItems([]);
     setVoiceTargetType("category");
+    const initialShelf = currentShelf || cats[0] || null;
+    setVoiceShelfId(initialShelf?.id || null);
+    const subs = initialShelf ? childCategories(initialShelf.id) : [];
+    if (selectedSubCatId && subs.some((s) => s.id === selectedSubCatId)) {
+      setVoiceSubCatId(selectedSubCatId);
+    } else if (subs.length > 0) {
+      setVoiceSubCatId(subs[0].id);
+    } else {
+      setVoiceSubCatId(null);
+    }
     setVoiceOpen(true);
     startVoiceCapture();
   }
@@ -849,6 +877,46 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   function stopVoiceCapture() {
     stopListening();
     setVoiceListening(false);
+  }
+
+  function toggleBulkVoice(target: "words" | "shelves" | "subcats") {
+    if (bulkVoiceActive) {
+      stopListening();
+      setBulkVoiceActive(null);
+      return;
+    }
+    setBulkVoiceActive(target);
+    const recognitionLang = lang.startsWith("ur") ? "ur-PK" : lang.startsWith("ar") ? "ar-SA" : lang;
+    startListening({
+      lang: recognitionLang,
+      onPartial: (text) => {
+        handleBulkVoiceInput(text, target);
+      },
+      onFinal: (text) => {
+        handleBulkVoiceInput(text, target);
+        setBulkVoiceActive(null);
+      },
+      onError: () => setBulkVoiceActive(null),
+      onEnd: () => setBulkVoiceActive(null),
+    });
+  }
+
+  function handleBulkVoiceInput(rawText: string, target: "words" | "shelves" | "subcats") {
+    if (!rawText.trim()) return;
+    const parsed = parseVoiceCategoryCommand(rawText);
+    const items = parsed.items.length > 0 ? parsed.items : [parsed.cleanName];
+    const formatted = items.join(", ");
+    if (target === "words") {
+      setBulkWordsText(formatted);
+    } else if (target === "shelves") {
+      if (parsed.subItems && parsed.subItems.length > 0) {
+        setBulkShelvesText(`${parsed.cleanName}: ${parsed.subItems.join(", ")}`);
+      } else {
+        setBulkShelvesText(formatted);
+      }
+    } else if (target === "subcats") {
+      setBulkSubCatsText(formatted);
+    }
   }
 
   function handleSaveVoice() {
@@ -901,16 +969,22 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
           setSelectedSubCatId(null);
         }
       }
-    } else if (voiceTargetType === "subcategory" && currentShelf) {
+    } else if (voiceTargetType === "subcategory") {
+      const targetShelf = voiceTargetShelf || currentShelf;
+      if (!targetShelf) {
+        Alert.alert("Parent Shelf Required", "Please select a parent shelf for sub-categories.");
+        return;
+      }
       if (finalItems.length === 1) {
         const singleName = capWord(finalItems[0]);
         const created = createBlankCategory({
           name: singleName,
-          parentCategoryId: currentShelf.id,
+          parentCategoryId: targetShelf.id,
           icon: voiceIcon || getCategoryIconForName(singleName),
-          color: voiceColor || currentShelf.color || "#235E50",
+          color: voiceColor || targetShelf.color || "#235E50",
           imageUri: voiceImageUri || getPictogramUrl(singleName) || undefined,
         });
+        setSelectedShelfId(targetShelf.id);
         setSelectedSubCatId(created.id);
       } else {
         const createdList = createBlankCategoriesBulk(
@@ -918,77 +992,90 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             const clean = capWord(n);
             return {
               name: clean,
-              parentCategoryId: currentShelf.id,
+              parentCategoryId: targetShelf.id,
               icon: getCategoryIconForName(clean),
-              color: currentShelf.color || "#235E50",
+              color: targetShelf.color || "#235E50",
               imageUri: getPictogramUrl(clean) || undefined,
             };
           })
         );
         if (createdList.length > 0) {
+          setSelectedShelfId(targetShelf.id);
           setSelectedSubCatId(createdList[0].id);
         }
       }
     } else if (voiceTargetType === "word") {
-      let targetCat = activeCategory || currentShelf;
-      if (subCats.length > 0 && targetCat?.id === currentShelf?.id) {
-        targetCat = subCats[0];
+      let targetCat: CustomCategory | undefined = undefined;
+      if (voiceSubCatId) {
+        targetCat = getCategory(voiceSubCatId);
       }
-      if (targetCat) {
-        const wordsToAdd = finalItems;
-        const toInsert: {
-          label: string;
-          phrase: string;
-          emoji: string;
-          imageUri?: string;
-          size: TileSize;
-          useTextToSpeech: boolean;
-          verbForms?: CustomWord["verbForms"];
-          verbFormTag?: "1st" | "2nd" | "3rd" | "4th";
-        }[] = [];
-        for (const item of wordsToAdd) {
-          const cName = cleanVoiceSpeechName(item);
-          if (!cName) continue;
-          const vForms = generateAllVerbForms(cName);
-          if (vForms) {
-            const form1 = capWord(vForms.base);
-            const form2 = capWord(vForms.past);
-            const form3 = capWord(vForms.participle);
-            const form4 = capWord(vForms.continuous);
-            const forms = [
-              { label: form1, tag: "1st" as const },
-              { label: form2, tag: "2nd" as const },
-              { label: form3, tag: "3rd" as const },
-              { label: form4, tag: "4th" as const },
-            ];
-            for (const f of forms) {
-              toInsert.push({
-                label: f.label,
-                phrase: f.label,
-                emoji: vForms.emoji || "⚡",
-                imageUri: getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
-                size: "md",
-                useTextToSpeech: true,
-                verbForms: vForms,
-                verbFormTag: f.tag,
-              });
-            }
-          } else {
-            const cLabel = capWord(cName);
+      if (!targetCat || !targetCat.parentCategoryId) {
+        if (voiceTargetSubCats.length > 0) {
+          targetCat = voiceTargetSubCats[0];
+        } else {
+          Alert.alert("Sub-category Required", "Words must be added to a sub-category. Please select or create a sub-category first.");
+          return;
+        }
+      }
+
+      const wordsToAdd = finalItems;
+      const toInsert: {
+        label: string;
+        phrase: string;
+        color: string;
+        emoji: string;
+        imageUri?: string;
+        size: TileSize;
+        useTextToSpeech: boolean;
+        verbForms?: CustomWord["verbForms"];
+        verbFormTag?: "1st" | "2nd" | "3rd" | "4th";
+      }[] = [];
+
+      for (const item of wordsToAdd) {
+        const cName = cleanVoiceSpeechName(item);
+        if (!cName) continue;
+        const vForms = generateAllVerbForms(cName);
+        if (vForms) {
+          const form1 = capWord(vForms.base);
+          const form2 = capWord(vForms.past);
+          const form3 = capWord(vForms.participle);
+          const form4 = capWord(vForms.continuous);
+          const forms = [
+            { label: form1, tag: "1st" as const },
+            { label: form2, tag: "2nd" as const },
+            { label: form3, tag: "3rd" as const },
+            { label: form4, tag: "4th" as const },
+          ];
+          for (const f of forms) {
             toInsert.push({
-              label: cLabel,
-              phrase: cLabel,
-              emoji: voiceIcon || "🔹",
-              imageUri: getPictogramUrl(cLabel) || undefined,
+              label: f.label,
+              phrase: f.label,
+              color: voiceColor || PASTEL_PALETTE[0],
+              emoji: vForms.emoji || "⚡",
+              imageUri: getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
               size: "md",
               useTextToSpeech: true,
+              verbForms: vForms,
+              verbFormTag: f.tag,
             });
           }
+        } else {
+          const cLabel = capWord(cName);
+          toInsert.push({
+            label: cLabel,
+            phrase: cLabel,
+            color: voiceColor || PASTEL_PALETTE[0],
+            emoji: voiceIcon || "🔹",
+            imageUri: getPictogramUrl(cLabel) || undefined,
+            size: "md",
+            useTextToSpeech: true,
+          });
         }
-        if (toInsert.length > 0) {
-          addWordsBulk(targetCat.id, toInsert);
-          setSelectedSubCatId(targetCat.id);
-        }
+      }
+      if (toInsert.length > 0) {
+        addWordsBulk(targetCat.id, toInsert);
+        if (voiceTargetShelf) setSelectedShelfId(voiceTargetShelf.id);
+        setSelectedSubCatId(targetCat.id);
       }
     }
 
@@ -2267,6 +2354,92 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 </Pressable>
               </View>
 
+              {/* If Sub-category chosen: Target Parent Shelf Selector */}
+              {voiceTargetType === "subcategory" && (
+                <View style={{ marginTop: 10, marginBottom: 4 }}>
+                  <Text style={styles.fieldLabel}>Choose Parent Shelf</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modalTargetRow}>
+                    {cats.map((c) => {
+                      const isSelected = (voiceShelfId || currentShelf?.id) === c.id;
+                      return (
+                        <Pressable
+                          key={c.id}
+                          onPress={() => setVoiceShelfId(c.id)}
+                          style={[styles.modalTargetPill, isSelected && styles.modalTargetPillActive]}
+                        >
+                          <Text style={[styles.modalTargetPillText, isSelected && styles.modalTargetPillTextActive]}>
+                            {c.icon || "📁"} {c.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* If Word(s) chosen: 2-Step Category & Sub-category Selector */}
+              {voiceTargetType === "word" && (
+                <View style={{ marginTop: 10, marginBottom: 4 }}>
+                  <Text style={styles.fieldLabel}>1. Choose Shelf (Category)</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.modalTargetRow, { marginBottom: 6 }]}>
+                    {cats.map((c) => {
+                      const isSelected = (voiceShelfId || currentShelf?.id) === c.id;
+                      return (
+                        <Pressable
+                          key={c.id}
+                          onPress={() => {
+                            setVoiceShelfId(c.id);
+                            const subs = childCategories(c.id);
+                            setVoiceSubCatId(subs.length > 0 ? subs[0].id : null);
+                          }}
+                          style={[styles.modalTargetPill, isSelected && styles.modalTargetPillActive]}
+                        >
+                          <Text style={[styles.modalTargetPillText, isSelected && styles.modalTargetPillTextActive]}>
+                            {c.icon || "📁"} {c.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                    <Text style={styles.fieldLabel}>
+                      2. Choose Sub-category in "{voiceTargetShelf?.name || "Shelf"}"
+                    </Text>
+                    {voiceSubCatId && voiceTargetSubCats.some((s) => s.id === voiceSubCatId) && (
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#E7F3EE", paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6 }}>
+                        <Ionicons name="checkmark-circle" size={11} color="#235E50" />
+                        <Text style={{ fontSize: 10, color: "#235E50", fontWeight: "700" }}>
+                          Target: {getCategory(voiceSubCatId)?.name}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  {voiceTargetSubCats.length > 0 ? (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modalTargetRow}>
+                      {voiceTargetSubCats.map((sc) => (
+                        <Pressable
+                          key={sc.id}
+                          onPress={() => setVoiceSubCatId(sc.id)}
+                          style={[styles.modalTargetPill, voiceSubCatId === sc.id && styles.modalTargetPillActive]}
+                        >
+                          <Text style={[styles.modalTargetPillText, voiceSubCatId === sc.id && styles.modalTargetPillTextActive]}>
+                            {sc.icon || "📁"} {sc.name}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <View style={styles.noSubCatsBox}>
+                      <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
+                      <Text style={styles.noSubCatsText}>
+                        "{voiceTargetShelf?.name}" has no sub-categories yet. Words can only be added to sub-categories.
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
               {/* Clean Output Preview (Filtered of Noise) */}
               <View style={styles.voiceSmartFilterBanner}>
                 <Ionicons name="sparkles" size={16} color="#1F594A" />
@@ -3021,7 +3194,23 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     )}
                   </View>
 
-                  <Text style={styles.fieldLabel}>Type or paste words</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <Text style={styles.fieldLabel}>Type or paste words</Text>
+                    <Pressable
+                      onPress={() => toggleBulkVoice("words")}
+                      style={[styles.bulkVoiceMicBtn, bulkVoiceActive === "words" && styles.bulkVoiceMicBtnActive]}
+                      accessibilityLabel="Speak words with microphone"
+                    >
+                      <Ionicons
+                        name={bulkVoiceActive === "words" ? "mic" : "mic-outline"}
+                        size={13}
+                        color={bulkVoiceActive === "words" ? "#FFFFFF" : "#235E50"}
+                      />
+                      <Text style={[styles.bulkVoiceMicBtnText, bulkVoiceActive === "words" && styles.bulkVoiceMicBtnTextActive]}>
+                        {bulkVoiceActive === "words" ? "Listening..." : "🎙️ Speak words"}
+                      </Text>
+                    </Pressable>
+                  </View>
                   <TextInput
                     value={bulkWordsText}
                     onChangeText={setBulkWordsText}
@@ -3149,7 +3338,23 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               <View style={{ flex: 1, flexDirection: "column", minHeight: 0 }}>
                 {/* Fixed Top Controls */}
                 <View style={{ flexShrink: 0 }}>
-                  <Text style={styles.fieldLabel}>Type or paste shelf names</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <Text style={styles.fieldLabel}>Type or paste shelf names</Text>
+                    <Pressable
+                      onPress={() => toggleBulkVoice("shelves")}
+                      style={[styles.bulkVoiceMicBtn, bulkVoiceActive === "shelves" && styles.bulkVoiceMicBtnActive]}
+                      accessibilityLabel="Speak shelf names with microphone"
+                    >
+                      <Ionicons
+                        name={bulkVoiceActive === "shelves" ? "mic" : "mic-outline"}
+                        size={13}
+                        color={bulkVoiceActive === "shelves" ? "#FFFFFF" : "#235E50"}
+                      />
+                      <Text style={[styles.bulkVoiceMicBtnText, bulkVoiceActive === "shelves" && styles.bulkVoiceMicBtnTextActive]}>
+                        {bulkVoiceActive === "shelves" ? "Listening..." : "🎙️ Speak shelves"}
+                      </Text>
+                    </Pressable>
+                  </View>
                   <TextInput
                     value={bulkShelvesText}
                     onChangeText={setBulkShelvesText}
@@ -3340,7 +3545,23 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     })}
                   </ScrollView>
 
-                  <Text style={[styles.fieldLabel, { marginTop: 4 }]}>Type or paste sub-categories</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 4, marginBottom: 4 }}>
+                    <Text style={styles.fieldLabel}>Type or paste sub-categories</Text>
+                    <Pressable
+                      onPress={() => toggleBulkVoice("subcats")}
+                      style={[styles.bulkVoiceMicBtn, bulkVoiceActive === "subcats" && styles.bulkVoiceMicBtnActive]}
+                      accessibilityLabel="Speak sub-categories with microphone"
+                    >
+                      <Ionicons
+                        name={bulkVoiceActive === "subcats" ? "mic" : "mic-outline"}
+                        size={13}
+                        color={bulkVoiceActive === "subcats" ? "#FFFFFF" : "#235E50"}
+                      />
+                      <Text style={[styles.bulkVoiceMicBtnText, bulkVoiceActive === "subcats" && styles.bulkVoiceMicBtnTextActive]}>
+                        {bulkVoiceActive === "subcats" ? "Listening..." : "🎙️ Speak sub-categories"}
+                      </Text>
+                    </Pressable>
+                  </View>
                   <TextInput
                     value={bulkSubCatsText}
                     onChangeText={setBulkSubCatsText}
@@ -4503,6 +4724,29 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "700",
+  },
+  bulkVoiceMicBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#E2EFE9",
+    borderWidth: 1,
+    borderColor: "#A9D5C3",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  bulkVoiceMicBtnActive: {
+    backgroundColor: "#C44545",
+    borderColor: "#C44545",
+  },
+  bulkVoiceMicBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#1F594A",
+  },
+  bulkVoiceMicBtnTextActive: {
+    color: "#FFFFFF",
   },
   verbHintText: {
     fontSize: 11,

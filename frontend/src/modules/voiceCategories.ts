@@ -134,18 +134,21 @@ export function cleanVoiceSpeechName(raw: string): string {
   // 2. Normalize common Urdu / Hindi phrasing
   text = text.replace(/^(.*?)\s+(?:ki|ka|ke)\s+categor(?:y|ies)\s+(?:banao|banayein|karo|bana\s+do)/gi, "$1");
   text = text.replace(/\b(?:categor(?:y|ies)|shelf|shelves|subcategor(?:y|ies))\s+(?:banao|banayein|karo|bana\s+do)\b/gi, " ");
+  text = text.replace(/\b(?:alfaaz|lafz|words|word)\s+(?:banao|banayein|dalo|rakho|add\s+karo|karo)\b/gi, " ");
+  text = text.replace(/^(?:alfaaz|lafz|words|word|categories|subcategories|shelves)\s*[:=-]?\s*/gi, "");
+  text = text.replace(/^(?:catogirese|catogies|subcatogirese)\s*[:=-]?\s*/gi, "");
   text = text.replace(/\b(?:banao|banayein|bana\s+do)\b/gi, " ");
 
   // 3. Strip long boilerplate English command phrases
   const prefixes = [
-    /^(?:please\s+)?(?:can\s+you\s+)?(?:create|make|add|build|open)\s+(?:bulk\s+)?(?:categories|shelves|subcategories|sub-categories|words)\s+(?:of|for|with)?\s+/i,
+    /^(?:please\s+)?(?:can\s+you\s+)?(?:create|make|add|build|open)\s+(?:bulk\s+)?(?:categories|shelves|subcategories|sub-categories|words|alfaaz)\s+(?:of|for|with)?\s+/i,
     /^(?:please\s+)?(?:can\s+you\s+)?(?:create|make|add|build|open)\s+(?:a\s+|an\s+|the\s+|new\s+)?(?:categor(?:y|ies)|shelf|shelves|folder|folders|subcategor(?:y|ies)|sub-categor(?:y|ies))\s+(?:of|for|with)?\s+(?:the\s+)?(?:name|title)\s+(?:of|is|as)?\s+/i,
     /^(?:the\s+)?(?:categor(?:y|ies)|shelf|shelves|folder|folders|subcategor(?:y|ies)|sub-categor(?:y|ies))\s+(?:of|for)?\s+(?:the\s+)?(?:name|title)\s+(?:of|is|as)?\s+/i,
     /^(?:the\s+)?(?:name|title)\s+(?:of\s+)?(?:the\s+)?(?:categor(?:y|ies)|shelf|shelves)?\s+(?:is|as|of)?\s+/i,
     /^(?:please\s+)?(?:can\s+you\s+)?(?:create|make|add|build|open)\s+(?:a\s+|an\s+|the\s+|new\s+|bulk\s+)?(?:categor(?:y|ies)|shelf|shelves|folder|folders|subcategor(?:y|ies)|sub-categor(?:y|ies))\s+(?:of|for|called|named)?\s+/i,
     /^(?:a\s+|an\s+|the\s+)?new\s+(?:categor(?:y|ies)|shelf|shelves|folder|folders|subcategor(?:y|ies)|sub-categor(?:y|ies))\s+(?:of|for|called|named)?\s+/i,
-    /^(?:the\s+|bulk\s+)?(?:categor(?:y|ies)|shelf|shelves|folder|folders|subcategor(?:y|ies)|sub-categor(?:y|ies)|words)\s+(?:of|for|called|named)?\s+/i,
-    /^(?:please\s+)?(?:can\s+you\s+)?(?:add|create|make)\s+(?:the\s+|bulk\s+)?(?:word|words)\s+(?:of|for|called)?\s+/i,
+    /^(?:the\s+|bulk\s+)?(?:categor(?:y|ies)|shelf|shelves|folder|folders|subcategor(?:y|ies)|sub-categor(?:y|ies)|words|alfaaz)\s+(?:of|for|called|named)?\s+/i,
+    /^(?:please\s+)?(?:can\s+you\s+)?(?:add|create|make)\s+(?:the\s+|bulk\s+)?(?:word|words|alfaaz|lafz)\s+(?:of|for|called)?\s+/i,
   ];
 
   for (const regex of prefixes) {
@@ -194,6 +197,9 @@ export function parseVoiceCategoryCommand(raw: string): ParsedVoiceResult {
     lower.includes("sub-category") ||
     lower.includes("sub categories") ||
     lower.includes("sub-categories") ||
+    lower.includes("sub cat") ||
+    lower.includes("subcat") ||
+    lower.includes("subcatogirese") ||
     lower.includes("sub folder") ||
     lower.includes("subfolder") ||
     lower.includes("sub folders")
@@ -205,10 +211,20 @@ export function parseVoiceCategoryCommand(raw: string): ParsedVoiceResult {
     lower.includes("add words") ||
     lower.includes("words of") ||
     lower.includes("words") ||
+    lower.includes("word") ||
     lower.includes("alfaaz") ||
     lower.includes("lafz")
   ) {
     intent = "words";
+  } else if (
+    lower.includes("category") ||
+    lower.includes("categories") ||
+    lower.includes("catogirese") ||
+    lower.includes("catogies") ||
+    lower.includes("shelf") ||
+    lower.includes("shelves")
+  ) {
+    intent = "category";
   }
 
   // 2. Check for Hierarchical Command:
