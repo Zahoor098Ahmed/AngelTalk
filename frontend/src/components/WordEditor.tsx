@@ -14,7 +14,7 @@ import {
   type ImageHit,
   type ImageSource,
 } from "../modules/imageSearch";
-import { colors, radius } from "../theme";
+import { colors, radius, radiusSm } from "../theme";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../modules/i18n";
 
@@ -40,6 +40,7 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
   const [useTts, setUseTts] = useState(true);
   const [size, setSize] = useState<TileSize>("md");
   const [color, setColor] = useState<string>(TILE_COLORS[0]);
+  const [hidden, setHidden] = useState(word?.hidden || false);
 
   const [recording, setRecording] = useState(false);
   const [recSeconds, setRecSeconds] = useState(0);
@@ -70,6 +71,7 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
     setUseTts(word?.useTextToSpeech ?? !word?.audioUri);
     setSize(word?.size ?? "md");
     setColor(word?.color ?? TILE_COLORS[0]);
+    setHidden(word?.hidden || false);
     setRecording(false);
     setBusy(null);
   }, [visible, word]);
@@ -159,7 +161,7 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
   function save() {
     const l = label.trim();
     if (!l) return Alert.alert(t("weTypeWordFirst", lang));
-    const patch = { label: l, phrase: l, emoji, imageUri, color, audioUri, useTextToSpeech: audioUri ? useTts : true, size };
+    const patch = { label: l, phrase: l, emoji, imageUri, color, audioUri, useTextToSpeech: audioUri ? useTts : true, size, hidden };
     if (editing && word) updateWord(catId, word.id, patch);
     else addWord(catId, patch);
     onSaved();
@@ -168,17 +170,25 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
 
   function del() {
     if (!word) return;
+    const confirmDelete = () => {
+      deleteClip(word.audioUri);
+      removeWord(catId, word.id);
+      onSaved();
+      onClose();
+    };
+
+    if (Platform.OS === "web") {
+      const ok = typeof window !== "undefined" ? window.confirm(`Are you sure you want to delete "${word.label}"?`) : true;
+      if (ok) confirmDelete();
+      return;
+    }
+
     Alert.alert(t("weDeleteWordTitle", lang).replace("{word}", word.label), undefined, [
       { text: t("cancel", lang), style: "cancel" },
       {
         text: t("weDelete", lang),
         style: "destructive",
-        onPress: () => {
-          deleteClip(word.audioUri);
-          removeWord(catId, word.id);
-          onSaved();
-          onClose();
-        },
+        onPress: confirmDelete,
       },
     ]);
   }
@@ -314,6 +324,44 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
                 </Pressable>
               ))}
             </View>
+
+            {/* Parent Control: Hide from child board */}
+            <Pressable
+              onPress={() => setHidden((v) => !v)}
+              style={[
+                styles.ttsToggle,
+                {
+                  marginTop: 14,
+                  marginBottom: 10,
+                  padding: 12,
+                  backgroundColor: hidden ? "#FEF2F2" : "#F0FDF4",
+                  borderRadius: radiusSm,
+                  borderWidth: 1,
+                  borderColor: hidden ? "#FCA5A5" : "#BBF7D0",
+                },
+              ]}
+            >
+              <Ionicons
+                name={hidden ? "eye-off" : "eye-outline"}
+                size={20}
+                color={hidden ? "#DC2626" : colors.forest}
+              />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.ttsToggleText,
+                    { color: hidden ? "#991B1B" : colors.textDark, fontWeight: "700" },
+                  ]}
+                >
+                  {hidden ? "Hidden from Child Board" : "Visible on Child Board"}
+                </Text>
+                <Text style={{ fontSize: 11, color: colors.textLight, marginTop: 2 }}>
+                  {hidden
+                    ? "This word tile will not show on the child's AAC Talk screen."
+                    : "Tap to hide this word tile from the child's AAC Talk screen."}
+                </Text>
+              </View>
+            </Pressable>
 
             <Pressable onPress={save} style={styles.saveBtn}>
               <Ionicons name="checkmark" size={18} color="white" />
