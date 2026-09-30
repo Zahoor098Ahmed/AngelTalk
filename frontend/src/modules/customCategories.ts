@@ -129,6 +129,19 @@ export async function ensureCategoriesLoaded(): Promise<void> {
   if (cache.length === 0) {
     seedStarterBoard();
   } else {
+    // If Core was deleted by user, record in deletedItemKeys so it never resurrects
+    const hasCore = cache.some(
+      (c) =>
+        (c.name || "").toLowerCase() === "core" ||
+        c.name === "بنیادی" ||
+        c.name === "أساسي"
+    );
+    if (!hasCore && cache.length > 0) {
+      deletedItemKeys.add("cat::core");
+      deletedItemKeys.add("cat::بنیادی");
+      deletedItemKeys.add("cat::أساسي");
+      persistDeletedKeys();
+    }
     ensureAllStandardCategories();
     cleanAndDeduplicateCategories();
     retranslateSeedBoard(seedLang);
@@ -1344,6 +1357,11 @@ export function removeWord(catId: string, wordId: string) {
 export function cleanAndDeduplicateCategories() {
   let changed = false;
 
+  // Purge any categories or sub-categories that were deleted by the caregiver
+  const beforeLen = cache.length;
+  cache = cache.filter((c) => !isDeletedCategory(c.name, c.parentCategoryId));
+  if (cache.length !== beforeLen) changed = true;
+
   // Merge legacy "Emotion" into "Feelings" if both exist
   const feelingsCat = cache.find((c) => c.name.toLowerCase() === "feelings" || c.name.toLowerCase() === "احساسات");
   const emotionCat = cache.find((c) => c.name.toLowerCase() === "emotion" || c.name.toLowerCase() === "جذبات");
@@ -2120,10 +2138,19 @@ export const BOTTOM_CATEGORIES: { key: string; icon: string; label: string; enFa
   { key: "Music", icon: "🎸", label: "Music", enFallback: "Music", color: "#d46cae" },
 ];
 
-export function bottomTabCategories(): { id: string | null; name: string; icon: string; color: string }[] {
-  const top = topLevelCategories();
-  const out: { id: string | null; name: string; icon: string; color: string }[] = [];
+export function bottomTabCategories(): { id: string; name: string; icon: string; color: string }[] {
+  const top = visibleTopLevelCategories();
+  const out: { id: string; name: string; icon: string; color: string }[] = [];
+
+  // Match known categories first (in consistent standard order) ONLY if they exist and are not deleted or hidden
   for (const tab of BOTTOM_CATEGORIES) {
+    if (
+      isDeletedCategory(tab.key) ||
+      isDeletedCategory(tab.label) ||
+      isDeletedCategory(tab.enFallback)
+    ) {
+      continue;
+    }
     const hit = top.find(
       (c) =>
         c.name.toLowerCase() === tab.key.toLowerCase() ||
@@ -2131,13 +2158,28 @@ export function bottomTabCategories(): { id: string | null; name: string; icon: 
         c.name.toLowerCase() === tab.enFallback.toLowerCase() ||
         c.name.toLowerCase() === folderName(tab.key).toLowerCase()
     );
-    if (hit?.hidden) continue; // parent hid this folder from the child board
-    if (hit) {
-      out.push({ id: hit.id, name: hit.name, icon: hit.icon || tab.icon, color: hit.color || tab.color });
-    } else {
-      out.push({ id: null, name: tab.label, icon: tab.icon, color: tab.color });
+    if (hit && !hit.hidden) {
+      out.push({
+        id: hit.id,
+        name: hit.name,
+        icon: hit.icon || tab.icon,
+        color: hit.color || tab.color,
+      });
     }
   }
+
+  // Include any other user-created top-level shelves (e.g. "My Angel's World", etc.)
+  for (const c of top) {
+    if (!out.some((x) => x.id === c.id)) {
+      out.push({
+        id: c.id,
+        name: c.name,
+        icon: c.icon || "📁",
+        color: c.color || "#2f6d62",
+      });
+    }
+  }
+
   return out;
 }
 
