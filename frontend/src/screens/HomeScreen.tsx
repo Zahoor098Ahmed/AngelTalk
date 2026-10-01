@@ -14,6 +14,8 @@ import Mascot from "../components/Mascot";
 import SoftBackdrop from "../components/SoftBackdrop";
 import TabBar from "../components/TabBar";
 import { colors, radius, radiusLg } from "../theme";
+import MoodFace from "../components/MoodFace";
+import UrgentActionIcon from "../components/UrgentActionIcon";
 
 interface Props {
   child: ChildProfile;
@@ -68,11 +70,20 @@ const QUICK_ACCESS: QuickItem[] = [
   },
 ];
 
-const TODAY_PREVIEW = [
-  { icon: "🍳", labelKey: "sBreakfast" as TKey, time: "08:00", state: "done" as const, color: colors.yellow },
-  { icon: "🧩", labelKey: "sPlayTime" as TKey, time: "09:00", state: "done" as const, color: colors.green },
-  { icon: "💬", labelKey: "sAacSession" as TKey, time: "10:30", state: "now" as const, color: colors.blue },
-  { icon: "🍽️", labelKey: "sLunch" as TKey, time: "12:00", state: "upcoming" as const, color: colors.orange },
+type SchedulePreviewItem = {
+  iconName: keyof typeof Ionicons.glyphMap;
+  labelKey: TKey;
+  time: string;
+  state: "done" | "now" | "upcoming";
+  color: string;
+  iconColor: string;
+};
+
+const TODAY_PREVIEW: SchedulePreviewItem[] = [
+  { iconName: "cafe", labelKey: "sBreakfast", time: "08:00", state: "done", color: "#fef3c7", iconColor: "#b45309" },
+  { iconName: "extension-puzzle", labelKey: "sPlayTime", time: "09:00", state: "done", color: "#dcfce7", iconColor: "#15803d" },
+  { iconName: "chatbubbles", labelKey: "sAacSession", time: "10:30", state: "now", color: "#e0f2fe", iconColor: "#0284c7" },
+  { iconName: "restaurant", labelKey: "sLunch", time: "12:00", state: "upcoming", color: "#ffedd5", iconColor: "#c2410c" },
 ];
 
 export default function HomeScreen(props: Props) {
@@ -176,13 +187,20 @@ export default function HomeScreen(props: Props) {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <Mascot mood="happy" size={44} animate={!settings.reduceMotion} />
                 <View>
-                  <Text style={styles.greeting}>{greeting} 👋</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                    <Ionicons
+                      name={hour < 12 ? "sunny-outline" : hour < 17 ? "partly-sunny-outline" : "moon-outline"}
+                      size={13}
+                      color="rgba(255,255,255,0.8)"
+                    />
+                    <Text style={styles.greeting}>{greeting}</Text>
+                  </View>
                   <Text style={styles.name}>{child.name}</Text>
                 </View>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <View style={styles.starBadgeHeader}>
-                  <Text style={{ fontSize: 13 }}>⭐</Text>
+                  <Ionicons name="star" size={13} color="#fbbf24" />
                   <Text style={styles.starBadgeHeaderText}>{child.stars ?? 0}</Text>
                 </View>
                 <LangBadge dark />
@@ -211,24 +229,26 @@ export default function HomeScreen(props: Props) {
             </View>
             <View style={[styles.urgentGrid, isSmallPhone && { gap: 6 }, isTablet && { gap: 12 }]}>
               {[
-                { label: "Help", phraseKey: "needHelpPhrase" as TKey, emoji: "🆘", color: "#fee2e2", textColor: "#b91c1c" },
-                { label: "Water", phraseKey: "needWaterPhrase" as TKey, emoji: "💧", color: "#e0f2fe", textColor: "#0369a1" },
-                { label: "Bathroom", phraseKey: "needBathroomPhrase" as TKey, emoji: "🚻", color: "#fef3c7", textColor: "#b45309" },
-                { label: "Stop", phraseKey: "pleaseStopPhrase" as TKey, emoji: "🛑", color: "#ffedd5", textColor: "#c2410c" },
+                { label: "Help", phraseKey: "needHelpPhrase" as TKey, type: "help" as const, color: "#fef2f2", borderColor: "#fecaca", textColor: "#b91c1c" },
+                { label: "Water", phraseKey: "needWaterPhrase" as TKey, type: "water" as const, color: "#f0f9ff", borderColor: "#bae6fd", textColor: "#0369a1" },
+                { label: "Bathroom", phraseKey: "needBathroomPhrase" as TKey, type: "bathroom" as const, color: "#fefce8", borderColor: "#fde68a", textColor: "#b45309" },
+                { label: "Stop", phraseKey: "pleaseStopPhrase" as TKey, type: "stop" as const, color: "#fff7ed", borderColor: "#fed7aa", textColor: "#c2410c" },
               ].map((u) => (
                 <Pressable
                   key={u.label}
                   onPress={() => handleUrgentNeed(u.phraseKey)}
                   style={({ pressed }) => [
                     styles.urgentTile,
-                    { backgroundColor: u.color },
-                    isSmallPhone && { paddingVertical: 10, borderRadius: 12 },
-                    isTablet && { paddingVertical: 16, borderRadius: 16 },
+                    { backgroundColor: u.color, borderColor: u.borderColor },
+                    isSmallPhone && { paddingVertical: 10, borderRadius: 14 },
+                    isTablet && { paddingVertical: 16, borderRadius: 18 },
                     pressed && { transform: [{ scale: 0.96 }] },
                   ]}
                   accessibilityLabel={`Express ${u.label}`}
                 >
-                  <Text style={{ fontSize: isSmallPhone ? 22 : isTablet ? 28 : 24 }}>{u.emoji}</Text>
+                  <View style={styles.urgentIconCircle}>
+                    <UrgentActionIcon type={u.type} size={isSmallPhone ? 22 : isTablet ? 28 : 25} />
+                  </View>
                   <Text
                     style={[
                       styles.urgentTileLabel,
@@ -251,19 +271,20 @@ export default function HomeScreen(props: Props) {
               </View>
               {selectedMood && (
                 <View style={styles.selectedMoodTag}>
+                  <Ionicons name="checkmark-circle" size={13} color="#166534" />
                   <Text style={styles.selectedMoodTagText}>
-                    {t("feelingTag", lang)} {wordLabel(selectedMood, lang)} ✓
+                    {t("feelingTag", lang)} {wordLabel(selectedMood, lang)}
                   </Text>
                 </View>
               )}
             </View>
             <View style={[styles.moodRow, isSmallPhone && { gap: 4 }, isTablet && { gap: 12 }]}>
               {[
-                { label: "Happy", emoji: "😃", bg: "#dcfce7", color: "#166534" },
-                { label: "Calm", emoji: "😌", bg: "#e0f2fe", color: "#0369a1" },
-                { label: "Excited", emoji: "🤩", bg: "#fef3c7", color: "#b45309" },
-                { label: "Sad", emoji: "😢", bg: "#ede9fe", color: "#6b21a8" },
-                { label: "Tired", emoji: "😴", bg: "#f1f5f9", color: "#475569" },
+                { label: "Happy", mood: "Happy" as const, bg: "#f0fdf4", border: "#bbf7d0", color: "#15803d" },
+                { label: "Calm", mood: "Calm" as const, bg: "#f0f9ff", border: "#bae6fd", color: "#0369a1" },
+                { label: "Excited", mood: "Excited" as const, bg: "#fefce8", border: "#fef08a", color: "#b45309" },
+                { label: "Sad", mood: "Sad" as const, bg: "#faf5ff", border: "#e9d5ff", color: "#6b21a8" },
+                { label: "Tired", mood: "Tired" as const, bg: "#f8fafc", border: "#e2e8f0", color: "#475569" },
               ].map((m) => {
                 const isSel = selectedMood === m.label;
                 return (
@@ -272,24 +293,25 @@ export default function HomeScreen(props: Props) {
                     onPress={() => handleSelectMood(m.label)}
                     style={({ pressed }) => [
                       styles.moodBtn,
-                      { backgroundColor: m.bg },
-                      isSmallPhone && { paddingVertical: 8, borderRadius: 12 },
-                      isTablet && { paddingVertical: 14, borderRadius: 16 },
+                      { backgroundColor: m.bg, borderColor: isSel ? colors.forest : m.border },
+                      isSmallPhone && { paddingVertical: 8, borderRadius: 14 },
+                      isTablet && { paddingVertical: 14, borderRadius: 18 },
                       isSel && styles.moodBtnActive,
                       pressed && { transform: [{ scale: 0.95 }] },
                     ]}
                   >
-                    <Text style={{ fontSize: isSmallPhone ? 22 : isTablet ? 30 : 26 }}>{m.emoji}</Text>
+                    <MoodFace mood={m.mood} size={isSmallPhone ? 28 : isTablet ? 38 : 34} />
                     <Text
                       style={[
                         styles.moodBtnText,
                         { color: m.color, fontSize: isSmallPhone ? 10 : isTablet ? 12.5 : 11 },
-                        isSel && { fontWeight: "900" },
+                        isSel && { fontWeight: "900", color: colors.forest },
                       ]}
                       numberOfLines={1}
                     >
                       {wordLabel(m.label, lang)}
                     </Text>
+                    {isSel && <View style={styles.moodSelectedDot} />}
                   </Pressable>
                 );
               })}
@@ -307,20 +329,46 @@ export default function HomeScreen(props: Props) {
           >
             <View style={styles.therapyBannerHeader}>
               <View style={styles.therapyBadgeWrap}>
-                <Ionicons name="flag" size={13} color="white" />
+                <Ionicons name="ribbon-outline" size={13} color="white" />
                 <Text style={styles.therapyBadgeText}>{t("therapyTargetBadge", lang)}</Text>
               </View>
               <View style={styles.therapyStarReward}>
-                <Text style={{ fontSize: 12 }}>⭐</Text>
+                <Ionicons name="star" size={12} color="#b45309" />
                 <Text style={styles.therapyStarText}>+5 {t("stars", lang)}</Text>
               </View>
             </View>
 
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 }}>
-              <View style={styles.therapyIconCircle}>
-                <Text style={{ fontSize: 24 }}>
-                  {activeTherapyGoal.category === "speech" ? "🗣️" : activeTherapyGoal.category === "sensory" ? "🌿" : "📅"}
-                </Text>
+              <View
+                style={[
+                  styles.therapyIconCircle,
+                  {
+                    backgroundColor:
+                      activeTherapyGoal.category === "speech"
+                        ? "#eff6ff"
+                        : activeTherapyGoal.category === "sensory"
+                        ? "#f0fdf4"
+                        : "#fefce8",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={
+                    activeTherapyGoal.category === "speech"
+                      ? "chatbubbles"
+                      : activeTherapyGoal.category === "sensory"
+                      ? "leaf"
+                      : "calendar"
+                  }
+                  size={24}
+                  color={
+                    activeTherapyGoal.category === "speech"
+                      ? "#2563eb"
+                      : activeTherapyGoal.category === "sensory"
+                      ? "#16a34a"
+                      : "#ca8a04"
+                  }
+                />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.therapyTitle}>{activeTherapyGoal.title}</Text>
@@ -394,7 +442,7 @@ export default function HomeScreen(props: Props) {
           >
             <View style={styles.socialStoryLeft}>
               <View style={styles.socialStoryIconCircle}>
-                <Text style={{ fontSize: 26 }}>📖</Text>
+                <Ionicons name="book" size={24} color="#0d9488" />
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -447,7 +495,7 @@ export default function HomeScreen(props: Props) {
                 ]}
               >
                 <View style={[styles.scheduleIcon, { backgroundColor: item.color }]}>
-                  <Text style={{ fontSize: isTablet ? 22 : 18 }}>{item.icon}</Text>
+                  <Ionicons name={item.iconName} size={isTablet ? 22 : 18} color={item.iconColor} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text
@@ -564,8 +612,27 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     paddingVertical: 12,
-    borderRadius: 14,
-    gap: 4,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    gap: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  urgentIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
   },
   urgentTileLabel: { fontWeight: "800" },
 
@@ -585,9 +652,12 @@ const styles = StyleSheet.create({
   },
   sectionHeadingSmall: { fontSize: 12, fontWeight: "800", color: "#64748b", letterSpacing: 0.5 },
   selectedMoodTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     backgroundColor: "#dcfce7",
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 8,
   },
   selectedMoodTagText: { fontSize: 11, fontWeight: "700", color: "#166534" },
@@ -596,12 +666,32 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     paddingVertical: 10,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: "transparent",
-    gap: 4,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    gap: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  moodBtnActive: { borderColor: colors.forest, backgroundColor: "#ffffff" },
+  moodBtnActive: {
+    borderColor: colors.forest,
+    borderWidth: 2,
+    backgroundColor: "#ffffff",
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  moodSelectedDot: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.forest,
+  },
   moodBtnText: { fontSize: 11, fontWeight: "700" },
 
   /* Doctor Therapy Target Card */

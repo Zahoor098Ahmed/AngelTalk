@@ -168,6 +168,40 @@ export const VERB_FORMS_LIST: VerbForms[] = [
   { base: "wear", past: "wore", participle: "worn", continuous: "wearing", emoji: "👗" },
   { base: "win", past: "won", participle: "won", continuous: "winning", emoji: "🏆" },
   { base: "write", past: "wrote", participle: "written", continuous: "writing", emoji: "✏️" },
+  // Additional Complete A-Z Verbs
+  { base: "agree", past: "agreed", participle: "agreed", continuous: "agreeing", emoji: "🤝" },
+  { base: "arrive", past: "arrived", participle: "arrived", continuous: "arriving", emoji: "🛬" },
+  { base: "be", past: "was", participle: "been", continuous: "being", emoji: "✨" },
+  { base: "call", past: "called", participle: "called", continuous: "calling", emoji: "📞" },
+  { base: "dream", past: "dreamed", participle: "dreamed", continuous: "dreaming", emoji: "💭" },
+  { base: "enter", past: "entered", participle: "entered", continuous: "entering", emoji: "🚪" },
+  { base: "explain", past: "explained", participle: "explained", continuous: "explaining", emoji: "🗣️" },
+  { base: "imagine", past: "imagined", participle: "imagined", continuous: "imagining", emoji: "🌈" },
+  { base: "introduce", past: "introduced", participle: "introduced", continuous: "introducing", emoji: "🤝" },
+  { base: "invite", past: "invited", participle: "invited", continuous: "inviting", emoji: "✉️" },
+  { base: "join", past: "joined", participle: "joined", continuous: "joining", emoji: "🤝" },
+  { base: "jog", past: "jogged", participle: "jogged", continuous: "jogging", emoji: "🏃" },
+  { base: "knock", past: "knocked", participle: "knocked", continuous: "knocking", emoji: "🚪" },
+  { base: "move", past: "moved", participle: "moved", continuous: "moving", emoji: "📦" },
+  { base: "nod", past: "nodded", participle: "nodded", continuous: "nodding", emoji: "👍" },
+  { base: "notice", past: "noticed", participle: "noticed", continuous: "noticing", emoji: "👁️" },
+  { base: "order", past: "ordered", participle: "ordered", continuous: "ordering", emoji: "📝" },
+  { base: "point", past: "pointed", participle: "pointed", continuous: "pointing", emoji: "👉" },
+  { base: "quit", past: "quit", participle: "quit", continuous: "quitting", emoji: "⏹️" },
+  { base: "question", past: "questioned", participle: "questioned", continuous: "questioning", emoji: "❓" },
+  { base: "try", past: "tried", participle: "tried", continuous: "trying", emoji: "🎯" },
+  { base: "turn", past: "turned", participle: "turned", continuous: "turning", emoji: "🔄" },
+  { base: "understand", past: "understood", participle: "understood", continuous: "understanding", emoji: "💡" },
+  { base: "use", past: "used", participle: "used", continuous: "using", emoji: "📱" },
+  { base: "visit", past: "visited", participle: "visited", continuous: "visiting", emoji: "🚗" },
+  { base: "view", past: "viewed", participle: "viewed", continuous: "viewing", emoji: "👓" },
+  { base: "wish", past: "wished", participle: "wished", continuous: "wishing", emoji: "⭐" },
+  { base: "work", past: "worked", participle: "worked", continuous: "working", emoji: "💼" },
+  { base: "x-ray", past: "x-rayed", participle: "x-rayed", continuous: "x-raying", emoji: "🩻" },
+  { base: "yawn", past: "yawned", participle: "yawned", continuous: "yawning", emoji: "🥱" },
+  { base: "yell", past: "yelled", participle: "yelled", continuous: "yelling", emoji: "📢" },
+  { base: "zip", past: "zipped", participle: "zipped", continuous: "zipping", emoji: "🤐" },
+  { base: "zoom", past: "zoomed", participle: "zoomed", continuous: "zooming", emoji: "🏎️" },
 ];
 
 const LOOKUP_MAP = new Map<string, VerbForms>();
@@ -316,38 +350,114 @@ export function getVerbForms(label: string): VerbForms | null {
 
 // Common regular verbs for children AAC, routines, actions, and school
 export const KNOWN_REGULAR_VERBS = new Set([
-  // Routines & Self-care
-  "wash", "clean", "brush", "comb", "dress", "bathe", "shower", "flush", "wipe",
-  "rest", "relax", "yawn", "stretch", "cough", "sneeze",
-  // Food & Kitchen
-  "cook", "bake", "fry", "boil", "cut", "chop", "slice", "peel", "stir", "mix",
-  "pour", "spill", "feed", "chew", "taste", "lick", "serve", "heat", "cool",
-  // Movement & Play
-  "walk", "jump", "hop", "skip", "crawl", "climb", "march", "dance", "jog",
-  "slide", "swing", "stumble", "roll", "bounce", "spin", "balance", "exercise",
-  // Hand Actions & Manipulation
-  "touch", "press", "tap", "knock", "click", "clap", "wave", "point", "push",
-  "pull", "lift", "drop", "pick", "carry", "hold", "hug", "grab", "squeeze",
-  "kick", "pass", "hit", "strike", "build", "fix", "repair", "assemble", "stack",
-  "open", "close", "shut", "lock", "unlock", "turn", "twist", "bend", "fold",
-  "wrap", "pack", "unpack", "load", "unload", "tie", "untie", "fasten",
-  // Social & Emotion
-  "talk", "ask", "answer", "explain", "shout", "whisper", "scream", "cry",
-  "smile", "laugh", "giggle", "cheer", "greet", "share", "help", "care",
-  "comfort", "tease", "apologize", "agree", "refuse", "interrupt",
-  "like", "love", "hate", "enjoy", "prefer", "worry", "fear", "hope", "wish", "miss", "trust",
-  // Learning & Arts
-  "learn", "study", "teach", "practice", "test", "quiz", "check", "correct",
-  "draw", "paint", "color", "scribble", "sketch", "trace", "erase", "paste",
-  "glue", "tape", "staple", "count", "calculate", "measure", "spell", "pronounce",
-  // Housework & Daily Tasks
-  "sweep", "mop", "vacuum", "scrub", "dust", "polish", "tidy", "organize", "sort",
-  "rinse", "dry", "iron", "empty", "fill", "dispose", "recycle",
-  // Digital & Sensory
-  "watch", "listen", "play", "record", "film", "photograph", "snap", "scroll",
-  "swipe", "zoom", "type", "print", "search", "browse", "charge", "plug", "unplug",
-  "look", "smell", "taste", "feel", "notice", "wait", "start", "stop", "finish", "pause", "resume",
-  "want", "need"
+  // A
+  "accept", "achieve", "acquire", "act", "adapt", "add", "address", "adjust", "admire", "admit",
+  "adopt", "advance", "advise", "afford", "agree", "alert", "allow", "alter", "amaze", "amuse",
+  "analyze", "announce", "annoy", "answer", "apologize", "appear", "applaud", "apply", "appoint",
+  "appreciate", "approach", "approve", "argue", "arrange", "arrest", "arrive", "ask", "assist",
+  "assume", "assure", "astonish", "attach", "attack", "attempt", "attend", "attract", "avoid", "awake",
+  // B
+  "back", "bake", "balance", "ban", "bark", "bathe", "battle", "beam", "beg", "behave", "belong",
+  "blame", "bleed", "bless", "blind", "blink", "block", "bloom", "blot", "blow", "blush", "boast",
+  "boil", "bolt", "bomb", "book", "boost", "borrow", "bother", "bounce", "bow", "box", "brake",
+  "branch", "breathe", "brush", "bubble", "build", "bump", "burn", "bury", "buzz",
+  // C
+  "calculate", "call", "calm", "camp", "care", "carry", "carve", "cause", "celebrate", "challenge",
+  "change", "charge", "chase", "cheat", "check", "cheer", "chew", "choke", "chop", "claim", "clap",
+  "clean", "clear", "click", "climb", "cling", "clip", "close", "coach", "coil", "collect", "color",
+  "comb", "combine", "comfort", "command", "communicate", "compare", "compete", "complain",
+  "complete", "concentrate", "concern", "conclude", "conduct", "confess", "confirm", "confuse",
+  "connect", "consider", "consist", "contain", "continue", "control", "convert", "cook", "cool",
+  "cope", "copy", "correct", "cough", "count", "cover", "crack", "crash", "crawl", "cross",
+  "crush", "cry", "cure", "curl", "curve", "cycle",
+  // D
+  "damage", "dance", "dare", "decay", "deceive", "decide", "declare", "decorate", "decrease",
+  "delay", "delight", "deliver", "demand", "demonstrate", "depend", "describe", "desert", "deserve",
+  "design", "destroy", "detect", "determine", "develop", "dial", "dictate", "differ", "direct",
+  "disagree", "disappear", "disappoint", "discover", "discuss", "dislike", "display", "distribute",
+  "dive", "divide", "divorce", "dock", "doubt", "drag", "drain", "draw", "dream", "dress",
+  "drip", "drop", "drown", "drum", "dry", "dust",
+  // E
+  "earn", "echo", "educate", "embarrass", "employ", "empty", "encourage", "end", "enjoy", "enter",
+  "entertain", "escape", "examine", "excite", "excuse", "exercise", "exist", "expand", "expect",
+  "experience", "explain", "explode", "explore", "express", "extend",
+  // F
+  "face", "fade", "fail", "faint", "fasten", "favor", "fax", "fear", "fence", "fetch", "file",
+  "fill", "film", "filter", "finish", "fire", "fish", "fit", "fix", "flap", "flash", "float",
+  "flood", "flow", "flower", "fold", "follow", "fool", "force", "form", "found", "frame",
+  "frighten", "fry",
+  // G
+  "gather", "gaze", "generate", "glow", "glue", "grab", "grade", "graduate", "grant", "grate",
+  "grease", "greet", "grin", "grip", "groan", "guarantee", "guard", "guess", "guide",
+  // H
+  "hammer", "hand", "handle", "hang", "happen", "harass", "harm", "harness", "hate", "haunt",
+  "heal", "heat", "help", "hint", "hire", "hiss", "hook", "hop", "hope", "horn", "hover",
+  "hug", "hum", "hunt", "hurry",
+  // I
+  "identify", "ignore", "illuminate", "imagine", "imitate", "impress", "improve", "include",
+  "increase", "indicate", "influence", "inform", "inject", "injure", "instruct", "intend",
+  "interest", "interfere", "interrupt", "introduce", "invent", "invite", "iron", "irritate", "itch",
+  // J
+  "jail", "jam", "jog", "join", "joke", "judge", "juggle", "jump",
+  // K
+  "kick", "kiss", "kneel", "knit", "knock", "knot",
+  // L
+  "label", "land", "last", "laugh", "launch", "learn", "level", "lick", "lighten", "like",
+  "limit", "link", "list", "listen", "live", "load", "locate", "lock", "long", "look", "love",
+  // M
+  "mail", "manage", "march", "mark", "marry", "match", "mate", "matter", "measure", "meddle",
+  "melt", "memorize", "mend", "mention", "mess", "milk", "mine", "miss", "mix", "moan", "mop",
+  "mourn", "move", "muddle", "multiply", "murder",
+  // N
+  "nail", "name", "need", "nest", "nod", "note", "notice", "number",
+  // O
+  "obey", "object", "observe", "obtain", "occupy", "occur", "offend", "offer", "open", "operate",
+  "order", "organize", "overflow", "owe", "own",
+  // P
+  "pack", "paddle", "paint", "park", "part", "pass", "paste", "pat", "pause", "pedal", "peel",
+  "peep", "perform", "permit", "phone", "photograph", "pick", "pinch", "pine", "place", "plan",
+  "plant", "play", "please", "plug", "point", "poke", "polish", "pop", "possess", "post",
+  "pour", "practice", "praise", "pray", "preach", "precede", "prefer", "prepare", "present",
+  "preserve", "press", "pretend", "prevent", "prick", "print", "produce", "program", "promise",
+  "protect", "provide", "pull", "pump", "punch", "punish", "push",
+  // Q
+  "question", "queue", "quit",
+  // R
+  "race", "radiate", "rain", "raise", "reach", "realize", "receive", "recognize", "record",
+  "reduce", "reflect", "refuse", "regret", "reign", "reject", "rejoice", "relax", "release",
+  "rely", "remain", "remember", "remind", "remove", "repair", "repeat", "replace", "reply",
+  "report", "represent", "reproduce", "request", "rescue", "resolve", "respond", "rest",
+  "restore", "retire", "return", "reveal", "rhyme", "rinse", "risk", "rob", "rock", "roll",
+  "rot", "rub", "ruin", "rule", "rush",
+  // S
+  "sack", "sail", "satisfy", "save", "saw", "scare", "scatter", "scold", "scorch", "scrape",
+  "scratch", "scream", "screw", "scribble", "scrub", "seal", "search", "secure", "select",
+  "separate", "serve", "settle", "shade", "share", "shave", "shelter", "shiver", "shock",
+  "shop", "shout", "show", "shrug", "sigh", "sign", "signal", "sin", "sip", "ski", "skip",
+  "slap", "slip", "slow", "smash", "smell", "smile", "smoke", "snap", "snatch", "sneeze",
+  "sniff", "snore", "snow", "soak", "solve", "soothe", "sound", "spare", "spark", "sparkle",
+  "spell", "spill", "spoil", "spot", "spray", "sprout", "squash", "squeak", "squeal",
+  "squeeze", "stain", "stamp", "stare", "start", "stay", "steer", "step", "stir", "stitch",
+  "stop", "store", "strap", "strengthen", "stretch", "strip", "stroke", "stuff", "subtract",
+  "succeed", "suck", "suffer", "suggest", "suit", "supply", "support", "suppose", "surprise",
+  "surround", "suspect", "suspend", "switch",
+  // T
+  "talk", "tame", "tap", "taste", "tease", "telephone", "tempt", "terrify", "test", "thank",
+  "thaw", "tick", "tickle", "tie", "time", "tip", "tire", "touch", "tour", "tow", "trace",
+  "trade", "train", "transport", "trap", "travel", "treat", "tremble", "trick", "trip",
+  "trot", "trouble", "trust", "try", "tug", "tumble", "turn", "twist", "type",
+  // U
+  "undress", "unfasten", "unlock", "unpack", "untidy", "use",
+  // V
+  "vanish", "visit",
+  // W
+  "wail", "wait", "walk", "wander", "want", "warm", "warn", "wash", "waste", "watch", "water",
+  "wave", "weigh", "welcome", "whine", "whip", "whirl", "whisper", "whistle", "wink", "wipe",
+  "wish", "wobble", "wonder", "work", "worry", "wrap", "wreck", "wrestle",
+  // Y
+  "yawn", "yell",
+  // Z
+  "zip", "zoom"
 ]);
 
 // Comprehensive dictionary of nouns, objects, foods, vehicles, animals, and non-verbs
@@ -448,6 +558,16 @@ export function isKnownNonVerb(word: string): boolean {
     const last = tokens[tokens.length - 1];
     if (KNOWN_NON_VERBS.has(last)) return true;
   }
+  // Abstract / noun suffixes (unless in lookup or known regular verbs)
+  if (w.length > 5 && !LOOKUP_MAP.has(w) && !KNOWN_REGULAR_VERBS.has(w)) {
+    if (
+      w.endsWith("tion") || w.endsWith("sion") || w.endsWith("ness") ||
+      w.endsWith("ment") || w.endsWith("ity") || w.endsWith("hood") ||
+      w.endsWith("ship") || w.endsWith("ism") || w.endsWith("ist")
+    ) {
+      return true;
+    }
+  }
   return false;
 }
 
@@ -456,7 +576,7 @@ export function isVerb(word: string): boolean {
   const clean = (word || "").trim().toLowerCase();
   if (!clean || clean.length < 2) return false;
   // If it's a known non-verb and not directly in the verb dictionary, it is NOT a verb
-  if (isKnownNonVerb(clean) && !LOOKUP_MAP.has(clean)) return false;
+  if (isKnownNonVerb(clean) && !LOOKUP_MAP.has(clean) && !KNOWN_REGULAR_VERBS.has(clean)) return false;
   if (LOOKUP_MAP.has(clean)) return true;
   if (KNOWN_REGULAR_VERBS.has(clean)) return true;
   // Multi-word phrase starting with a verb (e.g. "eat apple", "go home")
@@ -470,6 +590,7 @@ export function isVerb(word: string): boolean {
   if (root !== clean && (LOOKUP_MAP.has(root) || KNOWN_REGULAR_VERBS.has(root))) {
     return true;
   }
+  if (generateAllVerbForms(clean) !== null) return true;
   return false;
 }
 
@@ -479,10 +600,10 @@ export function isVerb(word: string): boolean {
  */
 export function generateAllVerbForms(inputWord: string): VerbForms | null {
   const clean = (inputWord || "").trim().toLowerCase();
-  if (!clean) return null;
+  if (!clean || clean.length < 2) return null;
 
   // 1. If it's a known noun / non-verb and not directly in the verb dictionary, return null!
-  if (isKnownNonVerb(clean) && !LOOKUP_MAP.has(clean)) {
+  if (isKnownNonVerb(clean) && !LOOKUP_MAP.has(clean) && !KNOWN_REGULAR_VERBS.has(clean)) {
     return null;
   }
 
@@ -522,6 +643,15 @@ export function generateAllVerbForms(inputWord: string): VerbForms | null {
     }
   }
 
+  // 6. If word ends with continuous -ing (e.g. "zooming", "zipping", "accepting")
+  if (clean.endsWith("ing") && clean.length > 4) {
+    const stem = clean.slice(0, -3);
+    const candidate = stem.endsWith("y") ? stem : (stem.length >= 3 ? stem : stem + "e");
+    if (!isKnownNonVerb(candidate)) {
+      return conjugateRegularVerb(candidate);
+    }
+  }
+
   // Otherwise, it's NOT a verb (e.g. "car", "apple", "merhan car") -> null!
   return null;
 }
@@ -534,7 +664,9 @@ export function isLikelyVerb(word: string): boolean {
 /** Returns which form the given word label is (1st, 2nd, 3rd, 4th) */
 export function detectVerbForm(label: string): "1st" | "2nd" | "3rd" | "4th" | null {
   const clean = (label || "").trim().toLowerCase();
-  const v = getVerbForms(clean);
+  if (!clean) return null;
+  if (clean.endsWith("ing")) return "4th";
+  const v = getVerbForms(clean) || generateAllVerbForms(clean);
   if (!v) return null;
   if (v.continuous.toLowerCase() === clean) return "4th";
   if (v.past.toLowerCase() === clean) return "2nd";

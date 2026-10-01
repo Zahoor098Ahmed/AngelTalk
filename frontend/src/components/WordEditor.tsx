@@ -16,7 +16,7 @@ import {
 } from "../modules/imageSearch";
 import { colors, radius, radiusSm } from "../theme";
 import { useSettings } from "../context/SettingsContext";
-import { t } from "../modules/i18n";
+import { t, canonicalWordEn } from "../modules/i18n";
 
 interface Props {
   visible: boolean;
@@ -418,17 +418,28 @@ function ImageSearchModal({
 
   useEffect(() => {
     if (visible) {
-      setTerm(seed);
+      const q = (seed || "").trim();
+      setTerm(q);
       setHits([]);
       setErr(null);
+      if (q) {
+        const enQuery = canonicalWordEn(q) || q;
+        run("arasaac", enQuery);
+      }
     }
   }, [visible, seed]);
 
-  async function run(src: ImageSource, q: string) {
+  async function run(src: ImageSource, q?: string) {
     setSource(src);
+    const query = (q !== undefined ? q : term).trim();
+    if (!query) {
+      setHits([]);
+      return;
+    }
     setLoading(true);
     setErr(null);
-    const res = await searchImages(q, src);
+    const enQuery = canonicalWordEn(query) || query;
+    const res = await searchImages(enQuery, src);
     setLoading(false);
     setHits(res.hits);
     setErr(res.error ?? null);
@@ -454,30 +465,53 @@ function ImageSearchModal({
               placeholderTextColor={colors.textLight}
               style={styles.searchInput}
               onSubmitEditing={() => run(source, term)}
+              returnKeyType="search"
             />
             <Pressable onPress={() => run(source, term)} style={styles.searchGo}>
               <Ionicons name="search" size={18} color="white" />
             </Pressable>
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabRow}>
-            <Pressable onPress={() => run("arasaac", term)} style={[styles.tab, source === "arasaac" && styles.tabOn]}>
-              <Text style={[styles.tabText, source === "arasaac" && { color: "white" }]}>ARASAAC</Text>
-            </Pressable>
-            <Pressable onPress={() => run("opensymbols", term)} style={[styles.tab, source === "opensymbols" && styles.tabOn]}>
-              <Text style={[styles.tabText, source === "opensymbols" && { color: "white" }]}>{t("weSourceOpenSymbols", lang)}</Text>
-            </Pressable>
-            <Pressable onPress={() => run("mulberry", term)} style={[styles.tab, source === "mulberry" && styles.tabOn]}>
-              <Text style={[styles.tabText, source === "mulberry" && { color: "white" }]}>Mulberry</Text>
-            </Pressable>
-            <Pressable onPress={() => run("pixabay", term)} style={[styles.tab, source === "pixabay" && styles.tabOn]}>
-              <Text style={[styles.tabText, source === "pixabay" && { color: "white" }]}>{hasPixabayKey() ? t("photos", lang) : t("weSourcePhotosKey", lang)}</Text>
-            </Pressable>
-          </ScrollView>
+          <View style={styles.tabContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tabRow}
+            >
+              <Pressable onPress={() => run("arasaac", term)} style={[styles.tab, source === "arasaac" && styles.tabOn]}>
+                <Text style={[styles.tabText, source === "arasaac" && styles.tabTextOn]}>ARASAAC</Text>
+              </Pressable>
+              <Pressable onPress={() => run("opensymbols", term)} style={[styles.tab, source === "opensymbols" && styles.tabOn]}>
+                <Text style={[styles.tabText, source === "opensymbols" && styles.tabTextOn]}>{t("weSourceOpenSymbols", lang)}</Text>
+              </Pressable>
+              <Pressable onPress={() => run("mulberry", term)} style={[styles.tab, source === "mulberry" && styles.tabOn]}>
+                <Text style={[styles.tabText, source === "mulberry" && styles.tabTextOn]}>Mulberry</Text>
+              </Pressable>
+              <Pressable onPress={() => run("pixabay", term)} style={[styles.tab, source === "pixabay" && styles.tabOn]}>
+                <Text style={[styles.tabText, source === "pixabay" && styles.tabTextOn]}>{hasPixabayKey() ? t("photos", lang) : t("weSourcePhotosKey", lang)}</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
 
           <ScrollView contentContainerStyle={styles.hitGrid}>
-            {loading && <ActivityIndicator color={colors.forest} style={{ marginTop: 30 }} />}
+            {loading && (
+              <View style={{ width: "100%", alignItems: "center", marginTop: 36, gap: 8 }}>
+                <ActivityIndicator size="large" color={colors.forest} />
+                <Text style={{ fontSize: 13, color: colors.textMid, fontWeight: "600" }}>Searching images...</Text>
+              </View>
+            )}
             {err && <Text style={styles.hitErr}>{err}</Text>}
+            {!loading && !err && hits.length === 0 && (
+              <View style={{ width: "100%", alignItems: "center", marginTop: 45, paddingHorizontal: 20 }}>
+                <Ionicons name="images-outline" size={46} color={colors.textLight} />
+                <Text style={{ fontSize: 14, color: colors.textMid, fontWeight: "700", marginTop: 10 }}>
+                  No pictures found for "{term}"
+                </Text>
+                <Text style={{ fontSize: 12.5, color: colors.textLight, marginTop: 4, textAlign: "center" }}>
+                  Try switching to ARASAAC, OpenSymbols, or Mulberry tab above.
+                </Text>
+              </View>
+            )}
             {hits.map((h) => (
               <Pressable key={h.id} onPress={() => onPick(h)} style={styles.hit}>
                 <Image source={{ uri: h.thumb }} style={styles.hitImg} resizeMode="contain" />
@@ -550,14 +584,79 @@ const styles = StyleSheet.create({
   searchBar: { flexDirection: "row", gap: 8, padding: 16 },
   searchInput: { flex: 1, backgroundColor: colors.card, borderWidth: 2, borderColor: colors.border, borderRadius: radius, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: colors.textDark },
   searchGo: { width: 46, borderRadius: radius, backgroundColor: colors.forest, alignItems: "center", justifyContent: "center" },
-  tabRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16 },
-  tab: { flex: 1, backgroundColor: colors.cardMuted, borderRadius: 12, paddingVertical: 9, alignItems: "center" },
-  tabOn: { backgroundColor: colors.forest },
-  tabText: { fontWeight: "700", fontSize: 12.5, color: colors.textMid },
-  hitGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, padding: 16 },
-  hit: { width: "31%", aspectRatio: 1, backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.border, overflow: "hidden", position: "relative" },
-  hitImg: { width: "100%", height: "100%" },
-  hitBadge: { position: "absolute", bottom: 2, right: 2, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 },
-  hitBadgeText: { color: "#ffffff", fontSize: 8.5, fontWeight: "700", textTransform: "uppercase" },
-  hitErr: { color: colors.textMid, fontSize: 13, padding: 20, width: "100%", textAlign: "center" },
+  tabContainer: {
+    height: 48,
+    marginBottom: 8,
+  },
+  tabRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    height: 48,
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.cardMuted,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  tabOn: {
+    backgroundColor: colors.forest,
+  },
+  tabText: {
+    fontWeight: "700",
+    fontSize: 13,
+    color: colors.textMid,
+  },
+  tabTextOn: {
+    color: "#FFFFFF",
+  },
+  hitGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    padding: 16,
+  },
+  hit: {
+    width: "31%",
+    aspectRatio: 1,
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    overflow: "hidden",
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  hitImg: {
+    width: "88%",
+    height: "88%",
+  },
+  hitBadge: {
+    position: "absolute",
+    bottom: 3,
+    right: 3,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+  },
+  hitBadgeText: {
+    color: "#ffffff",
+    fontSize: 8.5,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  hitErr: {
+    color: colors.textMid,
+    fontSize: 13,
+    padding: 20,
+    width: "100%",
+    textAlign: "center",
+  },
 });

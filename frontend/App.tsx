@@ -61,6 +61,13 @@ function AppInner() {
   const [categoryInitialId, setCategoryInitialId] = useState<string | null>(null);
   const [enrollReturnScreen, setEnrollReturnScreen] = useState<Screen>("face-scan");
   const lang = settings.language;
+  const tabLabels: Record<TabScreen, string> = {
+    home: t("home", lang),
+    speak: t("talk", lang),
+    schedule: t("schedule", lang),
+    games: t("games", lang),
+    progress: t("progress", lang),
+  };
   const go = (s: Screen) => setScreen(s);
 
   let body: ReactNode;
@@ -151,7 +158,7 @@ function AppInner() {
           onTabChange={(t) => setCurrentTab(t)}
           onOpenMore={() => go("more")}
           onOpenSocialStories={() => go("social-stories")}
-          labels={TAB_LABEL}
+          labels={tabLabels}
         />
       );
     } else if (currentTab === "speak") {
@@ -160,7 +167,7 @@ function AppInner() {
           child={currentChild}
           tab={currentTab}
           onTabChange={(t) => setCurrentTab(t)}
-          labels={TAB_LABEL}
+          labels={tabLabels}
           onOpenCategories={(catId) => {
             setCategoryReturnScreen("speak");
             setCategoryInitialId(catId ?? null);
@@ -174,7 +181,7 @@ function AppInner() {
           child={currentChild}
           tab={currentTab}
           onTabChange={(t) => setCurrentTab(t)}
-          labels={TAB_LABEL}
+          labels={tabLabels}
         />
       );
     } else if (currentTab === "games") {
@@ -183,7 +190,7 @@ function AppInner() {
           child={currentChild}
           tab={currentTab}
           onTabChange={(t) => setCurrentTab(t)}
-          labels={TAB_LABEL}
+          labels={tabLabels}
         />
       );
     } else {
@@ -193,7 +200,7 @@ function AppInner() {
           tab={currentTab}
           onTabChange={(t) => setCurrentTab(t)}
           onUpdateChild={setCurrentChild}
-          labels={TAB_LABEL}
+          labels={tabLabels}
         />
       );
     }

@@ -553,11 +553,13 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
     const imgUri = newWordImageUri || getPictogramUrl(text) || undefined;
 
-    if (detectedVerbForms && autoAddVerbForms) {
-      const form1 = capWord(detectedVerbForms.base);
-      const form2 = capWord(detectedVerbForms.past);
-      const form3 = capWord(detectedVerbForms.participle);
-      const form4 = capWord(detectedVerbForms.continuous);
+    const vForms = detectedVerbForms || generateAllVerbForms(text);
+
+    if (vForms) {
+      const form1 = capWord(vForms.base);
+      const form2 = capWord(vForms.past);
+      const form3 = capWord(vForms.participle);
+      const form4 = capWord(vForms.continuous);
 
       const formsToAdd: {
         label: string;
@@ -578,7 +580,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         (canonicalWordEn(currentShelf?.name || "") || currentShelf?.name || "").toLowerCase().includes("action");
 
       if (isActionsShelf) {
-        const letter = (detectedVerbForms.base[0] || "A").toUpperCase();
+        const letter = (vForms.base[0] || "A").toUpperCase();
         const subName = `Verbs ${letter}`;
         const existingSub = subCats.find((sc) => sc.name.toLowerCase() === subName.toLowerCase());
         if (existingSub) {
@@ -607,12 +609,12 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
           label: f.label,
           phrase: f.phrase,
           color: newWordColor,
-          emoji: detectedVerbForms.emoji || "⚡",
+          emoji: vForms.emoji || "⚡",
           imageUri: imgUri || getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
           size: "md" as TileSize,
           useTextToSpeech: true,
           verbFormTag: f.verbFormTag,
-          verbForms: detectedVerbForms,
+          verbForms: vForms,
         }))
       );
       setSelectedSubCatId(actualTargetCatId);
@@ -622,12 +624,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         label: cLabel,
         phrase: cLabel,
         color: newWordColor,
-        emoji: detectedVerbForms?.emoji || "🔹",
+        emoji: "🔹",
         imageUri: imgUri,
         size: "md" as TileSize,
         useTextToSpeech: true,
-        verbForms: detectedVerbForms || undefined,
-        verbFormTag: detectedVerbForms ? detectVerbForm(text) || undefined : undefined,
       });
       setSelectedSubCatId(targetCat.id);
     }
@@ -692,9 +692,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
           { label: form4, verbFormTag: "4th" },
         ];
         for (const f of forms) {
-          const lower = f.label.toLowerCase();
-          if (!seenLabels.has(lower)) {
-            seenLabels.add(lower);
+          const key = `${f.verbFormTag}::${f.label.toLowerCase()}`;
+          if (!seenLabels.has(key)) {
+            seenLabels.add(key);
             wordsToInsert.push({
               label: f.label,
               phrase: f.label,

@@ -29,7 +29,7 @@ interface Props {
 
 type StoryCategory = "all" | "routine" | "health" | "school" | "emotions" | "social";
 
-const CATEGORIES: { key: StoryCategory; label: string; icon: string }[] = [
+const CATEGORIES: { key: StoryCategory; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: "all", label: "All Stories", icon: "sparkles" },
   { key: "routine", label: "Daily Routines", icon: "calendar" },
   { key: "health", label: "Dentist & Doctors", icon: "medkit" },
@@ -37,6 +37,156 @@ const CATEGORIES: { key: StoryCategory; label: string; icon: string }[] = [
   { key: "emotions", label: "Emotions & Calm", icon: "heart" },
   { key: "social", label: "Sharing & Manners", icon: "people" },
 ];
+
+export interface StoryTheme {
+  iconName: keyof typeof Ionicons.glyphMap;
+  bg: string;
+  borderColor: string;
+  iconColor: string;
+  tag: string;
+  tagColor: string;
+  tagBg: string;
+}
+
+export function getStoryTheme(story: SocialStory): StoryTheme {
+  const id = story.id.toLowerCase();
+  const title = story.title.toLowerCase();
+
+  if (id.includes("dentist") || title.includes("dentist")) {
+    return {
+      iconName: "sparkles",
+      bg: "#eff6ff",
+      borderColor: "#bfdbfe",
+      iconColor: "#2563eb",
+      tag: "Health & Care",
+      tagColor: "#1d4ed8",
+      tagBg: "#dbeafe",
+    };
+  }
+  if (id.includes("haircut") || title.includes("haircut")) {
+    return {
+      iconName: "cut",
+      bg: "#fefce8",
+      borderColor: "#fef08a",
+      iconColor: "#d97706",
+      tag: "Daily Routine",
+      tagColor: "#b45309",
+      tagBg: "#fef3c7",
+    };
+  }
+  if (id.includes("school") || title.includes("school")) {
+    return {
+      iconName: "school",
+      bg: "#f0fdf4",
+      borderColor: "#bbf7d0",
+      iconColor: "#16a34a",
+      tag: "School & Friends",
+      tagColor: "#15803d",
+      tagBg: "#dcfce7",
+    };
+  }
+  if (id.includes("calm") || id.includes("overwhelmed") || title.includes("overwhelmed") || story.category === "emotions") {
+    return {
+      iconName: "heart",
+      bg: "#faf5ff",
+      borderColor: "#e9d5ff",
+      iconColor: "#9333ea",
+      tag: "Emotions & Calm",
+      tagColor: "#7e22ce",
+      tagBg: "#f3e8ff",
+    };
+  }
+  if (id.includes("sharing") || title.includes("sharing") || title.includes("turns") || story.category === "social") {
+    return {
+      iconName: "people",
+      bg: "#fff1f2",
+      borderColor: "#fecdd3",
+      iconColor: "#e11d48",
+      tag: "Social Skills",
+      tagColor: "#be123c",
+      tagBg: "#ffe4e6",
+    };
+  }
+  if (id.includes("doctor") || title.includes("doctor") || story.category === "health") {
+    return {
+      iconName: "medkit",
+      bg: "#f0f9ff",
+      borderColor: "#bae6fd",
+      iconColor: "#0284c7",
+      tag: "Dentist & Doctors",
+      tagColor: "#0369a1",
+      tagBg: "#e0f2fe",
+    };
+  }
+  if (id.includes("supermarket") || title.includes("supermarket") || title.includes("shop")) {
+    return {
+      iconName: "cart",
+      bg: "#fff7ed",
+      borderColor: "#fed7aa",
+      iconColor: "#ea580c",
+      tag: "Community",
+      tagColor: "#c2410c",
+      tagBg: "#ffedd5",
+    };
+  }
+
+  return {
+    iconName: "book",
+    bg: "#f0fdfa",
+    borderColor: "#99f6e4",
+    iconColor: "#0d9488",
+    tag: "Social Story",
+    tagColor: "#0f766e",
+    tagBg: "#ccfbf1",
+  };
+}
+
+export function getPageIcon(emojiOrIcon?: string, fallback: keyof typeof Ionicons.glyphMap = "book"): keyof typeof Ionicons.glyphMap {
+  if (!emojiOrIcon) return fallback;
+  const map: Record<string, keyof typeof Ionicons.glyphMap> = {
+    "🦷": "sparkles",
+    "💺": "color-wand",
+    "😷": "shield-checkmark",
+    "🦁": "happy",
+    "🪥": "sparkles",
+    "⭐": "star",
+    "💇": "cut",
+    "🦸": "shield",
+    "💦": "water",
+    "✂️": "cut",
+    "✨": "sparkles",
+    "🏫": "school",
+    "🎒": "briefcase",
+    "👩‍🏫": "heart",
+    "🙋": "hand-right",
+    "🛝": "game-controller",
+    "🏡": "home",
+    "🌪️": "thunderstorm",
+    "🎧": "headset",
+    "🎈": "leaf",
+    "💬": "chatbubbles",
+    "🧸": "gift",
+    "🌈": "sunny",
+    "🧩": "extension-puzzle",
+    "⏳": "hourglass",
+    "🔟": "timer",
+    "😄": "happy",
+    "🩺": "pulse",
+    "📏": "fitness",
+    "💓": "heart",
+    "🔦": "flashlight",
+    "👍": "thumbs-up",
+    "🛒": "cart",
+    "🍎": "nutrition",
+    "💳": "card",
+    "🚗": "car",
+    "🌙": "moon",
+    "🛁": "water",
+    "📖": "book",
+    "😴": "bed",
+  };
+  return map[emojiOrIcon] || fallback;
+}
 
 export default function SocialStoriesScreen({ onBack }: Props) {
   const { width } = useWindowDimensions();
@@ -177,38 +327,51 @@ export default function SocialStoriesScreen({ onBack }: Props) {
       {/* Stories Grid */}
       <ScrollView contentContainerStyle={styles.gridContent}>
         <View style={[styles.storiesGrid, isTablet && { flexDirection: "row", flexWrap: "wrap" }]}>
-          {filteredStories.map((story) => (
-            <Pressable
-              key={story.id}
-              onPress={() => openStory(story)}
-              style={[styles.storyCard, isTablet && { width: "48.5%" }]}
-            >
-              <View style={styles.storyCardTop}>
-                <View style={styles.storyIconWrap}>
-                  <Text style={{ fontSize: 32 }}>{story.icon}</Text>
+          {filteredStories.map((story) => {
+            const theme = getStoryTheme(story);
+            return (
+              <Pressable
+                key={story.id}
+                onPress={() => openStory(story)}
+                style={({ pressed }) => [
+                  styles.storyCard,
+                  isTablet && { width: "48.5%" },
+                  pressed && { transform: [{ scale: 0.985 }] },
+                ]}
+              >
+                <View style={styles.storyCardTop}>
+                  <View style={[styles.storyIconWrap, { backgroundColor: theme.bg, borderColor: theme.borderColor }]}>
+                    <Ionicons name={theme.iconName} size={isTablet ? 28 : 24} color={theme.iconColor} />
+                  </View>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <View style={[styles.themeTag, { backgroundColor: theme.tagBg }]}>
+                      <Text style={[styles.themeTagText, { color: theme.tagColor }]}>{theme.tag}</Text>
+                    </View>
+                    <View style={styles.badge}>
+                      <Ionicons name="layers-outline" size={11} color="#b45309" />
+                      <Text style={styles.badgeText}>{story.pages.length} Steps</Text>
+                    </View>
+                  </View>
                 </View>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{story.pages.length} Steps</Text>
-                </View>
-              </View>
 
-              <Text style={styles.storyTitle}>{story.title}</Text>
-              <Text style={styles.storyDesc} numberOfLines={2}>
-                {story.description}
-              </Text>
+                <Text style={styles.storyTitle}>{story.title}</Text>
+                <Text style={styles.storyDesc} numberOfLines={2}>
+                  {story.description}
+                </Text>
 
-              <View style={styles.storyFooter}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Ionicons name="volume-medium" size={16} color={colors.forest} />
-                  <Text style={styles.storyFooterText}>Speech Read-Aloud</Text>
+                <View style={styles.storyFooter}>
+                  <View style={styles.audioPill}>
+                    <Ionicons name="volume-medium" size={13} color="#059669" />
+                    <Text style={styles.audioPillText}>Speech Read-Aloud</Text>
+                  </View>
+                  <View style={[styles.readBtn, { backgroundColor: colors.forest }]}>
+                    <Text style={styles.readBtnText}>Read</Text>
+                    <Ionicons name="arrow-forward" size={13} color="#fff" />
+                  </View>
                 </View>
-                <View style={styles.readBtn}>
-                  <Text style={styles.readBtnText}>Read</Text>
-                  <Ionicons name="chevron-forward" size={14} color="#fff" />
-                </View>
-              </View>
-            </Pressable>
-          ))}
+              </Pressable>
+            );
+          })}
         </View>
       </ScrollView>
 
@@ -234,36 +397,56 @@ export default function SocialStoriesScreen({ onBack }: Props) {
 
             {/* Reader Card Content */}
             <View style={styles.readerBody}>
-              <View style={styles.readerCard}>
-                <View style={styles.illustrationWrap}>
-                  <Text style={{ fontSize: 72 }}>
-                    {activeStory.pages[currentPage]?.emoji || activeStory.icon}
-                  </Text>
-                </View>
+              {(() => {
+                const activeTheme = getStoryTheme(activeStory);
+                const pageIcon = getPageIcon(activeStory.pages[currentPage]?.emoji, activeTheme.iconName);
+                return (
+                  <View style={styles.readerCard}>
+                    <View style={[styles.illustrationWrap, { backgroundColor: activeTheme.bg, borderColor: activeTheme.borderColor }]}>
+                      <View style={styles.illustrationInnerGlow}>
+                        <Ionicons
+                          name={pageIcon}
+                          size={isTablet ? 56 : 46}
+                          color={activeTheme.iconColor}
+                        />
+                      </View>
+                    </View>
 
-                <Text style={styles.pageSentenceText}>
-                  {activeStory.pages[currentPage]?.text}
-                </Text>
+                    <Text style={styles.pageSentenceText}>
+                      {activeStory.pages[currentPage]?.text}
+                    </Text>
 
-                {/* Listen button on card */}
-                <Pressable onPress={readCurrentPageAloud} style={styles.cardSpeakRow}>
-                  <Ionicons name="play-circle" size={24} color={colors.forest} />
-                  <Text style={styles.cardSpeakRowText}>Listen again</Text>
-                </Pressable>
-              </View>
+                    {/* Listen button on card */}
+                    <Pressable
+                      onPress={readCurrentPageAloud}
+                      style={({ pressed }) => [
+                        styles.cardSpeakRow,
+                        { borderColor: activeTheme.borderColor },
+                        pressed && { transform: [{ scale: 0.98 }] },
+                      ]}
+                    >
+                      <Ionicons name="play-circle" size={24} color={activeTheme.iconColor} />
+                      <Text style={[styles.cardSpeakRowText, { color: activeTheme.iconColor }]}>Listen again</Text>
+                    </Pressable>
+                  </View>
+                );
+              })()}
 
               {/* Progress Dots */}
               <View style={styles.dotRow}>
-                {activeStory.pages.map((_, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.dot,
-                      i === currentPage && styles.dotActive,
-                      i < currentPage && styles.dotDone,
-                    ]}
-                  />
-                ))}
+                {activeStory.pages.map((_, i) => {
+                  const activeTheme = getStoryTheme(activeStory);
+                  return (
+                    <View
+                      key={i}
+                      style={[
+                        styles.dot,
+                        i === currentPage && [styles.dotActive, { backgroundColor: activeTheme.iconColor, width: 22 }],
+                        i < currentPage && [styles.dotDone, { backgroundColor: activeTheme.iconColor, opacity: 0.45 }],
+                      ]}
+                    />
+                  );
+                })}
               </View>
             </View>
 
@@ -496,50 +679,64 @@ const styles = StyleSheet.create({
   },
   storyCard: {
     backgroundColor: "#ffffff",
-    borderRadius: radiusLg,
-    padding: 16,
+    borderRadius: 20,
+    padding: 18,
     borderWidth: 1.5,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: "#e2e8f0",
     shadowColor: "#000",
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   storyCardTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   storyIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: "#f0f7f4",
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
+  themeTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  themeTagText: {
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
   badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     backgroundColor: "#fef3c7",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   badgeText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: "800",
     color: "#b45309",
   },
   storyTitle: {
-    fontSize: 17,
+    fontSize: 16.5,
     fontWeight: "800",
     color: colors.textDark,
-    marginBottom: 4,
+    marginBottom: 5,
   },
   storyDesc: {
     fontSize: 13,
     color: colors.textMid,
-    lineHeight: 18,
+    lineHeight: 18.5,
     marginBottom: 14,
   },
   storyFooter: {
@@ -550,19 +747,27 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(0,0,0,0.05)",
   },
-  storyFooterText: {
-    fontSize: 12,
-    color: colors.forest,
-    fontWeight: "600",
+  audioPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#ecfdf5",
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  audioPillText: {
+    fontSize: 11,
+    color: "#059669",
+    fontWeight: "700",
   },
   readBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: colors.forest,
+    gap: 5,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 10,
   },
   readBtnText: {
     color: "#fff",
@@ -631,17 +836,29 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
   },
   illustrationWrap: {
-    width: 130,
-    height: 130,
-    borderRadius: 65,
-    backgroundColor: "#f4f7f5",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 24,
+    marginBottom: 20,
+  },
+  illustrationInnerGlow: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   pageSentenceText: {
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "800",
     color: colors.textDark,
     textAlign: "center",
     lineHeight: 32,
@@ -651,14 +868,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#f0f7f4",
+    backgroundColor: "#ffffff",
+    borderWidth: 1.5,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 16,
   },
   cardSpeakRowText: {
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "800",
     color: colors.forestDark,
   },
   dotRow: {

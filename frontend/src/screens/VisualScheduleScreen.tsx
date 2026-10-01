@@ -88,6 +88,131 @@ const PRESETS: Record<RoutinePreset, { title: string; icon: string; items: Sched
   },
 };
 
+export function getScheduleVectorTheme(emojiOrId?: string, label?: string) {
+  const l = (label || "").toLowerCase();
+  const e = emojiOrId || "";
+
+  if (l.includes("breakfast") || l.includes("eat") || l.includes("cereal") || e === "🍳" || e === "🥣") {
+    return {
+      icon: "cafe" as keyof typeof Ionicons.glyphMap,
+      bg: "#fef3c7",
+      color: "#b45309",
+      border: "#fde68a",
+    };
+  }
+  if (l.includes("lunch") || l.includes("dinner") || l.includes("meal") || e === "🍽️" || e === "🍲") {
+    return {
+      icon: "restaurant" as keyof typeof Ionicons.glyphMap,
+      bg: "#ffedd5",
+      color: "#c2410c",
+      border: "#fed7aa",
+    };
+  }
+  if (l.includes("play") || l.includes("learning") || l.includes("puzzle") || e === "🧩") {
+    return {
+      icon: "extension-puzzle" as keyof typeof Ionicons.glyphMap,
+      bg: "#dcfce7",
+      color: "#15803d",
+      border: "#bbf7d0",
+    };
+  }
+  if (l.includes("aac") || l.includes("speech") || l.includes("practice") || e === "💬" || e === "🗣️") {
+    return {
+      icon: "chatbubbles" as keyof typeof Ionicons.glyphMap,
+      bg: "#e0f2fe",
+      color: "#0284c7",
+      border: "#bae6fd",
+    };
+  }
+  if (l.includes("rest") || l.includes("sleep") || l.includes("lights out") || l.includes("quiet") || e === "😴" || e === "🌙") {
+    return {
+      icon: "moon" as keyof typeof Ionicons.glyphMap,
+      bg: "#f3e8ff",
+      color: "#7e22ce",
+      border: "#e9d5ff",
+    };
+  }
+  if (l.includes("sensory") || l.includes("playground") || l.includes("park") || l.includes("warmup") || e === "🌿") {
+    return {
+      icon: "leaf" as keyof typeof Ionicons.glyphMap,
+      bg: "#d1fae5",
+      color: "#059669",
+      border: "#a7f3d0",
+    };
+  }
+  if (l.includes("wake") || l.includes("stretch") || e === "☀️") {
+    return {
+      icon: "sunny" as keyof typeof Ionicons.glyphMap,
+      bg: "#fef9c3",
+      color: "#ca8a04",
+      border: "#fef08a",
+    };
+  }
+  if (l.includes("teeth") || l.includes("brush") || e === "🪥") {
+    return {
+      icon: "sparkles" as keyof typeof Ionicons.glyphMap,
+      bg: "#e0f2fe",
+      color: "#0284c7",
+      border: "#bae6fd",
+    };
+  }
+  if (l.includes("dress") || l.includes("clothes") || l.includes("pajamas") || e === "👕") {
+    return {
+      icon: "shirt" as keyof typeof Ionicons.glyphMap,
+      bg: "#ffedd5",
+      color: "#c2410c",
+      border: "#fed7aa",
+    };
+  }
+  if (l.includes("pack") || l.includes("backpack") || e === "🎒") {
+    return {
+      icon: "briefcase" as keyof typeof Ionicons.glyphMap,
+      bg: "#f1f5f9",
+      color: "#475569",
+      border: "#cbd5e1",
+    };
+  }
+  if (l.includes("bath") || l.includes("wash") || e === "🛁") {
+    return {
+      icon: "water" as keyof typeof Ionicons.glyphMap,
+      bg: "#e0f2fe",
+      color: "#0284c7",
+      border: "#bae6fd",
+    };
+  }
+  if (l.includes("read") || l.includes("book") || l.includes("story") || e === "📖") {
+    return {
+      icon: "book" as keyof typeof Ionicons.glyphMap,
+      bg: "#ccfbf1",
+      color: "#0f766e",
+      border: "#99f6e4",
+    };
+  }
+  if (l.includes("motor") || l.includes("art") || l.includes("fine motor") || e === "🎨") {
+    return {
+      icon: "color-palette" as keyof typeof Ionicons.glyphMap,
+      bg: "#fce7f3",
+      color: "#be185d",
+      border: "#fbcfe8",
+    };
+  }
+  if (l.includes("reward") || l.includes("star") || e === "⭐" || e === "🎉") {
+    return {
+      icon: (e === "🎉" ? "ribbon" : "star") as keyof typeof Ionicons.glyphMap,
+      bg: "#fef3c7",
+      color: "#d97706",
+      border: "#fde68a",
+    };
+  }
+
+  return {
+    icon: "calendar" as keyof typeof Ionicons.glyphMap,
+    bg: "#f8fafc",
+    color: "#64748b",
+    border: "#e2e8f0",
+  };
+}
+
 export default function VisualScheduleScreen({ child, tab, onTabChange, labels }: Props) {
   const { settings } = useSettings();
   const { isSmallPhone, isTablet, isLargeTablet } = useResponsive();
@@ -261,61 +386,65 @@ export default function VisualScheduleScreen({ child, tab, onTabChange, labels }
           </View>
 
           {/* ================= FIRST-THEN BOARD MODE ================= */}
-          {viewMode === "first_then" && (
-            <View style={[styles.firstThenCard, isTablet && styles.firstThenCardTablet]}>
-              <View style={styles.firstThenHeader}>
-                <Ionicons name="sparkles" size={18} color="#f59e0b" />
-                <Text style={styles.firstThenTitle}>{t("firstThenBoardTitle", lang)}</Text>
-              </View>
-              <Text style={styles.firstThenSub}>{t("firstThenSubtitle", lang)}</Text>
+          {viewMode === "first_then" && (() => {
+            const ftFirstTheme = getScheduleVectorTheme(currentTask?.emoji, currentTask?.label);
+            const ftNextTheme = getScheduleVectorTheme(nextTask?.emoji, nextTask?.label);
+            return (
+              <View style={[styles.firstThenCard, isTablet && styles.firstThenCardTablet]}>
+                <View style={styles.firstThenHeader}>
+                  <Ionicons name="sparkles" size={18} color="#f59e0b" />
+                  <Text style={styles.firstThenTitle}>{t("firstThenBoardTitle", lang)}</Text>
+                </View>
+                <Text style={styles.firstThenSub}>{t("firstThenSubtitle", lang)}</Text>
 
-              <View style={[styles.firstThenRow, isSmallPhone && { gap: 4 }, isTablet && { gap: 16 }]}>
-                {/* FIRST */}
-                <View style={[styles.ftBox, isTablet && styles.ftBoxTablet, isSmallPhone && styles.ftBoxSmallPhone, { borderColor: colors.blueDeep, backgroundColor: "#eff6ff" }]}>
-                  <View style={[styles.ftBadge, { backgroundColor: colors.blueDeep }]}>
-                    <Text style={styles.ftBadgeText}>{t("firstLabel", lang)}</Text>
+                <View style={[styles.firstThenRow, isSmallPhone && { gap: 4 }, isTablet && { gap: 16 }]}>
+                  {/* FIRST */}
+                  <View style={[styles.ftBox, isTablet && styles.ftBoxTablet, isSmallPhone && styles.ftBoxSmallPhone, { borderColor: colors.blueDeep, backgroundColor: "#eff6ff" }]}>
+                    <View style={[styles.ftBadge, { backgroundColor: colors.blueDeep }]}>
+                      <Text style={styles.ftBadgeText}>{t("firstLabel", lang)}</Text>
+                    </View>
+                    <View style={[styles.ftIconCircle, { backgroundColor: ftFirstTheme.bg, borderColor: ftFirstTheme.border }]}>
+                      <Ionicons name={ftFirstTheme.icon} size={isTablet ? 36 : isSmallPhone ? 24 : 30} color={ftFirstTheme.color} />
+                    </View>
+                    <Text style={[styles.ftTitle, isTablet && { fontSize: 17 }, isSmallPhone && { fontSize: 12 }]}>
+                      {currentTask ? wordLabel(currentTask.label, lang) : t("activityFallback", lang)}
+                    </Text>
+                    <Text style={styles.ftTime}>{currentTask?.time}</Text>
                   </View>
-                  <Text style={[styles.ftEmoji, isTablet && { fontSize: 62 }, isSmallPhone && { fontSize: 34 }]}>
-                    {currentTask?.emoji || "⭐"}
-                  </Text>
-                  <Text style={[styles.ftTitle, isTablet && { fontSize: 17 }, isSmallPhone && { fontSize: 12 }]}>
-                    {currentTask ? wordLabel(currentTask.label, lang) : t("activityFallback", lang)}
-                  </Text>
-                  <Text style={styles.ftTime}>{currentTask?.time}</Text>
-                </View>
 
-                {/* ARROW */}
-                <View style={styles.ftArrowWrap}>
-                  <Ionicons name="arrow-forward" size={isTablet ? 36 : 28} color="#94a3b8" />
-                </View>
-
-                {/* THEN */}
-                <View style={[styles.ftBox, isTablet && styles.ftBoxTablet, isSmallPhone && styles.ftBoxSmallPhone, { borderColor: colors.greenDeep, backgroundColor: "#f0fdf4" }]}>
-                  <View style={[styles.ftBadge, { backgroundColor: colors.greenDeep }]}>
-                    <Text style={styles.ftBadgeText}>{t("thenLabel", lang)}</Text>
+                  {/* ARROW */}
+                  <View style={styles.ftArrowWrap}>
+                    <Ionicons name="arrow-forward" size={isTablet ? 36 : 28} color="#94a3b8" />
                   </View>
-                  <Text style={[styles.ftEmoji, isTablet && { fontSize: 62 }, isSmallPhone && { fontSize: 34 }]}>
-                    {nextTask?.emoji || "🎉"}
-                  </Text>
-                  <Text style={[styles.ftTitle, isTablet && { fontSize: 17 }, isSmallPhone && { fontSize: 12 }]}>
-                    {nextTask ? wordLabel(nextTask.label, lang) : t("rewardPlayFallback", lang)}
-                  </Text>
-                  <Text style={styles.ftTime}>{nextTask?.time}</Text>
-                </View>
-              </View>
 
-              <Pressable
-                onPress={() => {
-                  const idx = items.findIndex((i) => i.id === currentTask?.id);
-                  if (idx >= 0) toggle(idx);
-                }}
-                style={[styles.ftCompleteBtn, isTablet && { paddingVertical: 16 }]}
-              >
-                <Ionicons name="checkmark-circle" size={20} color="white" />
-                <Text style={[styles.ftCompleteBtnText, isTablet && { fontSize: 15 }]}>{t("markFirstDoneBtn", lang)}</Text>
-              </Pressable>
-            </View>
-          )}
+                  {/* THEN */}
+                  <View style={[styles.ftBox, isTablet && styles.ftBoxTablet, isSmallPhone && styles.ftBoxSmallPhone, { borderColor: colors.greenDeep, backgroundColor: "#f0fdf4" }]}>
+                    <View style={[styles.ftBadge, { backgroundColor: colors.greenDeep }]}>
+                      <Text style={styles.ftBadgeText}>{t("thenLabel", lang)}</Text>
+                    </View>
+                    <View style={[styles.ftIconCircle, { backgroundColor: ftNextTheme.bg, borderColor: ftNextTheme.border }]}>
+                      <Ionicons name={ftNextTheme.icon} size={isTablet ? 36 : isSmallPhone ? 24 : 30} color={ftNextTheme.color} />
+                    </View>
+                    <Text style={[styles.ftTitle, isTablet && { fontSize: 17 }, isSmallPhone && { fontSize: 12 }]}>
+                      {nextTask ? wordLabel(nextTask.label, lang) : t("rewardPlayFallback", lang)}
+                    </Text>
+                    <Text style={styles.ftTime}>{nextTask?.time}</Text>
+                  </View>
+                </View>
+
+                <Pressable
+                  onPress={() => {
+                    const idx = items.findIndex((i) => i.id === currentTask?.id);
+                    if (idx >= 0) toggle(idx);
+                  }}
+                  style={[styles.ftCompleteBtn, isTablet && { paddingVertical: 16 }]}
+                >
+                  <Ionicons name="checkmark-circle" size={20} color="white" />
+                  <Text style={[styles.ftCompleteBtnText, isTablet && { fontSize: 15 }]}>{t("markFirstDoneBtn", lang)}</Text>
+                </Pressable>
+              </View>
+            );
+          })()}
 
           {/* ================= TIMELINE LIST MODE ================= */}
           {viewMode === "timeline" && (
@@ -323,6 +452,7 @@ export default function VisualScheduleScreen({ child, tab, onTabChange, labels }
               {items.map((item, idx) => {
                 const isNow = item.state === "now";
                 const isDone = item.state === "done";
+                const itemTheme = getScheduleVectorTheme(item.emoji, item.label);
                 return (
                   <View key={item.id} style={styles.timelineRow}>
                     <View style={styles.timelineRail}>
@@ -349,8 +479,8 @@ export default function VisualScheduleScreen({ child, tab, onTabChange, labels }
                         isNow && styles.cardNow,
                       ]}
                     >
-                      <View style={[styles.itemEmojiWrap, isTablet && { width: 52, height: 52, borderRadius: 16 }]}>
-                        <Text style={{ fontSize: isTablet ? 28 : 24 }}>{item.emoji}</Text>
+                      <View style={[styles.itemEmojiWrap, { backgroundColor: itemTheme.bg, borderColor: itemTheme.border }, isTablet && { width: 50, height: 50, borderRadius: 16 }]}>
+                        <Ionicons name={itemTheme.icon} size={isTablet ? 24 : 20} color={itemTheme.color} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text
@@ -607,7 +737,19 @@ const styles = StyleSheet.create({
   },
   ftBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
   ftBadgeText: { color: "white", fontSize: 10.5, fontWeight: "800" },
-  ftEmoji: { fontSize: 44, marginVertical: 6 },
+  ftIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+    marginVertical: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+  },
   ftTitle: { fontSize: 14, fontWeight: "800", color: "#0f172a", textAlign: "center" },
   ftTime: { fontSize: 11, color: "#64748b" },
   ftArrowWrap: { alignItems: "center", justifyContent: "center" },
@@ -665,8 +807,8 @@ const styles = StyleSheet.create({
   itemEmojiWrap: {
     width: 44,
     height: 44,
-    borderRadius: 12,
-    backgroundColor: "#f1f5f9",
+    borderRadius: 13,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },

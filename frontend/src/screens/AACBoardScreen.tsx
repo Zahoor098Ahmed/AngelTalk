@@ -210,7 +210,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     ensureCategoriesLoaded().then(() => {
       setReady(true);
       // Auto-select "Core" (or first category) on load so communication cards appear immediately
-      const tabs = bottomTabCategories();
+      const tabs = bottomTabCategories(lang);
       const coreTab =
         tabs.find((t) => {
           const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
@@ -307,7 +307,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     if (ready && currentId) {
       const cat = getCategory(currentId);
       if (!cat || cat.hidden) {
-        const tabs = bottomTabCategories();
+        const tabs = bottomTabCategories(lang);
         const coreTab =
           tabs.find((t) => {
             const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
@@ -316,9 +316,9 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
         setPath(coreTab?.id ? [coreTab.id] : []);
       }
     }
-  }, [currentId, ready, tick]);
+  }, [currentId, ready, tick, lang]);
 
-  const bottomTabs = useMemo(() => (ready ? bottomTabCategories() : []), [ready, tick]);
+  const bottomTabs = useMemo(() => (ready ? bottomTabCategories(lang) : []), [ready, tick, lang]);
 
   function speakWords(): SpokenWord[] {
     return sentence.map((c) => ({
@@ -433,7 +433,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       setPath((p) => p.slice(0, -1));
       return;
     }
-    const tabs = bottomTabCategories();
+    const tabs = bottomTabCategories(lang);
     const coreTab =
       tabs.find((t) => {
         const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
@@ -476,7 +476,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
           <Pressable
             onPress={() => {
               tapFeedback();
-              const tabs = bottomTabCategories();
+              const tabs = bottomTabCategories(lang);
               const coreTab =
                 tabs.find((t) => {
                   const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
@@ -700,7 +700,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
               })}
 
               {words.map((w) => {
-                const vTag = isActionsCategory ? (w.verbFormTag || detectVerbForm(w.label)) : null;
+                let vTag = isActionsCategory ? (w.verbFormTag || detectVerbForm(w.label)) : null;
+                if (vTag === "1st" && (w.label.toLowerCase().endsWith("ing") || (canonicalWordEn(w.label) || "").toLowerCase().endsWith("ing"))) {
+                  vTag = "4th";
+                }
                 return (
                   <View key={w.id} style={[styles.cell, tileSize]}>
                     <Pressable

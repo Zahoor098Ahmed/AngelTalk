@@ -29,6 +29,7 @@ import LangBadge from "../components/LangBadge";
 import TabBar from "../components/TabBar";
 import EmergencyPasscardModal from "../components/EmergencyPasscardModal";
 import SensoryCalmerModal from "../components/SensoryCalmerModal";
+import MoodFace, { type MoodType } from "../components/MoodFace";
 import { tapFeedback } from "../modules/haptics";
 import { colors, radius } from "../theme";
 
@@ -57,12 +58,12 @@ const DAY_LETTER_KEYS: TKey[] = ["dayLetterM", "dayLetterT", "dayLetterW", "dayL
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun
 const DAY_NAME_KEYS: TKey[] = ["dayMon", "dayTue", "dayWed", "dayThu", "dayFri", "daySat", "daySun"];
 
-const MOODS: { key: CareLogEntry["mood"]; label: string; emoji: string; color: string }[] = [
-  { key: "happy", label: "Happy", emoji: "😃", color: "#10b981" },
-  { key: "calm", label: "Calm", emoji: "😌", color: "#06b6d4" },
-  { key: "frustrated", label: "Frustrated", emoji: "😣", color: "#f59e0b" },
-  { key: "overwhelmed", label: "Overwhelmed", emoji: "🤯", color: "#ef4444" },
-  { key: "tired", label: "Tired", emoji: "😴", color: "#8b5cf6" },
+const MOODS: { key: CareLogEntry["mood"]; label: string; moodType: MoodType; color: string }[] = [
+  { key: "happy", label: "Happy", moodType: "Happy", color: "#10b981" },
+  { key: "calm", label: "Calm", moodType: "Calm", color: "#06b6d4" },
+  { key: "frustrated", label: "Frustrated", moodType: "Sad", color: "#f59e0b" },
+  { key: "overwhelmed", label: "Overwhelmed", moodType: "Sad", color: "#ef4444" },
+  { key: "tired", label: "Tired", moodType: "Tired", color: "#8b5cf6" },
 ];
 
 function adherenceColor(percent: number): string {
@@ -690,8 +691,8 @@ Sent via BloomSpeech AAC & Pediatric Support Portal.`;
                   return (
                     <View key={log.id} style={styles.logCard}>
                       <View style={styles.logHeader}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                          <Text style={{ fontSize: 22 }}>{moodObj.emoji}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                          <MoodFace mood={moodObj.moodType} size={30} />
                           <View>
                             <Text style={styles.logMoodTitle}>{moodObj.label}</Text>
                             <Text style={styles.logDate}>
@@ -732,7 +733,10 @@ Sent via BloomSpeech AAC & Pediatric Support Portal.`;
 
                       {log.communicationWins ? (
                         <View style={styles.logWinBox}>
-                          <Text style={styles.logWinTitle}>🎉 Communication Win:</Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                            <Ionicons name="sparkles" size={14} color="#d97706" />
+                            <Text style={styles.logWinTitle}>Communication Win:</Text>
+                          </View>
                           <Text style={styles.logWinText}>{log.communicationWins}</Text>
                         </View>
                       ) : null}
@@ -1020,7 +1024,7 @@ Daily Target: ${child.stars ?? 0} Stars Earned! Keep up the great work!`;
                       onPress={() => setLogMood(m.key)}
                       style={[styles.moodChip, sel && styles.moodChipActive]}
                     >
-                      <Text style={{ fontSize: 20 }}>{m.emoji}</Text>
+                      <MoodFace mood={m.moodType} size={24} />
                       <Text style={[styles.moodChipText, sel && styles.moodChipTextActive]}>
                         {m.label}
                       </Text>

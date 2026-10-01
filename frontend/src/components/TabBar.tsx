@@ -3,23 +3,27 @@ import { Ionicons } from "@expo/vector-icons";
 import type { TabScreen } from "../types";
 import { colors } from "../theme";
 import { useResponsive } from "../modules/responsive";
+import { useSettings } from "../context/SettingsContext";
+import { t, type TKey } from "../modules/i18n";
 
 interface TabBarProps {
   active: TabScreen;
   onChange: (tab: TabScreen) => void;
-  labels: Record<TabScreen, string>;
+  labels?: Record<TabScreen, string>;
 }
 
-const TABS: { key: TabScreen; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: "home", icon: "home" },
-  { key: "speak", icon: "chatbubble-ellipses" },
-  { key: "schedule", icon: "calendar" },
-  { key: "games", icon: "game-controller" },
-  { key: "progress", icon: "stats-chart" },
+const TABS: { key: TabScreen; icon: keyof typeof Ionicons.glyphMap; tKey: TKey }[] = [
+  { key: "home", icon: "home", tKey: "home" },
+  { key: "speak", icon: "chatbubble-ellipses", tKey: "talk" },
+  { key: "schedule", icon: "calendar", tKey: "schedule" },
+  { key: "games", icon: "game-controller", tKey: "games" },
+  { key: "progress", icon: "stats-chart", tKey: "progress" },
 ];
 
 export default function TabBar({ active, onChange, labels }: TabBarProps) {
   const { isSmallPhone, isTablet } = useResponsive();
+  const { settings } = useSettings();
+  const lang = settings.language;
   const iconSize = isSmallPhone ? 20 : isTablet ? 24 : 22;
   const labelFontSize = isSmallPhone ? 9.5 : isTablet ? 11.5 : 10.5;
 
@@ -28,6 +32,7 @@ export default function TabBar({ active, onChange, labels }: TabBarProps) {
       <View style={[styles.innerContainer, isTablet && styles.innerContainerTablet]}>
         {TABS.map((tab) => {
           const isActive = active === tab.key;
+          const displayLabel = labels?.[tab.key] || t(tab.tKey, lang);
           return (
             <Pressable
               key={tab.key}
@@ -43,7 +48,7 @@ export default function TabBar({ active, onChange, labels }: TabBarProps) {
                   color={isActive ? "#ffffff" : "#8c96a0"}
                 />
               </View>
-              {labels[tab.key] ? (
+              {displayLabel ? (
                 <Text
                   style={[
                     styles.label,
@@ -55,7 +60,7 @@ export default function TabBar({ active, onChange, labels }: TabBarProps) {
                   ]}
                   numberOfLines={1}
                 >
-                  {labels[tab.key]}
+                  {displayLabel}
                 </Text>
               ) : null}
             </Pressable>

@@ -220,22 +220,17 @@ const MODES: {
   title: string;
   subtitle: string;
   icon: string;
+  ionicon: keyof typeof Ionicons.glyphMap;
   color: string;
   accent: string;
 }[] = [
-  { key: "animals", title: "Animal Match", subtitle: "Match the animal to its name", icon: "🐸", color: "#dcfce7", accent: "#15803d" },
-  { key: "food", title: "Food & Snacks", subtitle: "Name the food you see", icon: "🍎", color: "#fee2e2", accent: "#dc2626" },
-  { key: "letters", title: "Learn Letters", subtitle: "Tap the letter you see", icon: "🔤", color: "#e0f2fe", accent: "#0284c7" },
-  { key: "numbers", title: "Learn Numbers", subtitle: "Tap the number you see", icon: "🔢", color: "#fef3c7", accent: "#d97706" },
-  { key: "colors", title: "Colors", subtitle: "Name the color you see", icon: "🎨", color: "#fce7f3", accent: "#be185d" },
-  { key: "shapes", title: "Shapes", subtitle: "Name the shape you see", icon: "🔷", color: "#f3e8ff", accent: "#7e22ce" },
-  { key: "emotions", title: "Emotions", subtitle: "How is this face feeling?", icon: "🙂", color: "#ffedd5", accent: "#c2410c" },
-  // Memory Puzzle / Number Sequence / Picture Jigsaw / Category Sort were
-  // built but rejected as a direction — hidden from the visible mode list
-  // (and therefore the carousel + "Explore More Games" grid) without
-  // deleting their implementation below, in case a revised version is
-  // wanted later. See PUZZLE_ITEMS / SORT_ITEMS and the setup*/tap*/choose*
-  // functions further down.
+  { key: "animals", title: "Animal Match", subtitle: "Match the animal to its name", icon: "🐸", ionicon: "paw", color: "#dcfce7", accent: "#15803d" },
+  { key: "food", title: "Food & Snacks", subtitle: "Name the food you see", icon: "🍎", ionicon: "nutrition", color: "#fee2e2", accent: "#dc2626" },
+  { key: "letters", title: "Learn Letters", subtitle: "Tap the letter you see", icon: "🔤", ionicon: "text", color: "#e0f2fe", accent: "#0284c7" },
+  { key: "numbers", title: "Learn Numbers", subtitle: "Tap the number you see", icon: "🔢", ionicon: "keypad", color: "#fef3c7", accent: "#d97706" },
+  { key: "colors", title: "Colors", subtitle: "Name the color you see", icon: "🎨", ionicon: "color-palette", color: "#fce7f3", accent: "#be185d" },
+  { key: "shapes", title: "Shapes", subtitle: "Name the shape you see", icon: "🔷", ionicon: "shapes", color: "#f3e8ff", accent: "#7e22ce" },
+  { key: "emotions", title: "Emotions", subtitle: "How is this face feeling?", icon: "🙂", ionicon: "happy", color: "#ffedd5", accent: "#c2410c" },
 ];
 
 const MODE_TKEY: Record<GameMode, { title: TKey; sub: TKey }> = {
@@ -540,9 +535,9 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
         <View style={styles.header}>
           <View style={[styles.headerInner, isTablet && styles.headerInnerTablet]}>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <View style={[styles.modeHeaderIcon, { backgroundColor: activeMeta.color }]}>
-                  <Text style={{ fontSize: 20 }}>{activeMeta.icon}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View style={[styles.modeHeaderIcon, { backgroundColor: activeMeta.color, borderColor: activeMeta.accent + "40", borderWidth: 1 }]}>
+                  <Ionicons name={activeMeta.ionicon} size={22} color={activeMeta.accent} />
                 </View>
                 <View>
                   <Text style={styles.title}>{gTitle(mode)}</Text>
@@ -568,7 +563,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
                     { backgroundColor: isSel ? m.color : "#ffffff", borderColor: isSel ? m.accent : "#e2e8f0" },
                   ]}
                 >
-                  <Text style={{ fontSize: 18 }}>{m.icon}</Text>
+                  <Ionicons name={m.ionicon} size={15} color={isSel ? m.accent : "#64748b"} />
                   <Text style={[styles.carouselChipText, isSel && { color: m.accent, fontWeight: "800" }]}>
                     {gTitle(m.key)}
                   </Text>
@@ -583,7 +578,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
           <View style={styles.statRow}>
             <View style={[styles.statPill, { borderLeftColor: "#f59e0b", borderLeftWidth: 4 }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ fontSize: 16 }}>⭐</Text>
+                <Ionicons name="star" size={16} color="#f59e0b" />
                 <Text style={styles.statValue}>{score}</Text>
               </View>
               <Text style={styles.statLabel}>{tt("gScore")}</Text>
@@ -591,7 +586,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
 
             <View style={[styles.statPill, { borderLeftColor: "#ef4444", borderLeftWidth: 4 }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ fontSize: 16 }}>🔥</Text>
+                <Ionicons name="flame" size={16} color="#ef4444" />
                 <Text style={[styles.statValue, { color: streak > 1 ? "#dc2626" : colors.textDark }]}>
                   {streak}
                 </Text>
@@ -601,7 +596,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
 
             <View style={[styles.statPill, { borderLeftColor: colors.forest, borderLeftWidth: 4 }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Text style={{ fontSize: 16 }}>🎯</Text>
+                <Ionicons name="checkmark-circle" size={16} color={colors.forest} />
                 <Text style={styles.statValue}>{accuracy}%</Text>
               </View>
               <Text style={styles.statLabel}>{tt("gAccuracy")}</Text>
@@ -854,7 +849,9 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
           {/* Game Completed Celebration Card */}
           {finished && (
             <View style={[styles.finishCard, isTablet && styles.finishCardTablet]}>
-              <Text style={{ fontSize: isTablet ? 80 : 64 }}>🎉</Text>
+              <View style={styles.celebrationIconWrap}>
+                <Ionicons name="trophy" size={isTablet ? 64 : 52} color="#f59e0b" />
+              </View>
               <Text style={[styles.finishTitle, isTablet && { fontSize: 26 }]}>
                 {gTitle(mode)} {tt("gYouFinished")}
               </Text>
@@ -868,11 +865,17 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
                   <Text style={styles.finishStatLabel}>{tt("gAccuracyLabel")}</Text>
                 </View>
                 <View style={styles.finishStatBox}>
-                  <Text style={[styles.finishStatNum, { color: "#f59e0b" }]}>+{score} ⭐</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3, justifyContent: "center" }}>
+                    <Ionicons name="star" size={16} color="#f59e0b" />
+                    <Text style={[styles.finishStatNum, { color: "#f59e0b" }]}>+{score}</Text>
+                  </View>
                   <Text style={styles.finishStatLabel}>{tt("starsEarnedLabel")}</Text>
                 </View>
                 <View style={styles.finishStatBox}>
-                  <Text style={[styles.finishStatNum, { color: "#dc2626" }]}>{bestStreak} 🔥</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 3, justifyContent: "center" }}>
+                    <Ionicons name="flame" size={16} color="#dc2626" />
+                    <Text style={[styles.finishStatNum, { color: "#dc2626" }]}>{bestStreak}</Text>
+                  </View>
                   <Text style={styles.finishStatLabel}>{tt("bestStreakLabel")}</Text>
                 </View>
               </View>
@@ -911,7 +914,9 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
                   ]}
                 >
                   <View style={styles.gameCardTop}>
-                    <Text style={{ fontSize: 32 }}>{m.icon}</Text>
+                    <View style={[styles.modeCardIconWrap, { backgroundColor: m.accent + "18" }]}>
+                      <Ionicons name={m.ionicon} size={24} color={m.accent} />
+                    </View>
                     {active && (
                       <View style={[styles.activeTag, { backgroundColor: m.accent }]}>
                         <Text style={styles.activeTagText}>{tt("playingBadge")}</Text>
@@ -1195,6 +1200,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     borderRadius: 30,
   },
+  celebrationIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#fef3c7",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: "#fde68a",
+  },
   finishTitle: { fontSize: 22, fontWeight: "900", color: "#0f172a", textAlign: "center" },
   finishSub: { fontSize: 13, color: "#64748b", marginTop: 2 },
   finishStatsRow: { flexDirection: "row", gap: 12, marginVertical: 16, width: "100%" },
@@ -1244,6 +1260,13 @@ const styles = StyleSheet.create({
   },
   gameCardActive: { borderWidth: 2.5 },
   gameCardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  modeCardIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   activeTag: {
     paddingHorizontal: 8,
     paddingVertical: 2,

@@ -2457,7 +2457,7 @@ const WORD_AR: Record<string, string> = {
   'Speech AAC Practice': 'تمرين تواصل بالصور', 'Fine Motor Skills': 'مهارات حركية دقيقة',
   'Star Reward & Free Play': 'مكافأة نجمة ولعب حر', Core: 'أساسي', Food: 'طعام', Feelings: 'مشاعر',
   People: 'أشخاص', Actions: 'أفعال', Places: 'أماكن', Things: 'أشياء', Schools: 'مدرسة',
-  Sentences: 'جمل', Tools: 'أدوات', Emotion: 'مشاعر', Attributes: 'صفات', Sports: 'رياضة',
+  Sentences: 'جمل', Tools: 'أدوات', Emotion: 'عاطفة', Attributes: 'صفات', Sports: 'رياضة',
   Hygiene: 'نظافة', 'Say It For Me': 'قلها لي', 'My Words': 'كلماتي', 'New Folder': 'مجلد جديد',
   Blanket: 'بطانية', Clothes: 'ملابس', Outside: 'في الخارج', Hungry: 'جائع', Thirsty: 'عطشان',
   Drinks: 'مشروبات', 'Fast Food': 'وجبات سريعة', Fruits: 'فواكه', Vegetables: 'خضروات',
@@ -2720,6 +2720,63 @@ function buildReverse(dict: Record<string, string>): Record<string, string> {
 const WORD_AR_REVERSE = buildReverse(WORD_AR);
 const WORD_UR_REVERSE = buildReverse(WORD_UR);
 
+const CANONICAL_SHELVES: Record<string, string> = {
+  feelings: "Feelings",
+  feeling: "Feelings",
+  emotion: "Feelings",
+  emotions: "Feelings",
+  feelings2: "Feelings",
+  "مشاعر": "Feelings",
+  "احساسات": "Feelings",
+  "جذبات": "Feelings",
+  "عاطفة": "Feelings",
+  people: "People",
+  person: "People",
+  "أشخاص": "People",
+  "لوگ": "People",
+  actions: "Actions",
+  action: "Actions",
+  verbs: "Actions",
+  verb: "Actions",
+  "أفعال": "Actions",
+  "کام": "Actions",
+  food: "Food",
+  foods: "Food",
+  "طعام": "Food",
+  "کھانا": "Food",
+  places: "Places",
+  place: "Places",
+  "أماكن": "Places",
+  "مقامات": "Places",
+  things: "Things",
+  thing: "Things",
+  "أشياء": "Things",
+  "چیزیں": "Things",
+  core: "Core",
+  "أساسي": "Core",
+  "بنیادی": "Core",
+  red: "Red",
+  "أحمر": "Red",
+  "لال": "Red",
+  "say it for me": "Say It For Me",
+  "قلها لي": "Say It For Me",
+  "میرے لیے کہو": "Say It For Me",
+  schools: "Schools",
+  school: "Schools",
+  "مدرسة": "Schools",
+  "اسکول": "Schools",
+  sports: "Sports",
+  sport: "Sports",
+  "رياضة": "Sports",
+  "کھیل": "Sports",
+  hygiene: "Hygiene",
+  "نظافة": "Hygiene",
+  "صفائی": "Hygiene",
+  music: "Music",
+  "موسيقى": "Music",
+  "موسیقی": "Music",
+};
+
 /**
  * Recover the canonical English form of a word, whatever language it's
  * currently displayed in (a no-op if it's already English or unknown).
@@ -2727,12 +2784,18 @@ const WORD_UR_REVERSE = buildReverse(WORD_UR);
 export function canonicalWordEn(label: string): string {
   const clean = (label || '').trim();
   if (!clean) return '';
+  const lower = clean.toLowerCase();
+  const normAr = normalizeArabic(clean);
+
+
+  if (CANONICAL_SHELVES[lower]) return CANONICAL_SHELVES[lower];
+  if (CANONICAL_SHELVES[normAr]) return CANONICAL_SHELVES[normAr];
   // If no Arabic/Urdu unicode characters, it is already English/Latin
   if (!/[\u0600-\u06FF]/.test(clean)) {
     return clean;
   }
-  const lower = clean.toLowerCase();
-  const normAr = normalizeArabic(clean);
+
+
   return (
     WORD_AR_REV_NORM[normAr] ??
     WORD_AR_REV_NORM[lower] ??
