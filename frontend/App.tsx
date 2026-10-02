@@ -304,7 +304,8 @@ function MoreMenu({
   onNavigate: (s: Screen) => void;
   onBack: () => void;
 }) {
-  const isRtl = isRTL(lang);
+  // Layout never mirrors for Arabic/Urdu — only text changes
+  const isRtl = false && isRTL(lang);
 
   const tabShortcuts: { tab: TabScreen; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
     { tab: "home", label: t("homeHub", lang), icon: "home", color: colors.forest },

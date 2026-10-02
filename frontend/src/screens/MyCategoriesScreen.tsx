@@ -82,7 +82,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   const { settings } = useSettings();
   const lang = settings.language;
   const tt = (k: TKey) => t(k, lang);
-  const isRtl = lang === "ar-SA" || lang === "ur-PK";
+  // Layout never mirrors for Arabic/Urdu — same shape as English, only text changes
+  const isRtl = false;
 
   const [ready, setReady] = useState(false);
   const [cats, setCats] = useState<CustomCategory[]>([]);

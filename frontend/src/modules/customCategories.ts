@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { CustomCategory, CustomWord, TileSize, LanguageCode } from "../types";
 import { starterLabel, wordLabel, canonicalWordEn, translateDynamic } from "./i18n";
 import { getPictogramUrl } from "./aacPictograms";
-import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, type VerbForms } from "./verbForms";
+import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, isContinuousForm, type VerbForms } from "./verbForms";
 
 const SEED_WORD_EN: Record<string, string[]> = {
   Core: ["I", "am", "is", "are", "was", "I want", "More", "Help", "No", "Yes", "All done", "I need", "I feel", "I like", "Can I have", "Please", "Thank you", "Stop", "Go", "to", "the", "Look", "Where"],
@@ -77,17 +77,37 @@ export function isDeletedCategory(name: string, parentId?: string | null): boole
   return false;
 }
 
-export function isDeletedWord(catId: string, label: string): boolean {
-  const norm = (label || "").trim().toLowerCase();
-  if (deletedItemKeys.has(`word::${catId}::${norm}`)) return true;
-  if (deletedItemKeys.has(`word::label::${norm}`)) return true;
+const VERB_FORM_TAGS = ["1st", "2nd", "3rd", "4th"] as const;
+
+/**
+ * True when the caregiver deleted this word from this category. Verb forms are
+ * tracked per tag so deleting the 2nd form "Shared" does not hide the 3rd form "Shared".
+ */
+export function isDeletedWord(catId: string, label: string, verbFormTag?: CustomWord["verbFormTag"]): boolean {
+  const norms = new Set([(label || "").trim().toLowerCase()]);
+  const en = (canonicalWordEn(label) || "").trim().toLowerCase();
+  if (en) norms.add(en);
+  // Older deletions were stored under the localized (Arabic/Urdu) label only
+  const localized = (wordLabel(label, seedLang) || "").trim().toLowerCase();
+  if (localized) norms.add(localized);
+  for (const norm of norms) {
+    if (!norm) continue;
+    if (deletedItemKeys.has(`word::${catId}::${norm}`)) return true;
+    if (deletedItemKeys.has(`word::label::${norm}`)) return true;
+    if (verbFormTag && deletedItemKeys.has(`word::${catId}::${verbFormTag}::${norm}`)) return true;
+  }
   return false;
 }
 
 export function unblockDeletedWord(catId: string, label: string, wordId?: string) {
-  const norm = (label || "").trim().toLowerCase();
-  deletedItemKeys.delete(`word::${catId}::${norm}`);
-  deletedItemKeys.delete(`word::label::${norm}`);
+  const norms = new Set([(label || "").trim().toLowerCase()]);
+  const en = (canonicalWordEn(label) || "").trim().toLowerCase();
+  if (en) norms.add(en);
+  for (const norm of norms) {
+    deletedItemKeys.delete(`word::${catId}::${norm}`);
+    deletedItemKeys.delete(`word::label::${norm}`);
+    VERB_FORM_TAGS.forEach((t) => deletedItemKeys.delete(`word::${catId}::${t}::${norm}`));
+  }
   if (wordId) {
     deletedItemKeys.delete(`word::id::${wordId}`);
   }
@@ -553,6 +573,123 @@ const VERBS_A_TO_Z: Record<string, { base: string; past: string; participle: str
     { base: "zoom", past: "zoomed", participle: "zoomed", continuous: "zooming", emoji: "🏎️" },
   ],
 };
+
+/** Among duplicate matches, pick the copy the caregiver customised (their own picture/edits). */
+function preferCustomized(candidates: CustomWord[]): CustomWord | undefined {
+  return candidates.find((w) => w.isCustom) ?? candidates[0];
+}
+
+/** True when the uri is just the automatic pictogram for one of these labels (not a picture the user chose). */
+function isAutoPicture(uri: string | undefined, labels: (string | undefined)[]): boolean {
+  if (!uri) return true;
+  return labels.some((l) => !!l && getPictogramUrl(l) === uri);
+}
+
+/**
+ * When a word being added already exists in the category (same word, same verb form),
+ * update that word with what the user picked instead of creating a duplicate that a
+ * later clean-up would throw away along with the user's picture.
+ */
+function mergeIntoExistingWord(
+  c: CustomCategory,
+  incoming: Partial<CustomWord> & { label: string },
+): boolean {
+  const en = (canonicalWordEn(incoming.label) || incoming.label).trim().toLowerCase();
+  const tag = incoming.verbFormTag;
+  const existing = preferCustomized(
+    c.words.filter(
+      (w) =>
+        (canonicalWordEn(w.label) || w.label).trim().toLowerCase() === en &&
+        (tag ? (w.verbFormTag ?? tag) === tag : !w.verbFormTag),
+    ),
+  );
+  if (!existing) return false;
+  const autoLabels = [incoming.label, en, incoming.verbForms?.base, capWord(incoming.verbForms?.base || "")];
+  if (incoming.imageUri && (!isAutoPicture(incoming.imageUri, autoLabels) || !existing.imageUri)) {
+    existing.imageUri = incoming.imageUri;
+  }
+  if (incoming.color) existing.color = incoming.color;
+  if (incoming.audioUri) {
+    existing.audioUri = incoming.audioUri;
+    existing.useTextToSpeech = incoming.useTextToSpeech ?? false;
+  }
+  if (incoming.verbForms) existing.verbForms = incoming.verbForms;
+  if (tag) existing.verbFormTag = tag;
+  existing.hidden = false;
+  existing.isCustom = true;
+  return true;
+}
+
+/** Returns the letter ("a".."z") if this category is a "Verbs X" sub-category, else null. */
+function verbSubLetter(c: CustomCategory): string | null {
+  if (!c.parentCategoryId) return null;
+  const candidates = [c.seedName, canonicalWordEn(c.name), FOLDER_EN_BY_LANG[(c.name || "").toLowerCase()], c.name];
+  for (const n of candidates) {
+    const m = /^verbs ([a-z])$/i.exec((n || "").trim());
+    if (m) return m[1].toLowerCase();
+  }
+  return null;
+}
+
+/** The letter a verb word belongs under: first letter of its 1st form (fell/fallen/falling -> "f"). */
+function verbLetterOf(label: string): string | null {
+  const en = (canonicalWordEn(label) || label || "").trim().toLowerCase();
+  if (!en) return null;
+  const vf = getVerbForms(en) || generateAllVerbForms(en);
+  const letter = (vf?.base || en).charAt(0);
+  return /[a-z]/.test(letter) ? letter : null;
+}
+
+/** For a word added to a "Verbs X" folder, the "Verbs Y" folder it actually belongs in (same parent). */
+function verbBucketIdFor(catId: string, label: string): string {
+  const cat = cache.find((c) => c.id === catId);
+  if (!cat) return catId;
+  const own = verbSubLetter(cat);
+  const letter = verbLetterOf(label);
+  if (!own || !letter || own === letter) return catId;
+  const target = cache.find((c) => c.parentCategoryId === cat.parentCategoryId && verbSubLetter(c) === letter);
+  return target?.id ?? catId;
+}
+
+/**
+ * Every "Verbs X" folder holds only verbs whose 1st form starts with X.
+ * Words in the wrong folder are moved to the right one (or dropped if already there).
+ */
+function enforceVerbLetterBuckets(): boolean {
+  let changed = false;
+  const subs = cache.filter((c) => verbSubLetter(c));
+  const touched = new Set<CustomCategory>();
+  for (const sub of subs) {
+    const letter = verbSubLetter(sub)!;
+    const keep: CustomWord[] = [];
+    for (const w of sub.words) {
+      const wl = verbLetterOf(w.label);
+      if (!wl || wl === letter) {
+        keep.push(w);
+        continue;
+      }
+      changed = true;
+      touched.add(sub);
+      const target = subs.find((s) => s.parentCategoryId === sub.parentCategoryId && verbSubLetter(s) === wl);
+      if (!target || isDeletedWord(target.id, w.label, w.verbFormTag)) continue;
+      const wEn = (canonicalWordEn(w.label) || w.label).trim().toLowerCase();
+      const dup = target.words.some(
+        (tw) =>
+          (canonicalWordEn(tw.label) || tw.label).trim().toLowerCase() === wEn &&
+          (tw.verbFormTag ?? null) === (w.verbFormTag ?? null),
+      );
+      if (!dup) {
+        target.words.push({ ...w, order: target.words.length });
+        touched.add(target);
+      }
+    }
+    sub.words = keep;
+  }
+  touched.forEach((c) => {
+    c.words = sortWordsForCategory(c.words, c.name).map((w, i) => ({ ...w, order: i }));
+  });
+  return changed;
+}
 
 // Generates alphabetical Actions subcategories where every verb appears strictly in 1st -> 2nd -> 3rd -> 4th order
 const ACTION_VERB_SUBCATEGORIES = Object.entries(VERBS_A_TO_Z).map(([letter, rawList]) => {
@@ -1274,11 +1411,13 @@ function ensureAllStandardCategories() {
     // Populate and synchronize words for this sub-category in strict sequential order
     const usedExistingIds = new Set<string>();
     const targetWords = sub.words
-      .filter(([label]) => !isDeletedWord(subCat!.id, label))
+      .filter(([label, , verbFormTag]) => !isDeletedWord(subCat!.id, label, verbFormTag))
       .map(([label, emoji, verbFormTag], wi) => {
-        const existing = subCat!.words.find((w) => {
+        const existing = preferCustomized(subCat!.words.filter((w) => {
           if (usedExistingIds.has(w.id)) return false;
-          if (w.seedLabel && w.seedLabel.toLowerCase() === label.toLowerCase()) return true;
+          if (w.seedLabel && w.seedLabel.toLowerCase() === label.toLowerCase()) {
+            return !(verbFormTag && w.verbFormTag) || w.verbFormTag === verbFormTag;
+          }
           const en = (canonicalWordEn(w.label) || w.label).toLowerCase();
           const matchesLabel = en === label.toLowerCase() || w.label.toLowerCase() === label.toLowerCase();
           if (!matchesLabel) return false;
@@ -1286,7 +1425,7 @@ function ensureAllStandardCategories() {
             return w.verbFormTag === verbFormTag;
           }
           return true;
-        });
+        }));
         if (existing) usedExistingIds.add(existing.id);
         const localized = wordLabel(label, seedLang) || label;
         return {
@@ -1311,6 +1450,7 @@ function ensureAllStandardCategories() {
     // Preserve any custom words the parent added to this category
     const isVerbSub = sub.name.toLowerCase().includes("verbs ") || sub.parentCategory.toLowerCase() === "actions";
     const customParentWords = subCat.words.filter((w) => {
+      if (usedExistingIds.has(w.id)) return false; // already kept above
       if (w.isCustom) return true;
       const en = (canonicalWordEn(w.label) || w.label).toLowerCase();
       if (isVerbSub) {
@@ -1635,8 +1775,18 @@ export function removeWord(catId: string, wordId: string) {
   return mutate(targetCatId, (c) => {
     const targetWord = c.words.find((w) => w.id === wordId);
     if (targetWord) {
-      const normLabel = (targetWord.label || "").trim().toLowerCase();
-      deletedItemKeys.add(`word::${targetCatId}::${normLabel}`);
+      // Record every name this word can be re-seeded under (shown label, English
+      // source, seed label) so no load/repair step brings it back.
+      const norms = new Set<string>();
+      [targetWord.label, canonicalWordEn(targetWord.label), targetWord.seedLabel].forEach((l) => {
+        const n = (l || "").trim().toLowerCase();
+        if (n) norms.add(n);
+      });
+      norms.forEach((n) => {
+        deletedItemKeys.add(
+          targetWord.verbFormTag ? `word::${targetCatId}::${targetWord.verbFormTag}::${n}` : `word::${targetCatId}::${n}`,
+        );
+      });
       deletedItemKeys.add(`word::id::${targetWord.id}`);
       persistDeletedKeys();
     }
@@ -1662,11 +1812,13 @@ export function sortWordsForCategory(words: CustomWord[], catName: string): Cust
 
   const formWeight = (w: CustomWord, vf?: VerbForms | null): number => {
     const lbl = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
-    if (lbl.endsWith("ing") || (vf && lbl === vf.continuous.toLowerCase())) return 4;
+    // The stored tag wins: translated labels can collide (Arabic أقول = "say" and "saying")
     if (w.verbFormTag === "4th") return 4;
     if (w.verbFormTag === "3rd") return 3;
     if (w.verbFormTag === "2nd") return 2;
     if (w.verbFormTag === "1st") return 1;
+    if (vf && lbl === vf.base.toLowerCase()) return 1;
+    if (isContinuousForm(lbl) || (vf && lbl === vf.continuous.toLowerCase())) return 4;
     if (!vf) return 1;
     if (lbl === vf.base.toLowerCase()) return 1;
     if (lbl === vf.past.toLowerCase()) return 2;
@@ -1772,16 +1924,19 @@ export function cleanAndDeduplicateCategories() {
 
   // 4. Deduplicate words in each category canonically (preserving distinct verb forms)
   for (const c of cache) {
-    const seenWords = new Set<string>();
+    const seenWords = new Map<string, number>();
     const uniqueWords: CustomWord[] = [];
     for (const w of c.words) {
       const tagPrefix = w.verbFormTag ? `${w.verbFormTag}::` : "";
       const key = `${tagPrefix}${(canonicalWordEn(w.label) || w.label).trim().toLowerCase()}`;
       if (!key) continue;
-      if (!seenWords.has(key)) {
-        seenWords.add(key);
+      const idx = seenWords.get(key);
+      if (idx === undefined) {
+        seenWords.set(key, uniqueWords.length);
         uniqueWords.push(w);
       } else {
+        // Keep the copy the caregiver customised (their own picture), not the default seed copy
+        if (w.isCustom && !uniqueWords[idx].isCustom) uniqueWords[idx] = w;
         changed = true;
       }
     }
@@ -1790,6 +1945,9 @@ export function cleanAndDeduplicateCategories() {
       changed = true;
     }
   }
+
+  // Keep each "Verbs X" folder strictly to verbs starting with X (e.g. Fall never sits in Verbs D)
+  if (enforceVerbLetterBuckets()) changed = true;
 
   // 5. Ensure all verb subcategories under Actions have complete, strictly ordered 1st, 2nd, 3rd, and 4th forms
   const actionsCat = cache.find(
@@ -1840,12 +1998,13 @@ export function cleanAndDeduplicateCategories() {
           })?.imageUri;
 
           forms.forEach((f) => {
-            let existing = subCat.words.find((w) => {
+            if (isDeletedWord(subCat.id, f.word, f.tag)) return; // deleted by caregiver
+            let existing = preferCustomized(subCat.words.filter((w) => {
               if (usedExistingIds.has(w.id)) return false;
               const en = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
               const isMatch = en === f.word.toLowerCase() || w.label.toLowerCase().trim() === f.word.toLowerCase();
               return isMatch && w.verbFormTag === f.tag;
-            });
+            }));
             if (!existing) {
               existing = subCat.words.find((w) => {
                 if (usedExistingIds.has(w.id)) return false;
@@ -1876,7 +2035,10 @@ export function cleanAndDeduplicateCategories() {
 
         const handledCustomBases = new Set<string>();
         customWords.forEach((cw) => {
+          if (usedExistingIds.has(cw.id)) return; // already placed as a standard form above
           const enLabel = (canonicalWordEn(cw.label) || cw.label).trim();
+          // Leftover duplicate of a standard form — the standard loop already kept one copy
+          if (standardVerbWords.has(enLabel.toLowerCase())) return;
           const v = generateAllVerbForms(enLabel);
           if (v) {
             const baseKey = v.base.toLowerCase();
@@ -1896,6 +2058,7 @@ export function cleanAndDeduplicateCategories() {
             })?.imageUri;
 
             forms.forEach((f) => {
+              if (isDeletedWord(subCat.id, f.word, f.tag)) return; // deleted by caregiver
               let existing = subCat.words.find((w) => {
                 if (usedExistingIds.has(w.id)) return false;
                 const en = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
@@ -1958,7 +2121,7 @@ export function cleanAndDeduplicateCategories() {
       ["the", "🔹"],
     ];
     for (const [wLabel, wEmoji] of [...essentialCore].reverse()) {
-      if (!coreCat.words.some((w) => w.label.toLowerCase() === wLabel.toLowerCase())) {
+      if (!isDeletedWord(coreCat.id, wLabel) && !coreCat.words.some((w) => w.label.toLowerCase() === wLabel.toLowerCase())) {
         coreCat.words.unshift({
           id: uid("word"),
           label: wLabel,
@@ -2047,8 +2210,8 @@ export function cleanAndDeduplicateCategories() {
                 targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("hygiene") || (canonicalWordEn(sc.name) || sc.name).toLowerCase().includes("bath")) || targetSub;
               }
             } else if (pName.includes("action") || pName.includes("verb") || pName.includes("کام") || pName.includes("أفعال")) {
-              const letter = (wLower[0] || "a").toUpperCase();
-              targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase() === `verbs ${letter.toLowerCase()}`) || targetSub;
+              const letter = verbLetterOf(w.label) || wLower[0] || "a";
+              targetSub = subCatsOfParent.find((sc) => verbSubLetter(sc) === letter) || targetSub;
             }
             targetSub.words.push({ ...w, isCustom: w.isCustom ?? true, order: targetSub.words.length });
           }
@@ -2242,6 +2405,8 @@ export function addWord(
 ) {
   let cleanLabel = word.label.trim();
   let cleanPhrase = (word.phrase ?? word.label).trim() || cleanLabel;
+  // A verb added inside "Verbs X" goes to the folder of its own first letter
+  catId = verbBucketIdFor(catId, cleanLabel);
   unblockDeletedWord(catId, cleanLabel);
 
   if (["ar-SA", "ur-PK"].includes(seedLang) && !/[\u0600-\u06FF]/.test(cleanLabel) && /[a-zA-Z]/.test(cleanLabel)) {
@@ -2279,6 +2444,16 @@ export function addWord(
       ];
       forms.forEach((f) => {
         unblockDeletedWord(catId, f.word);
+        const merged = mergeIntoExistingWord(c, {
+          label: f.word,
+          imageUri: word.imageUri,
+          color: word.color,
+          audioUri: word.audioUri,
+          useTextToSpeech: word.useTextToSpeech,
+          verbForms: vForms,
+          verbFormTag: f.tag,
+        });
+        if (merged) return;
         c.words.push({
           id: uid("w"),
           label: f.word,
@@ -2298,7 +2473,7 @@ export function addWord(
       });
       c.words = sortWordsForCategory(c.words, c.name);
       c.words.forEach((w, i) => { w.order = i; });
-    } else {
+    } else if (!mergeIntoExistingWord(c, { ...word, label: cleanLabel })) {
       c.words.push({
         id: uid("w"),
         label: cleanLabel,
@@ -2383,6 +2558,7 @@ export function addWordsBulk(
     processedWords.forEach((word) => {
       const cleanLabel = word.label.trim();
       if (!cleanLabel) return;
+      if (mergeIntoExistingWord(c, { ...word, label: cleanLabel })) return;
       c.words.push({
         id: uid("w"),
         label: cleanLabel,
@@ -2402,6 +2578,8 @@ export function addWordsBulk(
     });
     c.words = sortWordsForCategory(c.words, c.name);
     c.words.forEach((w, i) => { w.order = i; });
+    // Bulk-added verbs inside "Verbs X" are moved to their own letter folders
+    if (verbSubLetter(c)) enforceVerbLetterBuckets();
   });
 }
 

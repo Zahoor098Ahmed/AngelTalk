@@ -40,7 +40,7 @@ import Mascot from "../components/Mascot";
 import TabBar from "../components/TabBar";
 import AddByVoiceScreen from "./AddByVoiceScreen";
 import { colors } from "../theme";
-import { getVerbForms, detectVerbForm } from "../modules/verbForms";
+import { getVerbForms, detectVerbForm, isContinuousForm } from "../modules/verbForms";
 
 interface Props {
   child: ChildProfile;
@@ -701,8 +701,15 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
 
               {words.map((w) => {
                 let vTag = isActionsCategory ? (w.verbFormTag || detectVerbForm(w.label)) : null;
-                if (vTag === "1st" && (w.label.toLowerCase().endsWith("ing") || (canonicalWordEn(w.label) || "").toLowerCase().endsWith("ing"))) {
-                  vTag = "4th";
+                if (vTag) {
+                  const enLbl = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
+                  const vf = getVerbForms(enLbl);
+                  if (vf && vf.base.toLowerCase() === enLbl) {
+                    // Base verbs ending in "ing" (sing, bring, ring) are always 1st form
+                    vTag = "1st";
+                  } else if (vTag === "1st" && isContinuousForm(enLbl)) {
+                    vTag = "4th";
+                  }
                 }
                 return (
                   <View key={w.id} style={[styles.cell, tileSize]}>

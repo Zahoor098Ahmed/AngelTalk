@@ -2450,9 +2450,10 @@ export function speechLocale(lang: LanguageCode): string {
  * actually flipped — the caller must then ask the user to reopen the app,
  * because React Native only picks up an RTL change on a fresh start.
  */
-export function applyLanguageDirection(lang: LanguageCode): boolean {
-  const want = isRTL(lang);
-  I18nManager.allowRTL(true);
+export function applyLanguageDirection(_lang: LanguageCode): boolean {
+  // Layout stays identical (LTR) in every language — only the text is translated.
+  const want = false;
+  I18nManager.allowRTL(false);
   if (I18nManager.isRTL !== want) {
     I18nManager.forceRTL(want);
     return true;

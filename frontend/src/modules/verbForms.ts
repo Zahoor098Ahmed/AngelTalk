@@ -661,11 +661,30 @@ export function isLikelyVerb(word: string): boolean {
   return isVerb(word);
 }
 
+// Base (1st form) verbs that themselves end in "-ing" and must NOT be treated as 4th form
+const BASE_ING_VERBS = new Set([
+  "sing", "bring", "ring", "swing", "sting", "cling", "fling", "sling", "spring", "string", "wring",
+]);
+
+/**
+ * True when the label is a 4th form (-ing) word. Base verbs that happen to end
+ * in "ing" (sing, bring, ring, swing...) return false.
+ */
+export function isContinuousForm(label: string): boolean {
+  const clean = (label || "").trim().toLowerCase();
+  if (!clean.endsWith("ing")) return false;
+  const first = clean.split(/\s+/)[0];
+  if (BASE_ING_VERBS.has(first)) return false;
+  const v = LOOKUP_MAP.get(first);
+  if (v && v.base.toLowerCase() === first) return false;
+  return true;
+}
+
 /** Returns which form the given word label is (1st, 2nd, 3rd, 4th) */
 export function detectVerbForm(label: string): "1st" | "2nd" | "3rd" | "4th" | null {
   const clean = (label || "").trim().toLowerCase();
   if (!clean) return null;
-  if (clean.endsWith("ing")) return "4th";
+  if (isContinuousForm(clean)) return "4th";
   const v = getVerbForms(clean) || generateAllVerbForms(clean);
   if (!v) return null;
   if (v.continuous.toLowerCase() === clean) return "4th";
