@@ -202,3 +202,14 @@
     - `frontend/update_mcs.js`
     - `frontend/src/screens/MyCategoriesScreen.tsx`
     - `frontend/dedup_dicts.js`
+- **13:02** 🌿 Commit `[a589e32]` — **"fix(i18n): complete Caregiver Space translation, full Arabic/Urdu dictionary words, and protect custom word edits"**
+  - 📁 **Changed Files (9):**
+    - `BACKLOG.md`
+    - `frontend/App.tsx`
+    - `frontend/src/components/UniversalImagePickerModal.tsx`
+    - `frontend/src/components/WordEditor.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/src/modules/imageSearch.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/src/types.ts`
