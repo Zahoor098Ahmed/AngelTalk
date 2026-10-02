@@ -40,6 +40,7 @@ import { getPictogramUrl } from "../modules/aacPictograms";
 import { generateAllVerbForms, isLikelyVerb, detectVerbForm } from "../modules/verbForms";
 import WordEditor from "../components/WordEditor";
 import UniversalImagePickerModal from "../components/UniversalImagePickerModal";
+import LangBadge from "../components/LangBadge";
 import { startListening, stopListening, isListening } from "../modules/voice";
 import { parseVoiceCategoryCommand, cleanVoiceSpeechName, getCategoryIconForName, getCategoryColorForName, type ParsedVoiceResult } from "../modules/voiceCategories";
 
@@ -81,6 +82,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   const { settings } = useSettings();
   const lang = settings.language;
   const tt = (k: TKey) => t(k, lang);
+  const isRtl = lang === "ar-SA" || lang === "ur-PK";
 
   const [ready, setReady] = useState(false);
   const [cats, setCats] = useState<CustomCategory[]>([]);
@@ -262,17 +264,50 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     return currentShelf;
   }, [currentShelf, subCats, selectedSubCatId]);
 
+  // Owning category for word currently being edited in WordEditor
+  const editorCatId = useMemo(() => {
+    if (!editorWord) return activeCategory?.id || currentShelf?.id || "";
+    if (activeCategory?.words?.some((w) => w.id === editorWord.id)) return activeCategory.id;
+    if (currentShelf?.words?.some((w) => w.id === editorWord.id)) return currentShelf.id;
+    for (const c of cats) {
+      if (c.words?.some((w) => w.id === editorWord.id)) return c.id;
+      const subs = childCategories(c.id);
+      for (const sc of subs) {
+        if (sc.words?.some((w) => w.id === editorWord.id)) return sc.id;
+      }
+    }
+    return activeCategory?.id || currentShelf?.id || "";
+  }, [editorWord, cats, activeCategory, currentShelf]);
+
   // Filtered words in active category
   const displayWords = useMemo(() => {
     if (!activeCategory) return [];
+    let sourceWords = activeCategory.words || [];
+
+    // If viewing top-level shelf without a specific sub-category selected,
+    // combine words from the shelf AND all its sub-categories so words are never hidden!
+    if (!selectedSubCatId && subCats.length > 0) {
+      const allWords: CustomWord[] = [...sourceWords];
+      const seenIds = new Set(allWords.map((w) => w.id));
+      for (const sc of subCats) {
+        for (const w of sc.words) {
+          if (!seenIds.has(w.id)) {
+            seenIds.add(w.id);
+            allWords.push(w);
+          }
+        }
+      }
+      sourceWords = allWords;
+    }
+
     const q = wordSearch.trim().toLowerCase();
-    if (!q) return activeCategory.words;
-    return activeCategory.words.filter(
+    if (!q) return sourceWords;
+    return sourceWords.filter(
       (w) =>
         w.label.toLowerCase().includes(q) ||
         (w.phrase && w.phrase.toLowerCase().includes(q))
     );
-  }, [activeCategory, wordSearch, tick]);
+  }, [activeCategory, selectedSubCatId, subCats, wordSearch, tick]);
 
   // Auto-detect verb forms for single word modal
   const detectedVerbForms = useMemo(() => {
@@ -542,11 +577,12 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     let targetCat =
       (modalTargetCatId ? subCats.find((s) => s.id === modalTargetCatId) : null) ||
       (selectedSubCatId ? subCats.find((s) => s.id === selectedSubCatId) : null) ||
-      (subCats.length > 0 ? subCats[0] : null);
+      (subCats.length > 0 ? subCats[0] : null) ||
+      currentShelf;
 
     if (!text || !targetCat) {
       if (!targetCat) {
-        Alert.alert("Sub-category Required", "Words must be added to a sub-category. Please create a sub-category first.");
+        Alert.alert("Category Required", "Please select or create a category first.");
       }
       return;
     }
@@ -629,7 +665,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         size: "md" as TileSize,
         useTextToSpeech: true,
       });
-      setSelectedSubCatId(targetCat.id);
+      if (targetCat.parentCategoryId) {
+        setSelectedSubCatId(targetCat.id);
+      }
     }
 
     setAddWordOpen(false);
@@ -772,8 +810,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       setEditCatImageUri(uri);
     } else if (imagePickerTarget.type === "voiceCat") {
       setVoiceImageUri(uri);
-    } else if (imagePickerTarget.type === "tableWord" && imagePickerTarget.wordId && activeCategory) {
-      updateWord(activeCategory.id, imagePickerTarget.wordId, { imageUri: uri });
+    } else if (imagePickerTarget.type === "tableWord" && imagePickerTarget.wordId) {
+      updateWord(activeCategory?.id || currentShelf?.id || "", imagePickerTarget.wordId, { imageUri: uri });
       refresh();
     } else if (imagePickerTarget.type === "bulkWord") {
       setBulkWordsImages((prev) => ({ ...prev, [imagePickerTarget.label]: uri }));
@@ -794,8 +832,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       setEditCatImageUri(undefined);
     } else if (imagePickerTarget.type === "voiceCat") {
       setVoiceImageUri(undefined);
-    } else if (imagePickerTarget.type === "tableWord" && imagePickerTarget.wordId && activeCategory) {
-      updateWord(activeCategory.id, imagePickerTarget.wordId, { imageUri: undefined });
+    } else if (imagePickerTarget.type === "tableWord" && imagePickerTarget.wordId) {
+      updateWord(activeCategory?.id || currentShelf?.id || "", imagePickerTarget.wordId, { imageUri: undefined });
       refresh();
     } else if (imagePickerTarget.type === "bulkWord") {
       setBulkWordsImages((prev) => {
@@ -1116,38 +1154,35 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         {/* Top Header - Fully Responsive */}
-        <View style={[styles.header, !isWide && styles.headerMobile]}>
-          <View style={[styles.headerLeft, !isWide && styles.headerLeftMobile]}>
+        <View style={[styles.header, !isWide && styles.headerMobile, isRtl && { flexDirection: "row-reverse" }]}>
+          <View style={[styles.headerLeft, !isWide && styles.headerLeftMobile, isRtl && { flexDirection: "row-reverse" }]}>
             <Pressable
               onPress={onBack}
               style={styles.backBtn}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityLabel="Back"
             >
-              <Ionicons name="arrow-back" size={20} color="#1A3830" />
+              <Ionicons name={isRtl ? "arrow-forward" : "arrow-back"} size={20} color="#1A3830" />
             </Pressable>
 
             <View style={{ flex: 1 }}>
-              <Text style={styles.superBadge}>CAREGIVER SPACE</Text>
-              <Text style={[styles.mainTitle, !isWide && styles.mainTitleMobile]} numberOfLines={isWide ? undefined : 1}>
-                Shape their vocabulary
-              </Text>
+              <Text style={[styles.superBadge, isRtl && { textAlign: "right" }]}>{t("caregiverSpaceBadge", lang)}</Text>
+              <Text style={[styles.mainTitle, !isWide && styles.mainTitleMobile, isRtl && { textAlign: "right" }]} numberOfLines={isWide ? undefined : 1}>{t("shapeVocabTitle", lang)}</Text>
               {isWide && (
-                <Text style={styles.mainSubtitle}>
-                  Keep everyday words close, add new shelves, and notice what helps communication flow.
-                </Text>
+                <Text style={[styles.mainSubtitle, isRtl && { textAlign: "right" }]}>{t("shapeVocabDesc", lang)}</Text>
               )}
             </View>
           </View>
 
-          <View style={[styles.headerActionsRow, !isWide && styles.headerActionsRowMobile]}>
+          <View style={[styles.headerActionsRow, !isWide && styles.headerActionsRowMobile, isRtl && { flexDirection: "row-reverse" }]}>
+            <LangBadge />
             <Pressable
               onPress={openVoiceAdd}
               style={[styles.voiceAddTopBtn, !isWide && styles.voiceAddTopBtnMobile]}
               accessibilityLabel="Voice add category or words"
             >
               <Ionicons name="mic" size={16} color="#235E50" />
-              <Text style={styles.voiceAddTopBtnText}>🎙️ Voice add</Text>
+              <Text style={styles.voiceAddTopBtnText}>🎙️ {t("voiceAddBtn", lang)}</Text>
             </Pressable>
 
             <Pressable
@@ -1156,7 +1191,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               accessibilityLabel="Bulk add words or categories"
             >
               <Ionicons name="flash-outline" size={16} color="#235E50" />
-              <Text style={styles.bulkWordTopBtnText}>⚡ Bulk add</Text>
+              <Text style={styles.bulkWordTopBtnText}>⚡ {t("bulkAddBtn", lang)}</Text>
             </Pressable>
 
             <Pressable
@@ -1178,7 +1213,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               style={[styles.addWordTopBtn, !isWide && styles.addWordTopBtnMobile]}
             >
               <Ionicons name="add" size={18} color="#FFFFFF" />
-              <Text style={styles.addWordTopBtnText}>Add word</Text>
+              <Text style={styles.addWordTopBtnText}>{t("addWordBtn", lang)}</Text>
             </Pressable>
           </View>
         </View>
@@ -1186,14 +1221,12 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         {/* Responsive Layout: Desktop/Tablet side-by-side vs Mobile stacked */}
         {isWide ? (
           /* WIDE DESKTOP/TABLET LAYOUT */
-          <View style={styles.mainLayoutWide}>
+          <View style={[styles.mainLayoutWide, isRtl && { flexDirection: "row-reverse" }]}>
             {/* Left Column: Shelves */}
             <View style={styles.sidebarCard}>
               <View style={styles.sidebarHeader}>
-                <Text style={styles.sidebarTitle}>Shelves</Text>
-                <Text style={styles.sidebarSub}>
-                  Organize words in a way that feels familiar.
-                </Text>
+                <Text style={[styles.sidebarTitle, isRtl && { textAlign: "right" }]}>{t("shelvesHeader", lang)}</Text>
+                <Text style={[styles.sidebarSub, isRtl && { textAlign: "right" }]}>{t("shelvesSub", lang)}</Text>
               </View>
 
               <ScrollView
@@ -1241,7 +1274,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             ]}
                             numberOfLines={1}
                           >
-                            {wordLabel(cat.name, lang)}
+                            {cat.isCustom ? cat.name : (wordLabel(cat.name, lang) || cat.name)}
                           </Text>
                           {cat.hidden && (
                             <Text style={styles.hiddenTag}>(Hidden)</Text>
@@ -1317,7 +1350,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                                     ]}
                                     numberOfLines={1}
                                   >
-                                    {wordLabel(sc.name, lang)}
+                                    {sc.isCustom ? sc.name : (wordLabel(sc.name, lang) || sc.name)}
                                   </Text>
                                   <Text style={styles.sidebarSubCatCount}>({sc.words.length})</Text>
                                 </View>
@@ -1370,7 +1403,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             style={styles.sidebarAddSubCatRow}
                           >
                             <Ionicons name="add" size={13} color="#235E50" />
-                            <Text style={styles.sidebarAddSubCatText}>Add sub-category</Text>
+                            <Text style={styles.sidebarAddSubCatText}>{t("addSubCategorySidebar", lang)}</Text>
                           </Pressable>
                         </View>
                       )}
@@ -1387,25 +1420,25 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 style={styles.newShelfBtn}
               >
                 <Ionicons name="add" size={16} color="#1A3830" />
-                <Text style={styles.newShelfBtnText}>New shelf</Text>
+                <Text style={styles.newShelfBtnText}>{t("newShelfBtn", lang)}</Text>
               </Pressable>
             </View>
 
             {/* Right Column: Words Table for Selected Shelf / Sub-Category */}
             <View style={styles.contentCard}>
-              <View style={styles.tableHeaderRow}>
+              <View style={[styles.tableHeaderRow, isRtl && { flexDirection: "row-reverse" }]}>
                 <View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Pressable onPress={() => setSelectedSubCatId(null)}>
                       <Text style={[styles.selectedShelfTitle, selectedSubCatId ? { color: "#235E50" } : null]}>
-                        {currentShelf ? wordLabel(currentShelf.name, lang) : wordLabel("Core", lang)}
+                        {currentShelf ? (currentShelf.isCustom ? currentShelf.name : (wordLabel(currentShelf.name, lang) || currentShelf.name)) : wordLabel("Core", lang)}
                       </Text>
                     </Pressable>
                     {selectedSubCatId && (
                       <>
                         <Ionicons name="chevron-forward" size={16} color="#8A9590" />
                         <Text style={styles.selectedShelfTitle}>
-                          {wordLabel(activeCategory?.name || "", lang)}
+                          {activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || "")}
                         </Text>
                       </>
                     )}
@@ -1416,12 +1449,16 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     >
                       <Ionicons name="pencil" size={12} color="#235E50" />
                       <Text style={styles.editCategoryTopPillText}>
-                        Edit {selectedSubCatId ? "sub-category" : "shelf"}
+                        {selectedSubCatId ? t("editSubCatPill", lang) : t("editShelfPill", lang)}
                       </Text>
                     </Pressable>
                   </View>
                   <Text style={styles.selectedShelfMeta}>
-                    {displayWords.length} words · {selectedSubCatId ? `in sub-category "${activeCategory?.name}"` : "used on this device"}
+                    {selectedSubCatId
+    ? t("wordsInSubCatMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || ""))
+    : subCats.length > 0
+    ? t("wordsInShelfAllMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", currentShelf?.isCustom ? currentShelf.name : (wordLabel(currentShelf?.name || "", lang) || currentShelf?.name || ""))
+    : t("wordsOnDeviceMeta", lang).replace("{count}", String(displayWords.length))}
                     {activeCategory?.hidden ? " · (Hidden from child)" : ""}
                   </Text>
                 </View>
@@ -1431,18 +1468,18 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   <TextInput
                     value={wordSearch}
                     onChangeText={setWordSearch}
-                    placeholder="Find a word"
+                    placeholder={t("findAWordPlaceholder", lang)}
                     placeholderTextColor="#8A9590"
                     style={styles.searchInput}
                   />
                 </View>
               </View>
 
-              <View style={styles.tableHead}>
-                <Text style={[styles.colHead, styles.colHeadWord]}>WORD</Text>
-                <Text style={[styles.colHead, styles.colHeadCount]}>USE COUNT</Text>
-                <Text style={[styles.colHead, styles.colHeadDate]}>LAST USED</Text>
-                <Text style={[styles.colHead, styles.colHeadAction]}>ACTIONS</Text>
+              <View style={[styles.tableHead, isRtl && { flexDirection: "row-reverse" }]}>
+                <Text style={[styles.colHead, styles.colHeadWord, isRtl && { textAlign: "right" }]}>{t("colWord", lang)}</Text>
+                <Text style={[styles.colHead, styles.colHeadCount, isRtl && { textAlign: "center" }]}>{t("colUseCount", lang)}</Text>
+                <Text style={[styles.colHead, styles.colHeadDate, isRtl && { textAlign: "center" }]}>{t("colLastUsed", lang)}</Text>
+                <Text style={[styles.colHead, styles.colHeadAction, isRtl && { textAlign: "center" }]}>{t("colActions", lang)}</Text>
               </View>
 
               <ScrollView
@@ -1453,10 +1490,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 {displayWords.length === 0 ? (
                   <View style={styles.emptyWrap}>
                     <Text style={styles.emptyIcon}>📝</Text>
-                    <Text style={styles.emptyTitle}>No words in this shelf</Text>
-                    <Text style={styles.emptySub}>
-                      Tap "+ Add word" above to add vocabulary to {currentShelf?.name}.
-                    </Text>
+                    <Text style={styles.emptyTitle}>{t("noWordsInShelfTitle", lang)}</Text>
+                    <Text style={styles.emptySub}>{t("noWordsInShelfSub", lang).replace("{name}", currentShelf?.isCustom ? currentShelf.name : (wordLabel(currentShelf?.name || "", lang) || currentShelf?.name || ""))}</Text>
                   </View>
                 ) : (
                   displayWords.map((w) => {
@@ -1466,21 +1501,20 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         key={w.id}
                         style={[styles.tableRow, w.hidden && styles.wordRowHidden]}
                       >
-                        <Pressable
-                          onPress={() => {
-                            playWord(
-                              {
-                                label: wordLabel(w.phrase || w.label, lang),
-                                audioUri: w.audioUri,
-                                useTextToSpeech: w.useTextToSpeech,
-                              },
-                              lang,
-                              settings.speechRate
-                            );
-                          }}
-                          style={[styles.colCell, styles.colHeadWord]}
-                        >
-                          <View style={[styles.wordBadgeIcon, { backgroundColor: sym.bg, overflow: "hidden" }]}>
+                        <View style={[styles.colCell, styles.colHeadWord, { flexDirection: "row", alignItems: "center", gap: 10 }]}>
+                          <Pressable
+                            onPress={() => {
+                              setImagePickerTarget({
+                                type: "tableWord",
+                                wordId: w.id,
+                                label: w.label,
+                                currentUri: w.imageUri,
+                              });
+                            }}
+                            style={[styles.wordBadgeIcon, { backgroundColor: sym.bg, overflow: "hidden" }]}
+                            accessibilityLabel={`Change picture for ${w.label}`}
+                            hitSlop={4}
+                          >
                             {w.imageUri ? (
                               <Image
                                 source={{ uri: w.imageUri }}
@@ -1492,8 +1526,21 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                                 {sym.symbol}
                               </Text>
                             )}
-                          </View>
-                          <View style={{ flex: 1 }}>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => {
+                              playWord(
+                                {
+                                  label: wordLabel(w.phrase || w.label, lang),
+                                  audioUri: w.audioUri,
+                                  useTextToSpeech: w.useTextToSpeech,
+                                },
+                                lang,
+                                settings.speechRate
+                              );
+                            }}
+                            style={{ flex: 1 }}
+                          >
                             <Text
                               style={[
                                 styles.wordLabelText,
@@ -1501,18 +1548,18 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                               ]}
                               numberOfLines={1}
                             >
-                              {wordLabel(w.label, lang)}
+                              {w.isCustom ? w.label : (wordLabel(w.label, lang) || w.label)}
                             </Text>
                             {w.hidden && (
-                              <Text style={styles.wordHiddenNote}>Hidden from child</Text>
+                              <Text style={[styles.wordHiddenNote, isRtl && { textAlign: "right" }]}>{t("hiddenFromChildNote", lang)}</Text>
                             )}
-                          </View>
-                        </Pressable>
+                          </Pressable>
+                        </View>
 
                         <View style={[styles.colCell, styles.colHeadCount]}>
                           <View style={styles.useCountPill}>
                             <Text style={styles.useCountPillText}>
-                              {w.useCount ? `${w.useCount} times` : "0 times"}
+                              {t("timesUsed", lang).replace("{count}", String(w.useCount || 0))}
                             </Text>
                           </View>
                         </View>
@@ -1637,7 +1684,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                           cat.hidden && styles.textHiddenDim,
                         ]}
                       >
-                        {wordLabel(cat.name, lang)}
+                        {cat.isCustom ? cat.name : (wordLabel(cat.name, lang) || cat.name)}
                       </Text>
 
                       {/* Pencil Edit button */}
@@ -1692,23 +1739,25 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 <View style={{ flex: 1 }}>
                   <Text style={styles.selectedShelfTitle}>
                     {selectedSubCatId
-                      ? `${currentShelf ? wordLabel(currentShelf.name, lang) : wordLabel("Core", lang)} › ${wordLabel(activeCategory?.name || "", lang)}`
+                      ? `${currentShelf ? (currentShelf.isCustom ? currentShelf.name : (wordLabel(currentShelf.name, lang) || currentShelf.name)) : wordLabel("Core", lang)} › ${activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || "")}`
                       : (currentShelf ? wordLabel(currentShelf.name, lang) : wordLabel("Core", lang))}
                   </Text>
-                  <Text style={styles.selectedShelfMeta}>
-                    {displayWords.length} words · {selectedSubCatId ? `sub-category "${activeCategory?.name}"` : "on device"}
-                    {activeCategory?.hidden ? " · (Hidden)" : ""}
+                  <Text style={[styles.selectedShelfMeta, isRtl && { textAlign: "right" }]}>
+                    {selectedSubCatId
+                      ? t("wordsInSubCatMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || ""))
+                      : t("wordsOnDeviceMeta", lang).replace("{count}", String(displayWords.length))}
+                    {activeCategory?.hidden ? t("hiddenShelfNote", lang) : ""}
                   </Text>
                 </View>
 
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View style={{ flexDirection: isRtl ? "row-reverse" : "row", alignItems: "center", gap: 6 }}>
                   <Pressable
                     onPress={() => activeCategory && openEditCategory(activeCategory)}
                     style={styles.mobileEditCategoryBtn}
                     accessibilityLabel="Edit category"
                   >
                     <Ionicons name="pencil" size={12} color="#1A3830" />
-                    <Text style={styles.mobileEditCategoryBtnText}>Edit</Text>
+                    <Text style={styles.mobileEditCategoryBtnText}>{selectedSubCatId ? t("editSubCatPill", lang) : t("editShelfPill", lang)}</Text>
                   </Pressable>
 
                   <Pressable
@@ -1719,18 +1768,18 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     style={styles.mobileAddSubBtn}
                   >
                     <Ionicons name="add" size={13} color="#1A3830" />
-                    <Text style={styles.mobileAddSubBtnText}>Sub-category</Text>
+                    <Text style={styles.mobileAddSubBtnText}>{t("addSubCategorySidebar", lang)}</Text>
                   </Pressable>
                 </View>
               </View>
 
               {/* Search Bar */}
-              <View style={styles.mobileSearchWrap}>
+              <View style={[styles.mobileSearchWrap, isRtl && { flexDirection: "row-reverse" }]}>
                 <Ionicons name="search" size={15} color="#8A9590" />
                 <TextInput
                   value={wordSearch}
                   onChangeText={setWordSearch}
-                  placeholder="Find a word"
+                  placeholder={t("findAWordPlaceholder", lang)}
                   placeholderTextColor="#8A9590"
                   style={styles.searchInput}
                 />
@@ -1761,7 +1810,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         !selectedSubCatId && styles.subCatTabPillTextActive,
                       ]}
                     >
-                      {currentShelf ? wordLabel(currentShelf.name, lang) : wordLabel("Core", lang)} (All)
+                      {currentShelf ? (currentShelf.isCustom ? currentShelf.name : (wordLabel(currentShelf.name, lang) || currentShelf.name)) : wordLabel("Core", lang)} (All)
                     </Text>
                     <View
                       style={[
@@ -1800,7 +1849,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             sc.hidden && styles.textHiddenDim,
                           ]}
                         >
-                          {wordLabel(sc.name, lang)}
+                          {sc.isCustom ? sc.name : (wordLabel(sc.name, lang) || sc.name)}
                         </Text>
                         <View
                           style={[
@@ -1895,23 +1944,21 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   return (
                     <View
                       key={w.id}
-                      style={[styles.tableRow, w.hidden && styles.wordRowHidden]}
-                    >
-                      <Pressable
-                        onPress={() => {
-                          playWord(
-                            {
-                              label: wordLabel(w.phrase || w.label, lang),
-                              audioUri: w.audioUri,
-                              useTextToSpeech: w.useTextToSpeech,
-                            },
-                            lang,
-                            settings.speechRate
-                          );
-                        }}
-                        style={[styles.colCell, { flex: 1.8, flexDirection: "row", alignItems: "center", gap: 8 }]}
-                      >
-                        <View style={[styles.wordBadgeIcon, { backgroundColor: sym.bg, overflow: "hidden" }]}>
+                      style={[styles.tableRow, w.hidden && styles.wordRowHidden, isRtl && { flexDirection: "row-reverse" }]}>
+                      <View style={[styles.colCell, { flex: 1.8, flexDirection: isRtl ? "row-reverse" : "row", alignItems: "center", gap: 8 }]}>
+                        <Pressable
+                          onPress={() => {
+                            setImagePickerTarget({
+                              type: "tableWord",
+                              wordId: w.id,
+                              label: w.label,
+                              currentUri: w.imageUri,
+                            });
+                          }}
+                          style={[styles.wordBadgeIcon, { backgroundColor: sym.bg, overflow: "hidden" }]}
+                          accessibilityLabel={`Change picture for ${w.label}`}
+                          hitSlop={4}
+                        >
                           {w.imageUri ? (
                             <Image
                               source={{ uri: w.imageUri }}
@@ -1923,8 +1970,21 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                               {sym.symbol}
                             </Text>
                           )}
-                        </View>
-                        <View style={{ flex: 1 }}>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => {
+                            playWord(
+                              {
+                                label: wordLabel(w.phrase || w.label, lang),
+                                audioUri: w.audioUri,
+                                useTextToSpeech: w.useTextToSpeech,
+                              },
+                              lang,
+                              settings.speechRate
+                            );
+                          }}
+                          style={{ flex: 1 }}
+                        >
                           <Text
                             style={[
                               styles.wordLabelText,
@@ -1932,13 +1992,13 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             ]}
                             numberOfLines={1}
                           >
-                            {wordLabel(w.label, lang)}
+                            {w.isCustom ? w.label : (wordLabel(w.label, lang) || w.label)}
                           </Text>
                           {w.hidden && (
-                            <Text style={styles.wordHiddenNote}>Hidden</Text>
+                            <Text style={[styles.wordHiddenNote, isRtl && { textAlign: "right" }]}>{t("hiddenFromChildNote", lang)}</Text>
                           )}
-                        </View>
-                      </Pressable>
+                        </Pressable>
+                      </View>
 
                       <View style={[styles.colCell, { flex: 1, alignItems: "center" }]}>
                         <View style={styles.useCountPill}>
@@ -2009,9 +2069,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Delete {deleteTarget?.type === "shelf" ? "Shelf" : "Word"}?
-              </Text>
+              <Text style={styles.modalTitle}>{t("deleteConfirmTitle", lang).replace("{type}", deleteTarget?.type === "shelf" ? t("shelvesHeader", lang) : t("colWord", lang))}</Text>
               <Pressable
                 onPress={() => setDeleteTarget(null)}
                 hitSlop={8}
@@ -2031,14 +2089,14 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
             <View style={styles.modalFooter}>
               <Pressable onPress={() => setDeleteTarget(null)} style={styles.cancelTextBtn}>
-                <Text style={styles.cancelTextBtnText}>Cancel</Text>
+                <Text style={styles.cancelTextBtnText}>{t("cancelBtn", lang)}</Text>
               </Pressable>
               <Pressable
                 onPress={executeDelete}
                 style={[styles.actionPillBtn, { backgroundColor: "#C44545" }]}
               >
                 <Ionicons name="trash" size={16} color="#FFFFFF" />
-                <Text style={styles.actionPillBtnText}>Delete</Text>
+                <Text style={styles.actionPillBtnText}>{t("confirmDeleteBtn", lang)}</Text>
               </Pressable>
             </View>
           </View>
@@ -2185,7 +2243,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 }}
                 style={styles.cancelTextBtn}
               >
-                <Text style={styles.cancelTextBtnText}>Cancel</Text>
+                <Text style={styles.cancelTextBtnText}>{t("cancelBtn", lang)}</Text>
               </Pressable>
               <Pressable
                 onPress={handleSaveEditCategory}
@@ -2599,7 +2657,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 }}
                 style={styles.cancelTextBtn}
               >
-                <Text style={styles.cancelTextBtnText}>Cancel</Text>
+                <Text style={styles.cancelTextBtnText}>{t("cancelBtn", lang)}</Text>
               </Pressable>
               <Pressable
                 onPress={handleSaveVoice}
@@ -2665,7 +2723,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
             <View style={styles.modalFooter}>
               <Pressable onPress={() => setSubCatOpen(false)} style={styles.cancelTextBtn}>
-                <Text style={styles.cancelTextBtnText}>Cancel</Text>
+                <Text style={styles.cancelTextBtnText}>{t("cancelBtn", lang)}</Text>
               </Pressable>
               <Pressable onPress={handleCreateSubCategory} style={styles.actionPillBtn}>
                 <Ionicons name="add" size={16} color="#FFFFFF" />
@@ -2864,7 +2922,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 }}
                 style={styles.cancelTextBtn}
               >
-                <Text style={styles.cancelTextBtnText}>Cancel</Text>
+                <Text style={styles.cancelTextBtnText}>{t("cancelBtn", lang)}</Text>
               </Pressable>
               <Pressable onPress={handleCreateWord} style={styles.actionPillBtn}>
                 <Ionicons name="add" size={16} color="#FFFFFF" />
@@ -2974,7 +3032,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 }}
                 style={styles.cancelTextBtn}
               >
-                <Text style={styles.cancelTextBtnText}>Cancel</Text>
+                <Text style={styles.cancelTextBtnText}>{t("cancelBtn", lang)}</Text>
               </Pressable>
               <Pressable onPress={handleCreateShelf} style={styles.actionPillBtn}>
                 <Ionicons name="add" size={16} color="#FFFFFF" />
@@ -3317,7 +3375,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     }}
                     style={styles.cancelTextBtn}
                   >
-                    <Text style={styles.cancelTextBtnText}>Cancel</Text>
+                    <Text style={styles.cancelTextBtnText}>{t("cancelBtn", lang)}</Text>
                   </Pressable>
                   <Pressable
                     onPress={handleBulkAddWords}
@@ -3497,7 +3555,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     }}
                     style={styles.cancelTextBtn}
                   >
-                    <Text style={styles.cancelTextBtnText}>Cancel</Text>
+                    <Text style={styles.cancelTextBtnText}>{t("cancelBtn", lang)}</Text>
                   </Pressable>
                   <Pressable
                     onPress={handleCreateBulkShelves}
@@ -3697,7 +3755,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     }}
                     style={styles.cancelTextBtn}
                   >
-                    <Text style={styles.cancelTextBtnText}>Cancel</Text>
+                    <Text style={styles.cancelTextBtnText}>{t("cancelBtn", lang)}</Text>
                   </Pressable>
                   <Pressable
                     onPress={handleCreateBulkSubCats}
@@ -3736,7 +3794,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       {/* Word Editor component for deeper edits */}
       <WordEditor
         visible={editorWord !== null}
-        catId={activeCategory?.id || currentShelf?.id || ""}
+        catId={editorCatId}
         word={editorWord}
         onClose={() => setEditorWord(null)}
         onSaved={refresh}

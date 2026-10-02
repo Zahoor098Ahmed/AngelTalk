@@ -279,6 +279,10 @@ export interface CustomWord {
   };
   /** Explicit verb form tag for display and speech (1st, 2nd, 3rd, 4th) */
   verbFormTag?: '1st' | '2nd' | '3rd' | '4th';
+  /** True if this word was added, edited, or customized by the caregiver or user */
+  isCustom?: boolean;
+  /** Original seed English word name to preserve customized labels */
+  seedLabel?: string;
 }
 
 export interface CustomCategory {
@@ -299,6 +303,10 @@ export interface CustomCategory {
   parentCategoryId?: string | null;
   order?: number;
   words: CustomWord[];
+  /** True if category name, icon or color was customized by user */
+  isCustom?: boolean;
+  /** Original seed English category name */
+  seedName?: string;
 }
 
 export interface ParsedCategoryCommand {

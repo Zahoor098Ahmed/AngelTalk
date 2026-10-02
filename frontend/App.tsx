@@ -5,10 +5,11 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { SettingsProvider, useSettings } from "./src/context/SettingsContext";
-import { t } from "./src/modules/i18n";
-import type { ChildProfile, TabScreen } from "./src/types";
+import { t, isRTL } from "./src/modules/i18n";
+import type { ChildProfile, TabScreen, LanguageCode } from "./src/types";
 import { colors, radius } from "./src/theme";
 import PinGate from "./src/components/PinGate";
+import LangBadge from "./src/components/LangBadge";
 
 import LandingScreen from "./src/screens/LandingScreen";
 import FaceScanScreen from "./src/screens/FaceScanScreen";
@@ -210,6 +211,7 @@ function AppInner() {
     body = (
       <MoreMenu
         childName={currentChild?.name}
+        lang={lang}
         onSelectTab={(t) => {
           setCurrentTab(t);
           go("main");
@@ -291,60 +293,70 @@ function AppInner() {
 
 function MoreMenu({
   childName,
+  lang,
   onSelectTab,
   onNavigate,
   onBack,
 }: {
   childName?: string;
+  lang: LanguageCode;
   onSelectTab: (t: TabScreen) => void;
   onNavigate: (s: Screen) => void;
   onBack: () => void;
 }) {
+  const isRtl = isRTL(lang);
+
   const tabShortcuts: { tab: TabScreen; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-    { tab: "home", label: "Home Hub", icon: "home", color: colors.forest },
-    { tab: "speak", label: "AAC Talk Board", icon: "chatbubble-ellipses", color: "#0284c7" },
-    { tab: "schedule", label: "Daily Routine Schedule", icon: "calendar", color: "#d97706" },
-    { tab: "games", label: "Speech & Learning Games", icon: "game-controller", color: "#059669" },
-    { tab: "progress", label: "Doctor & Progress Reports", icon: "stats-chart", color: "#7c3aed" },
+    { tab: "home", label: t("homeHub", lang), icon: "home", color: colors.forest },
+    { tab: "speak", label: t("aacTalkBoard", lang), icon: "chatbubble-ellipses", color: "#0284c7" },
+    { tab: "schedule", label: t("dailyRoutineSchedule", lang), icon: "calendar", color: "#d97706" },
+    { tab: "games", label: t("speechLearningGames", lang), icon: "game-controller", color: "#059669" },
+    { tab: "progress", label: t("doctorProgressReports", lang), icon: "stats-chart", color: "#7c3aed" },
   ];
 
   const adminRows: { key: Screen; label: string; icon: keyof typeof Ionicons.glyphMap; color: string; desc: string }[] = [
-    { key: "social-stories", label: "Visual Social Stories", icon: "book", color: "#f59e0b", desc: "Read-aloud guides for dentist, haircut, school, & emotions" },
-    { key: "enroll-child", label: "Add Child Profile", icon: "person-add", color: colors.forest, desc: "Enroll child with face recognition, age & diagnosis" },
-    { key: "my-categories", label: "My Categories & Words", icon: "folder-open", color: "#10b981", desc: "Organize shelves, words, hide/show & delete" },
-    { key: "category-builder", label: "Category Builder & Generator", icon: "sparkles-outline", color: "#0ea5e9", desc: "Build new categories from lists or AI presets" },
-    { key: "voice-command", label: "Voice Command Match", icon: "mic-circle", color: "#6366f1", desc: "Practice spoken phrases with live visual matching" },
-    { key: "phrase-library", label: "Phrase Library", icon: "chatbubble-ellipses", color: "#8b5cf6", desc: "Manage trigger phrases, speech levels & targets" },
-    { key: "review-queue", label: "Content Review Queue", icon: "checkmark-done-circle", color: "#f59e0b", desc: "Review, approve or reject vocabulary entries" },
-    { key: "parent-setup", label: "Parent Portal & Add Child", icon: "people", color: "#ec4899", desc: "Child enrollment, facial recognition & profiles" },
-    { key: "accessibility", label: "Settings & Accessibility", icon: "settings", color: "#64748b", desc: "Speech speed, PIN lock, backups & audio options" },
-    { key: "face-scan", label: "Switch Child / Face Login", icon: "scan-circle", color: colors.forest, desc: "Log in another child profile via camera scan" },
+    { key: "social-stories", label: t("visualSocialStoriesTitle", lang), icon: "book", color: "#f59e0b", desc: t("visualSocialStoriesDesc", lang) },
+    { key: "enroll-child", label: t("addChildProfileTitle", lang), icon: "person-add", color: colors.forest, desc: t("addChildProfileDesc", lang) },
+    { key: "my-categories", label: t("myCategoriesWordsTitle", lang), icon: "folder-open", color: "#10b981", desc: t("myCategoriesWordsDesc", lang) },
+    { key: "category-builder", label: t("categoryBuilderGenTitle", lang), icon: "sparkles-outline", color: "#0ea5e9", desc: t("categoryBuilderGenDesc", lang) },
+    { key: "voice-command", label: t("voiceCommandMatchTitle", lang), icon: "mic-circle", color: "#6366f1", desc: t("voiceCommandMatchDesc", lang) },
+    { key: "phrase-library", label: t("phraseLibraryTitle", lang), icon: "chatbubble-ellipses", color: "#8b5cf6", desc: t("phraseLibraryDesc", lang) },
+    { key: "review-queue", label: t("contentReviewQueueTitle", lang), icon: "checkmark-done-circle", color: "#f59e0b", desc: t("contentReviewQueueDesc", lang) },
+    { key: "parent-setup", label: t("parentPortalAddTitle", lang), icon: "people", color: "#ec4899", desc: t("parentPortalAddDesc", lang) },
+    { key: "accessibility", label: t("settingsAccessibilityTitle", lang), icon: "settings", color: "#64748b", desc: t("settingsAccessibilityDesc", lang) },
+    { key: "face-scan", label: t("switchChildFaceTitle", lang), icon: "scan-circle", color: colors.forest, desc: t("switchChildFaceDesc", lang) },
   ];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <View style={styles.moreHeader}>
+        <View style={[styles.moreHeader, isRtl && { flexDirection: "row-reverse" }]}>
           <Pressable onPress={onBack} hitSlop={8} style={{ padding: 4 }}>
-            <Ionicons name="arrow-back" size={22} color={colors.textDark} />
+            <Ionicons name={isRtl ? "arrow-forward" : "arrow-back"} size={22} color={colors.textDark} />
           </Pressable>
           <View style={{ alignItems: "center" }}>
-            <Text style={styles.moreTitle}>Angel Talk Hub</Text>
+            <Text style={styles.moreTitle}>{t("hubTitle", lang)}</Text>
             {childName ? (
               <Text style={{ fontSize: 12, color: colors.textMid, fontWeight: "600" }}>
-                Active child: {childName}
+                {t("activeChildLabel", lang).replace("{name}", childName)}
               </Text>
             ) : null}
           </View>
-          <View style={{ width: 30 }} />
+          <LangBadge />
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
           {/* Main App Tabs */}
-          <Text style={styles.menuSectionHeader}>MAIN APPS & TABS</Text>
+          <Text style={[styles.menuSectionHeader, isRtl && { textAlign: "right" }]}>
+            {t("mainAppsSection", lang)}
+          </Text>
           <View style={{ gap: 8 }}>
             {tabShortcuts.map((t) => (
-              <Pressable key={t.tab} onPress={() => onSelectTab(t.tab)} style={styles.moreRow}>
+              <Pressable
+                key={t.tab}
+                onPress={() => onSelectTab(t.tab)}
+                style={[styles.moreRow, isRtl && { flexDirection: "row-reverse" }]}
+              >
                 <View
                   style={{
                     width: 38,
@@ -357,17 +369,23 @@ function MoreMenu({
                 >
                   <Ionicons name={t.icon} size={20} color={t.color} />
                 </View>
-                <Text style={styles.moreRowText}>{t.label}</Text>
-                <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
+                <Text style={[styles.moreRowText, isRtl && { textAlign: "right" }]}>{t.label}</Text>
+                <Ionicons name={isRtl ? "chevron-back" : "chevron-forward"} size={18} color={colors.textLight} />
               </Pressable>
             ))}
           </View>
 
           {/* Management & Settings */}
-          <Text style={[styles.menuSectionHeader, { marginTop: 8 }]}>PARENT & CLINICAL TOOLS</Text>
+          <Text style={[styles.menuSectionHeader, { marginTop: 8 }, isRtl && { textAlign: "right" }]}>
+            {t("parentClinicalToolsSection", lang)}
+          </Text>
           <View style={{ gap: 8 }}>
             {adminRows.map((r) => (
-              <Pressable key={r.key} onPress={() => onNavigate(r.key)} style={styles.moreRow}>
+              <Pressable
+                key={r.key}
+                onPress={() => onNavigate(r.key)}
+                style={[styles.moreRow, isRtl && { flexDirection: "row-reverse" }]}
+              >
                 <View
                   style={{
                     width: 38,
@@ -381,10 +399,12 @@ function MoreMenu({
                   <Ionicons name={r.icon} size={20} color={r.color} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.moreRowText}>{r.label}</Text>
-                  <Text style={{ fontSize: 12, color: colors.textMid, marginTop: 2 }}>{r.desc}</Text>
+                  <Text style={[styles.moreRowText, isRtl && { textAlign: "right" }]}>{r.label}</Text>
+                  <Text style={[{ fontSize: 12, color: colors.textMid, marginTop: 2 }, isRtl && { textAlign: "right" }]}>
+                    {r.desc}
+                  </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textLight} />
+                <Ionicons name={isRtl ? "chevron-back" : "chevron-forward"} size={18} color={colors.textLight} />
               </Pressable>
             ))}
           </View>

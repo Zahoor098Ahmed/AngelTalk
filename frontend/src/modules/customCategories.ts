@@ -84,14 +84,19 @@ export function isDeletedWord(catId: string, label: string): boolean {
   return false;
 }
 
+export function unblockDeletedWord(catId: string, label: string, wordId?: string) {
+  const norm = (label || "").trim().toLowerCase();
+  deletedItemKeys.delete(`word::${catId}::${norm}`);
+  deletedItemKeys.delete(`word::label::${norm}`);
+  if (wordId) {
+    deletedItemKeys.delete(`word::id::${wordId}`);
+  }
+  persistDeletedKeys();
+}
+
 /** Bring older records up to the current shape without recreating anything. */
 function migrate(list: CustomCategory[]): CustomCategory[] {
-  const parentsWithChildren = new Set(
-    list.filter((x) => !!x.parentCategoryId).map((x) => x.parentCategoryId!)
-  );
-
   return list.map((c, i) => {
-    const hasChildren = parentsWithChildren.has(c.id);
     return {
       ...c,
       color: c.color ?? FOLDER_COLORS[i % FOLDER_COLORS.length],
@@ -100,18 +105,17 @@ function migrate(list: CustomCategory[]): CustomCategory[] {
       parentCategoryId: c.parentCategoryId ?? null,
       order: typeof c.order === "number" ? c.order : i,
       source: c.source ?? "manual",
-      words: hasChildren
-        ? []
-        : (c.words ?? []).map((w, wi) => ({
-            ...w,
-            imageUri: w.imageUri || getPictogramUrl(w.label) || undefined,
-            size: w.size ?? "md",
-            useTextToSpeech: w.useTextToSpeech ?? !w.audioUri,
-            order: typeof w.order === "number" ? w.order : wi,
-            hidden: w.hidden ?? false,
-            useCount: w.useCount ?? 0,
-            lastUsedAt: w.lastUsedAt,
-          })),
+      words: (c.words ?? []).map((w, wi) => ({
+        ...w,
+        imageUri: w.imageUri || getPictogramUrl(w.label) || undefined,
+        size: w.size ?? "md",
+        useTextToSpeech: w.useTextToSpeech ?? !w.audioUri,
+        order: typeof w.order === "number" ? w.order : wi,
+        hidden: w.hidden ?? false,
+        useCount: w.useCount ?? 0,
+        lastUsedAt: w.lastUsedAt,
+        isCustom: w.isCustom ?? (c.source === "manual" ? true : undefined),
+      })),
     };
   });
 }
@@ -163,11 +167,13 @@ function refreshSayItForMeImages() {
   if (!cat) return;
   let changed = false;
   cat.words.forEach((w, i) => {
-    const en = enWords[i];
-    const correctUri = en ? getPictogramUrl(en) : null;
-    if (correctUri && w.imageUri !== correctUri) {
-      w.imageUri = correctUri;
-      changed = true;
+    if (!w.imageUri) {
+      const en = enWords[i];
+      const correctUri = en ? getPictogramUrl(en) : null;
+      if (correctUri) {
+        w.imageUri = correctUri;
+        changed = true;
+      }
     }
   });
   if (changed) {
@@ -1070,6 +1076,7 @@ export function retranslateSeedBoard(lang: LanguageCode) {
   const pendingAsyncItems: { type: "cat" | "word"; id: string; catId?: string; originalText: string }[] = [];
 
   for (const cat of cache) {
+    if (cat.isCustom) continue;
     // 1. Category name translation
     const rawCatName = cat.name.trim();
     if (lang === "en-US") {
@@ -1091,6 +1098,7 @@ export function retranslateSeedBoard(lang: LanguageCode) {
 
     // 2. Words translation
     cat.words.forEach((w) => {
+      if (w.isCustom) return;
       const rawWordLabel = w.label.trim();
       if (lang === "en-US") {
         const en = canonicalWordEn(rawWordLabel);
@@ -1229,7 +1237,8 @@ function ensureAllStandardCategories() {
     let subCat = cache.find(
       (c) =>
         c.parentCategoryId === parent.id &&
-        ((canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).toLowerCase() === sub.name.toLowerCase() ||
+        ((c.seedName && c.seedName.toLowerCase() === sub.name.toLowerCase()) ||
+          (canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).toLowerCase() === sub.name.toLowerCase() ||
           c.name.toLowerCase() === sub.name.toLowerCase() ||
           c.name.toLowerCase() === folderName(sub.name).toLowerCase())
     );
@@ -1247,14 +1256,18 @@ function ensureAllStandardCategories() {
         parentCategoryId: parent.id,
         order: subIdx,
         words: [],
+        seedName: sub.name,
       };
       cache.push(subCat);
       changed = true;
     } else {
-      const targetName = folderName(sub.name);
-      if (subCat.name !== targetName && (canonicalWordEn(subCat.name) || FOLDER_EN_BY_LANG[subCat.name.toLowerCase()] || subCat.name).toLowerCase() === sub.name.toLowerCase()) {
-        subCat.name = targetName;
-        changed = true;
+      if (!subCat.seedName) subCat.seedName = sub.name;
+      if (!subCat.isCustom) {
+        const targetName = folderName(sub.name);
+        if (subCat.name !== targetName && (canonicalWordEn(subCat.name) || FOLDER_EN_BY_LANG[subCat.name.toLowerCase()] || subCat.name).toLowerCase() === sub.name.toLowerCase()) {
+          subCat.name = targetName;
+          changed = true;
+        }
       }
     }
 
@@ -1265,6 +1278,7 @@ function ensureAllStandardCategories() {
       .map(([label, emoji, verbFormTag], wi) => {
         const existing = subCat!.words.find((w) => {
           if (usedExistingIds.has(w.id)) return false;
+          if (w.seedLabel && w.seedLabel.toLowerCase() === label.toLowerCase()) return true;
           const en = (canonicalWordEn(w.label) || w.label).toLowerCase();
           const matchesLabel = en === label.toLowerCase() || w.label.toLowerCase() === label.toLowerCase();
           if (!matchesLabel) return false;
@@ -1277,9 +1291,9 @@ function ensureAllStandardCategories() {
         const localized = wordLabel(label, seedLang) || label;
         return {
           id: existing?.id ?? uid("w"),
-          label: localized,
-          phrase: localized,
-          emoji: emoji || existing?.emoji || "🔹",
+          label: existing?.isCustom ? existing.label : localized,
+          phrase: existing?.isCustom ? existing.phrase : localized,
+          emoji: existing?.emoji || emoji || "🔹",
           imageUri: existing?.imageUri || getPictogramUrl(label) || undefined,
           color: existing?.color,
           audioUri: existing?.audioUri,
@@ -1289,12 +1303,15 @@ function ensureAllStandardCategories() {
           useCount: existing?.useCount ?? 0,
           verbFormTag: verbFormTag ?? existing?.verbFormTag,
           hidden: existing?.hidden ?? false,
+          isCustom: existing?.isCustom,
+          seedLabel: label,
         };
       });
 
     // Preserve any custom words the parent added to this category
     const isVerbSub = sub.name.toLowerCase().includes("verbs ") || sub.parentCategory.toLowerCase() === "actions";
     const customParentWords = subCat.words.filter((w) => {
+      if (w.isCustom) return true;
       const en = (canonicalWordEn(w.label) || w.label).toLowerCase();
       if (isVerbSub) {
         return !sub.words.some(([swLabel]) => swLabel.toLowerCase() === en || swLabel.toLowerCase() === w.label.toLowerCase());
@@ -1374,7 +1391,26 @@ function seedStarterBoard() {
 }
 
 function persist(): void {
-  AsyncStorage.setItem(KEY, JSON.stringify(cache)).catch(() => {});
+  try {
+    const raw = JSON.stringify(cache);
+    AsyncStorage.setItem(KEY, raw).catch((err) => {
+      console.warn("[customCategories] AsyncStorage setItem failed:", err);
+      try {
+        const leanCache = cache.map((cat) => ({
+          ...cat,
+          words: cat.words.map((w) => {
+            if (w.imageUri && w.imageUri.startsWith("data:") && w.imageUri.length > 50000) {
+              return { ...w, imageUri: getPictogramUrl(w.label) || undefined };
+            }
+            return w;
+          }),
+        }));
+        AsyncStorage.setItem(KEY, JSON.stringify(leanCache)).catch(() => {});
+      } catch {}
+    });
+  } catch (e) {
+    console.error("[customCategories] persist serialization failed:", e);
+  }
   notifyListeners();
 }
 
@@ -1431,6 +1467,7 @@ export function createCategory(input: {
       useTextToSpeech: true,
       size: "md" as TileSize,
       order: i,
+      isCustom: true,
     })),
   };
   cache = [cat, ...cache];
@@ -1461,10 +1498,11 @@ export function updateCategory(
   return mutate(id, (c) => {
     if (patch.name !== undefined && patch.name.trim().length > 0) {
       c.name = patch.name.trim();
+      c.isCustom = true;
     }
-    if (patch.icon !== undefined) c.icon = patch.icon;
-    if (patch.color !== undefined) c.color = patch.color;
-    if (patch.imageUri !== undefined) c.imageUri = patch.imageUri;
+    if (patch.icon !== undefined) { c.icon = patch.icon; c.isCustom = true; }
+    if (patch.color !== undefined) { c.color = patch.color; c.isCustom = true; }
+    if (patch.imageUri !== undefined) { c.imageUri = patch.imageUri; c.isCustom = true; }
   });
 }
 
@@ -1491,17 +1529,31 @@ export function setGrouping(id: string, grouping: CustomCategory["grouping"]) {
 export function updateWord(
   catId: string,
   wordId: string,
-  patch: Partial<Pick<CustomWord, "label" | "phrase" | "emoji" | "imageUri" | "audioUri" | "useTextToSpeech" | "size" | "color" | "hidden">>,
+  patch: Partial<Pick<CustomWord, "label" | "phrase" | "emoji" | "imageUri" | "audioUri" | "useTextToSpeech" | "size" | "color" | "hidden" | "isCustom">>,
 ) {
-  return mutate(catId, (c) => {
+  let targetCatId = catId;
+  let targetCat = cache.find((c) => c.id === targetCatId);
+  if (!targetCat || !targetCat.words.some((x) => x.id === wordId)) {
+    const found = cache.find((c) => c.words.some((x) => x.id === wordId));
+    if (found) {
+      targetCatId = found.id;
+    }
+  }
+
+  return mutate(targetCatId, (c) => {
     const w = c.words.find((x) => x.id === wordId);
     if (!w) return;
+
+    if (patch.label) {
+      unblockDeletedWord(targetCatId, patch.label, wordId);
+    }
 
     const oldBase = (w.verbForms?.base || "").trim().toLowerCase();
     const oldEnLabel = (canonicalWordEn(w.label) || w.label).trim().toLowerCase();
     const oldVForms = w.verbForms || generateAllVerbForms(oldEnLabel);
 
     Object.assign(w, patch);
+    w.isCustom = true;
 
     const newEnLabel = (canonicalWordEn(w.label) || w.label).trim().toLowerCase();
     const newVForms = patch.label ? (generateAllVerbForms(newEnLabel) || oldVForms) : oldVForms;
@@ -1538,9 +1590,9 @@ export function updateWord(
       });
 
       siblings.forEach((sib) => {
-        if (patch.imageUri !== undefined) sib.imageUri = patch.imageUri;
-        if (patch.emoji !== undefined) sib.emoji = patch.emoji;
-        if (patch.color !== undefined) sib.color = patch.color;
+        if ("imageUri" in patch) sib.imageUri = patch.imageUri;
+        if (patch.emoji) sib.emoji = patch.emoji;
+        if (patch.color) sib.color = patch.color;
         if (patch.hidden !== undefined) sib.hidden = patch.hidden;
         if (newVForms) {
           sib.verbForms = newVForms;
@@ -1571,11 +1623,20 @@ export function updateWord(
 }
 
 export function removeWord(catId: string, wordId: string) {
-  return mutate(catId, (c) => {
+  let targetCatId = catId;
+  let targetCat = cache.find((c) => c.id === targetCatId);
+  if (!targetCat || !targetCat.words.some((x) => x.id === wordId)) {
+    const found = cache.find((c) => c.words.some((x) => x.id === wordId));
+    if (found) {
+      targetCatId = found.id;
+    }
+  }
+
+  return mutate(targetCatId, (c) => {
     const targetWord = c.words.find((w) => w.id === wordId);
     if (targetWord) {
       const normLabel = (targetWord.label || "").trim().toLowerCase();
-      deletedItemKeys.add(`word::${catId}::${normLabel}`);
+      deletedItemKeys.add(`word::${targetCatId}::${normLabel}`);
       deletedItemKeys.add(`word::id::${targetWord.id}`);
       persistDeletedKeys();
     }
@@ -1699,7 +1760,7 @@ export function cleanAndDeduplicateCategories() {
     if (!c.parentCategoryId) {
       const en = (canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).trim();
       const standardTab = BOTTOM_CATEGORIES.find((bc) => bc.key.toLowerCase() === en.toLowerCase());
-      if (standardTab) {
+      if (standardTab && !c.isCustom) {
         const expectedName = folderName(standardTab.key, seedLang);
         if (c.name !== expectedName) {
           c.name = expectedName;
@@ -1756,6 +1817,7 @@ export function cleanAndDeduplicateCategories() {
         });
 
         const customWords = subCat.words.filter((w) => {
+          if (w.isCustom) return true;
           const en = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
           return !standardVerbWords.has(en) && !standardVerbWords.has(w.label.toLowerCase().trim());
         });
@@ -1807,6 +1869,7 @@ export function cleanAndDeduplicateCategories() {
               order: orderIndex++,
               verbFormTag: f.tag,
               hidden: existing?.hidden ?? false,
+              isCustom: existing?.isCustom,
             });
           });
         });
@@ -1855,10 +1918,11 @@ export function cleanAndDeduplicateCategories() {
                 order: orderIndex++,
                 verbFormTag: f.tag,
                 hidden: existing?.hidden ?? cw.hidden ?? false,
+                isCustom: true,
               });
             });
           } else {
-            cleanWords.push({ ...cw, order: orderIndex++ });
+            cleanWords.push({ ...cw, isCustom: true, order: orderIndex++ });
           }
         });
 
@@ -1928,10 +1992,18 @@ export function cleanAndDeduplicateCategories() {
         // Move any words from parent into appropriate child subcategory or first child if not already present
         for (const w of c.words) {
           const wLower = (canonicalWordEn(w.label) || w.label).trim().toLowerCase();
-          const alreadyInSub = subCatsOfParent.some((sc) =>
-            sc.words.some((sw) => (canonicalWordEn(sw.label) || sw.label).trim().toLowerCase() === wLower)
-          );
-          if (!alreadyInSub) {
+          const matchingInSub = subCatsOfParent
+            .flatMap((sc) => sc.words)
+            .find((sw) => (canonicalWordEn(sw.label) || sw.label).trim().toLowerCase() === wLower);
+
+          if (matchingInSub && w.isCustom) {
+            if (w.imageUri) matchingInSub.imageUri = w.imageUri;
+            if (w.audioUri) matchingInSub.audioUri = w.audioUri;
+            if (w.color) matchingInSub.color = w.color;
+            if (w.verbForms) matchingInSub.verbForms = w.verbForms;
+            if (w.verbFormTag) matchingInSub.verbFormTag = w.verbFormTag;
+            matchingInSub.isCustom = true;
+          } else if (!matchingInSub) {
             let targetSub = subCatsOfParent[0];
             const pName = (canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).toLowerCase();
             if (pName.includes("people") || pName.includes("لوگ") || pName.includes("أشخاص")) {
@@ -1978,7 +2050,7 @@ export function cleanAndDeduplicateCategories() {
               const letter = (wLower[0] || "a").toUpperCase();
               targetSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).toLowerCase() === `verbs ${letter.toLowerCase()}`) || targetSub;
             }
-            targetSub.words.push({ ...w, order: targetSub.words.length });
+            targetSub.words.push({ ...w, isCustom: w.isCustom ?? true, order: targetSub.words.length });
           }
         }
       }
@@ -2049,15 +2121,17 @@ export function cleanAndDeduplicateCategories() {
       (c.name || "").toLowerCase().includes("verb");
 
     if (!isActionsShelf) {
-      // Strip any verb tags and verb forms outside Actions
+      // Strip any verb tags and verb forms outside Actions for non-custom words
       for (const w of c.words) {
-        if (w.verbFormTag) {
-          delete w.verbFormTag;
-          changed = true;
-        }
-        if (w.verbForms) {
-          delete w.verbForms;
-          changed = true;
+        if (!w.isCustom) {
+          if (w.verbFormTag) {
+            delete w.verbFormTag;
+            changed = true;
+          }
+          if (w.verbForms) {
+            delete w.verbForms;
+            changed = true;
+          }
         }
       }
 
@@ -2065,6 +2139,7 @@ export function cleanAndDeduplicateCategories() {
       if (shelf === "places") {
         const before = c.words.length;
         c.words = c.words.filter((w) => {
+          if (w.isCustom) return true;
           const lbl = (w.label || "").trim().toLowerCase();
           if (LEGIT_PLACES.has(lbl)) return true;
           if (allActionVerbs.has(lbl)) return false;
@@ -2077,6 +2152,7 @@ export function cleanAndDeduplicateCategories() {
       if (shelf === "food") {
         const before = c.words.length;
         c.words = c.words.filter((w) => {
+          if (w.isCustom) return true;
           const lbl = (w.label || "").trim().toLowerCase();
           if (LEGIT_FOODS.has(lbl)) return true;
           if (allActionVerbs.has(lbl)) return false;
@@ -2089,6 +2165,7 @@ export function cleanAndDeduplicateCategories() {
       if (shelf === "things" || shelf === "people" || shelf === "feelings") {
         const before = c.words.length;
         c.words = c.words.filter((w) => {
+          if (w.isCustom) return true;
           const lbl = (w.label || "").trim().toLowerCase();
           if (shelf === "things" && (lbl === "book" || lbl === "watch" || lbl === "brush" || lbl === "toy" || lbl === "ball")) return true;
           if (shelf === "people" && (lbl === "help" ? false : true)) {
@@ -2160,10 +2237,12 @@ export function addWord(
     color?: string;
     verbForms?: CustomWord["verbForms"];
     verbFormTag?: CustomWord["verbFormTag"];
+    isCustom?: boolean;
   },
 ) {
   let cleanLabel = word.label.trim();
   let cleanPhrase = (word.phrase ?? word.label).trim() || cleanLabel;
+  unblockDeletedWord(catId, cleanLabel);
 
   if (["ar-SA", "ur-PK"].includes(seedLang) && !/[\u0600-\u06FF]/.test(cleanLabel) && /[a-zA-Z]/.test(cleanLabel)) {
     const sync = wordLabel(cleanLabel, seedLang);
@@ -2199,6 +2278,7 @@ export function addWord(
         { word: capWord(wordLabel(vForms.continuous, seedLang) || vForms.continuous), enWord: vForms.continuous, tag: "4th" },
       ];
       forms.forEach((f) => {
+        unblockDeletedWord(catId, f.word);
         c.words.push({
           id: uid("w"),
           label: f.word,
@@ -2213,6 +2293,7 @@ export function addWord(
           useCount: 0,
           verbForms: vForms,
           verbFormTag: f.tag,
+          isCustom: true,
         });
       });
       c.words = sortWordsForCategory(c.words, c.name);
@@ -2232,6 +2313,7 @@ export function addWord(
         useCount: 0,
         verbForms: word.verbForms,
         verbFormTag: word.verbFormTag,
+        isCustom: true,
       });
       c.words = sortWordsForCategory(c.words, c.name);
       c.words.forEach((w, i) => { w.order = i; });
@@ -2253,6 +2335,7 @@ export function addWordsBulk(
     color?: string;
     verbForms?: CustomWord["verbForms"];
     verbFormTag?: CustomWord["verbFormTag"];
+    isCustom?: boolean;
   }[],
 ) {
   const pendingWords: string[] = [];
@@ -2260,6 +2343,7 @@ export function addWordsBulk(
   const processedWords = words.map((word) => {
     let cleanLabel = word.label.trim();
     let cleanPhrase = (word.phrase ?? cleanLabel).trim() || cleanLabel;
+    unblockDeletedWord(catId, cleanLabel);
 
     if (["ar-SA", "ur-PK"].includes(seedLang) && !/[\u0600-\u06FF]/.test(cleanLabel) && /[a-zA-Z]/.test(cleanLabel)) {
       const sync = wordLabel(cleanLabel, seedLang);
@@ -2313,6 +2397,7 @@ export function addWordsBulk(
         useCount: 0,
         verbForms: word.verbForms,
         verbFormTag: word.verbFormTag,
+        isCustom: true,
       });
     });
     c.words = sortWordsForCategory(c.words, c.name);
@@ -2454,7 +2539,15 @@ export function setCategoryHidden(id: string, hidden: boolean) {
 
 /** Parent control: show/hide a single word inside a folder, without deleting it. */
 export function setWordHidden(catId: string, wordId: string, hidden: boolean) {
-  return mutate(catId, (c) => {
+  let targetCatId = catId;
+  let targetCat = cache.find((c) => c.id === targetCatId);
+  if (!targetCat || !targetCat.words.some((x) => x.id === wordId)) {
+    const found = cache.find((c) => c.words.some((x) => x.id === wordId));
+    if (found) {
+      targetCatId = found.id;
+    }
+  }
+  return mutate(targetCatId, (c) => {
     const w = c.words.find((x) => x.id === wordId);
     if (w) w.hidden = hidden;
   });

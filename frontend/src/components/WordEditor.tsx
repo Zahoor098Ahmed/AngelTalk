@@ -10,6 +10,7 @@ import {
   searchImages,
   downloadTileImage,
   saveLocalTileImage,
+  compressImageForTile,
   hasPixabayKey,
   type ImageHit,
   type ImageSource,
@@ -17,6 +18,7 @@ import {
 import { colors, radius, radiusSm } from "../theme";
 import { useSettings } from "../context/SettingsContext";
 import { t, canonicalWordEn } from "../modules/i18n";
+import UniversalImagePickerModal from "./UniversalImagePickerModal";
 
 interface Props {
   visible: boolean;
@@ -46,6 +48,7 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
   const [recSeconds, setRecSeconds] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [universalPickerOpen, setUniversalPickerOpen] = useState(false);
 
   useEffect(() => {
     let interval: any = null;
@@ -79,25 +82,70 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
   const tempId = word?.id ?? `new_${Date.now()}`;
 
   async function pickFromCamera() {
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) return Alert.alert(t("weCameraPermission", lang) || "Camera permission is required");
-    const res = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
-    if (res.canceled || !res.assets[0]) return;
-    setBusy(t("weSavingPhoto", lang) || "Saving photo…");
-    const saved = await saveLocalTileImage(res.assets[0].uri, tempId);
-    setBusy(null);
-    if (saved) setImageUri(saved);
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) return Alert.alert(t("weCameraPermission", lang) || "Camera permission is required");
+      const res = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
+      if (res.canceled || !res.assets || !res.assets[0]?.uri) return;
+      const rawUri = res.assets[0].uri;
+      setBusy(t("weSavingPhoto", lang) || "Saving photo…");
+      const saved = await saveLocalTileImage(rawUri, tempId);
+      setBusy(null);
+      setImageUri(saved || rawUri);
+    } catch (e) {
+      setBusy(null);
+      console.warn("Camera error:", e);
+    }
   }
 
   async function pickFromGallery() {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return Alert.alert(t("weGalleryPermission", lang) || "Photo library permission is required");
-    const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
-    if (res.canceled || !res.assets[0]) return;
-    setBusy(t("weSavingPicture", lang) || "Saving picture…");
-    const saved = await saveLocalTileImage(res.assets[0].uri, tempId);
-    setBusy(null);
-    if (saved) setImageUri(saved);
+    if (Platform.OS === "web") {
+      try {
+        const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
+        if (!res.canceled && res.assets && res.assets[0]?.uri) {
+          const compressed = await compressImageForTile(res.assets[0].uri);
+          setImageUri(compressed);
+          return;
+        }
+      } catch {
+        // fallback
+      }
+      if (typeof document !== "undefined") {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.onchange = (e: any) => {
+          const file = e.target?.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = async () => {
+            const result = reader.result as string;
+            if (result) {
+              const compressed = await compressImageForTile(result);
+              setImageUri(compressed);
+            }
+          };
+          reader.readAsDataURL(file);
+        };
+        input.click();
+      }
+      return;
+    }
+
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return Alert.alert(t("weGalleryPermission", lang) || "Photo library permission is required");
+      const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [1, 1] });
+      if (res.canceled || !res.assets || !res.assets[0]?.uri) return;
+      const rawUri = res.assets[0].uri;
+      setBusy(t("weSavingPicture", lang) || "Saving picture…");
+      const saved = await saveLocalTileImage(rawUri, tempId);
+      setBusy(null);
+      setImageUri(saved || rawUri);
+    } catch (e) {
+      setBusy(null);
+      console.warn("Gallery error:", e);
+    }
   }
 
   async function chooseSearchImage(hit: ImageHit) {
@@ -105,8 +153,7 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
     setBusy(t("weDownloading", lang) || "Downloading picture…");
     const saved = await downloadTileImage(hit.full, tempId);
     setBusy(null);
-    if (saved) setImageUri(saved);
-    else Alert.alert(t("weDownloadFailed", lang) || "Download failed. Please try another image.");
+    setImageUri(saved || hit.full);
   }
 
   async function toggleRecord() {
@@ -161,7 +208,18 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
   function save() {
     const l = label.trim();
     if (!l) return Alert.alert(t("weTypeWordFirst", lang));
-    const patch = { label: l, phrase: l, emoji, imageUri, color, audioUri, useTextToSpeech: audioUri ? useTts : true, size, hidden };
+    const patch = {
+      label: l,
+      phrase: l,
+      emoji,
+      imageUri: imageUri || undefined,
+      color,
+      audioUri,
+      useTextToSpeech: audioUri ? useTts : true,
+      size,
+      hidden,
+      isCustom: true,
+    };
     if (editing && word) updateWord(catId, word.id, patch);
     else addWord(catId, patch);
     onSaved();
@@ -228,18 +286,33 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
 
             <Text style={styles.label}>{t("wePicture", lang)}</Text>
             <View style={styles.previewRow}>
-              <View style={styles.preview}>
-                {imageUri ? <Image source={{ uri: imageUri }} style={styles.previewImg} /> : <Text style={{ fontSize: 40 }}>{emoji}</Text>}
-              </View>
+              <Pressable
+                onPress={() => setUniversalPickerOpen(true)}
+                style={styles.preview}
+                accessibilityLabel="Choose picture"
+              >
+                {imageUri ? (
+                  <Image source={{ uri: imageUri }} style={styles.previewImg} resizeMode="contain" />
+                ) : (
+                  <Text style={{ fontSize: 40 }}>{emoji}</Text>
+                )}
+                <View style={styles.previewBadge}>
+                  <Ionicons name="camera" size={12} color="#FFFFFF" />
+                </View>
+              </Pressable>
               <View style={{ flex: 1, gap: 8 }}>
                 <View style={styles.srcRow}>
-                  <SrcBtn icon="camera" label={t("weCamera", lang)} onPress={pickFromCamera} />
-                  <SrcBtn icon="images" label={t("weGallery", lang)} onPress={pickFromGallery} />
+                  <SrcBtn icon="images" label={t("weGallery", lang) || "Gallery"} onPress={pickFromGallery} />
+                  <SrcBtn icon="camera" label={t("weCamera", lang) || "Camera"} onPress={pickFromCamera} />
                 </View>
                 <View style={styles.srcRow}>
-                  <SrcBtn icon="search" label={t("weSearch", lang)} onPress={() => setSearchOpen(true)} />
+                  <SrcBtn
+                    icon="search"
+                    label={t("weSearch", lang) || "Search / Library"}
+                    onPress={() => setUniversalPickerOpen(true)}
+                  />
                   {imageUri ? (
-                    <SrcBtn icon="close-circle" label={t("weRemove", lang)} onPress={() => setImageUri(undefined)} />
+                    <SrcBtn icon="close-circle" label={t("weRemove", lang) || "Remove"} onPress={() => setImageUri(undefined)} />
                   ) : (
                     <View style={{ flex: 1 }} />
                   )}
@@ -376,6 +449,22 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
             </View>
           )}
         </SafeAreaView>
+
+        <UniversalImagePickerModal
+          visible={universalPickerOpen}
+          title={`Picture for "${label || "Word"}"`}
+          currentImageUri={imageUri}
+          defaultSearchTerm={label}
+          onSelectImage={(uri) => {
+            setImageUri(uri);
+            setUniversalPickerOpen(false);
+          }}
+          onRemoveImage={() => {
+            setImageUri(undefined);
+            setUniversalPickerOpen(false);
+          }}
+          onClose={() => setUniversalPickerOpen(false)}
+        />
 
         <ImageSearchModal
           visible={searchOpen}
@@ -548,7 +637,8 @@ const styles = StyleSheet.create({
   colorSwatch: { width: 32, height: 32, borderRadius: 8, borderWidth: 2, borderColor: "transparent" },
   colorSwatchOn: { borderColor: colors.textDark },
   previewRow: { flexDirection: "row", gap: 12, marginTop: 6 },
-  preview: { width: 92, height: 92, borderRadius: radius, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  preview: { width: 92, height: 92, borderRadius: radius, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" },
+  previewBadge: { position: "absolute", bottom: 4, right: 4, backgroundColor: "rgba(35, 94, 80, 0.88)", width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   previewImg: { width: "100%", height: "100%" },
   srcRow: { flexDirection: "row", gap: 8 },
   srcBtn: { flex: 1, flexDirection: "row", gap: 5, alignItems: "center", justifyContent: "center", backgroundColor: colors.forestLight, borderRadius: 12, paddingVertical: 10 },

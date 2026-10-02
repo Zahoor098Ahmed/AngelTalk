@@ -112,3 +112,93 @@
     - `frontend/src/modules/customCategories.ts`
     - `frontend/src/screens/MyCategoriesScreen.tsx`
     - `frontend/src/components/WordEditor.tsx`
+
+- **05:34** 🌿 Commit `[508dded]` — **"feat: auto-generate 4 verb forms, sync verb edits across forms, and fix image search modal layout"**
+  - 📁 **Changed Files (17):**
+    - `BACKLOG.md`
+    - `BloomSpeech/frontend/src/types.ts`
+    - `frontend/App.tsx`
+    - `frontend/src/components/MoodFace.tsx`
+    - `frontend/src/components/TabBar.tsx`
+    - `frontend/src/components/UrgentActionIcon.tsx`
+    - `frontend/src/components/WordEditor.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/src/modules/verbForms.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/GamesScreen.tsx`
+    - `frontend/src/screens/HomeScreen.tsx`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/src/screens/ParentDashboardScreen.tsx`
+    - `frontend/src/screens/SocialStoriesScreen.tsx`
+    - `frontend/src/screens/VisualScheduleScreen.tsx`
+
+- **21:49:52 – 21:49:52** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+- **22:04:12 – 22:11:44** ⏱️ Active Coding Session (**8 min**)
+  - 📁 **Files Worked On (5):**
+    - `frontend/src/modules/imageSearch.ts`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/components/UniversalImagePickerModal.tsx`
+    - `frontend/src/components/WordEditor.tsx`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+
+- **22:48:52 – 22:55:20** ⏱️ Active Coding Session (**6 min**)
+  - 📁 **Files Worked On (6):**
+    - `frontend/src/types.ts`
+    - `frontend/src/modules/imageSearch.ts`
+    - `frontend/src/components/WordEditor.tsx`
+    - `frontend/src/components/UniversalImagePickerModal.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+
+- **23:53:05 – 11:57:30** ⏱️ Active Coding Session (**724 min**)
+  - 📁 **Files Worked On (8):**
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/App.tsx`
+    - `frontend/src/components/UniversalImagePickerModal.tsx`
+    - `frontend/src/components/WordEditor.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/imageSearch.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/src/types.ts`
+
+## 2026-10-01
+
+- **22:04:12 – 22:05:59** ⏱️ Active Coding Session (**2 min**)
+  - 📁 **Files Worked On (3):**
+    - `frontend/src/modules/imageSearch.ts`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/components/UniversalImagePickerModal.tsx`
+
+## 2026-10-02
+
+- **23:53:05 – 00:01:13** ⏱️ Active Coding Session (**8 min**)
+  - 📁 **Files Worked On (8):**
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/App.tsx`
+    - `frontend/src/components/UniversalImagePickerModal.tsx`
+    - `frontend/src/components/WordEditor.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/imageSearch.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/src/types.ts`
+
+- **12:30:01 – 12:32:12** ⏱️ Active Coding Session (**2 min**)
+  - 📁 **Files Worked On (2):**
+    - `frontend/test_words.js`
+    - `frontend/check_friend.js`
+
+- **12:39:25 – 12:59:02** ⏱️ Active Coding Session (**20 min**)
+  - 📁 **Files Worked On (9):**
+    - `frontend/eval_i18n.js`
+    - `frontend/src/types.ts`
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/update_i18n.js`
+    - `frontend/update_cc.js`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/update_mcs.js`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/dedup_dicts.js`

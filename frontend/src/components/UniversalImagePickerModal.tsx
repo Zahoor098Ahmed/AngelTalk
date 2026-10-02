@@ -10,6 +10,7 @@ import {
   Modal,
   ActivityIndicator,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -20,6 +21,7 @@ import {
   searchBuiltInSymbols,
   type BuiltInSymbol,
 } from "../modules/builtInImageLibrary";
+import { compressImageForTile } from "../modules/imageSearch";
 
 interface Props {
   visible: boolean;
@@ -84,6 +86,49 @@ export default function UniversalImagePickerModal({
 
   // Option 1: Gallery / Device Upload
   async function pickFromGallery() {
+    if (Platform.OS === "web") {
+      try {
+        const res = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+        if (!res.canceled && res.assets && res.assets[0]?.uri) {
+          const uri = res.assets[0].uri;
+          const compressed = await compressImageForTile(uri);
+          setPreviewUri(compressed);
+          onSelectImage(compressed);
+          onClose();
+          return;
+        }
+      } catch (err) {
+        console.warn("Image picker error on web, using file input fallback:", err);
+      }
+      if (typeof document !== "undefined") {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.onchange = (e: any) => {
+          const file = e.target?.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = async () => {
+            const result = reader.result as string;
+            if (result) {
+              const compressed = await compressImageForTile(result);
+              setPreviewUri(compressed);
+              onSelectImage(compressed);
+              onClose();
+            }
+          };
+          reader.readAsDataURL(file);
+        };
+        input.click();
+      }
+      return;
+    }
+
     try {
       const res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
@@ -93,8 +138,9 @@ export default function UniversalImagePickerModal({
       });
       if (!res.canceled && res.assets && res.assets[0]?.uri) {
         const uri = res.assets[0].uri;
-        setPreviewUri(uri);
-        onSelectImage(uri);
+        const compressed = await compressImageForTile(uri);
+        setPreviewUri(compressed);
+        onSelectImage(compressed);
         onClose();
       }
     } catch (err) {
