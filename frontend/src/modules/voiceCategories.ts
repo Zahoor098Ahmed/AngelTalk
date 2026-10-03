@@ -180,6 +180,196 @@ function cleanSingleItem(str: string): string {
     .join(" ");
 }
 
+// --- Full-tree voice plan (shelves -> sub-categories -> words in ONE utterance) ---
+
+/** Every node has a stable id so the caregiver can rename/remove it and keep its picture. */
+export interface VoicePlanWord {
+  id: string;
+  name: string;
+}
+
+export interface VoicePlanSub {
+  id: string;
+  name: string;
+  words: VoicePlanWord[];
+}
+
+export interface VoicePlanShelf {
+  id: string;
+  /** null = no shelf was spoken; use the shelf selected in the modal */
+  name: string | null;
+  subs: VoicePlanSub[];
+  /** Words spoken right after the shelf with no sub-category in between */
+  words: VoicePlanWord[];
+}
+
+export interface VoicePlan {
+  shelves: VoicePlanShelf[];
+  /** true when the utterance mixes levels (shelf + subs, sub + words, ...) */
+  nested: boolean;
+  shelfCount: number;
+  subCount: number;
+  wordCount: number;
+}
+
+type MarkerKind = "shelf" | "sub" | "words";
+
+// Sub-category variants must come before plain "category" so "sub category" wins.
+const PLAN_MARKER_RE = new RegExp(
+  "(^|[^a-z\\u0600-\\u06FF])(" +
+    [
+      // sub-category + common speech-engine mishearings ("sub period", "sub catgires", "sab category")
+      "s[ua]b[\\s-]?[ck]at[aeiou]?g[a-z]*", "s[ua]b[\\s-]?periods?", "sub[\\s-]?cat(?:s)?", "sub[\\s-]?folders?",
+      "سب\\s?کیٹیگریز?", "سب\\s?کیٹگری", "ذیلی\\s?زمرہ", "فئات\\s?فرعية", "فئة\\s?فرعية",
+      // category + mishearings ("catgires", "catagory", "catogirese", "katgori"); never plain "cat"
+      "[ck]at[aeiou]?g[a-z]*", "shel(?:f|ves)", "folders?",
+      "کیٹیگریز?", "کیٹگری", "زمرہ", "فئات", "فئة",
+      "words?", "alfaaz", "lafz", "الفاظ", "لفظ", "كلمات", "كلمة", "کلمات",
+    ].join("|") +
+    ")(?=$|[^a-z\\u0600-\\u06FF])",
+  "gi",
+);
+
+function markerKind(m: string): MarkerKind {
+  const s = m.toLowerCase();
+  if (/^s[ua]b|سب|ذیلی|فرعية/.test(s)) return "sub";
+  if (/^(word|alfaaz|lafz)|الفاظ|لفظ|كلم|کلم/.test(s)) return "words";
+  return "shelf";
+}
+
+function markerIsPlural(m: string): boolean {
+  const s = m.toLowerCase();
+  return /(ies|ves|s|se|alfaaz|الفاظ|كلمات|کلمات|فئات|یز)$/.test(s);
+}
+
+// Connector / command words that can sit at the edges of a spoken item ("fruits with", "add", "in it")
+const EDGE_FILLER_RE =
+  /^(?:create|make|add|build|new|the|a|an|with|having|has|have|named|called|name|of|in|it|inside|under|into|to|for|then|also|please|is|are|which|that|banao|banayein|bana|do|karo|mein|me|main|ke|ki|ka|andar|aur|and|اور|في|و|میں|کے|کی|کا|بناؤ|بنائیں)$/i;
+
+/**
+ * Trim command words from the edges of an item. A single remaining word is kept
+ * (AAC words like "me", "is", "do" are real words) unless `all` is set (lead text).
+ */
+function stripEdgeFillers(item: string, all = false): string {
+  const tokens = item.split(/\s+/).filter(Boolean);
+  const min = all ? 0 : 1;
+  while (tokens.length > min && EDGE_FILLER_RE.test(tokens[0])) tokens.shift();
+  while (tokens.length > min && EDGE_FILLER_RE.test(tokens[tokens.length - 1])) tokens.pop();
+  return tokens.join(" ");
+}
+
+function splitPlanItems(content: string, plural: boolean, isLead = false): string[] {
+  let text = content.replace(/["'?!.]/g, " ").replace(/\b(?:uh|um|er|ah|hmm)\b/gi, " ").trim();
+  // "a new one called toys" / "the name of book" -> only what follows the naming phrase
+  const afterName = text.replace(/^.*\b(?:called|named|titled|name\s+of|name\s+is|naam)\b\s*/i, "").trim();
+  if (afterName && afterName !== text) text = afterName;
+  if (!text) return [];
+  const delim = /(?:,|\n|;|\s+and\s+|\s+aur\s+|\s+اور\s+|\s+و\s+|\s+plus\s+|\s+&\s+|\s+then\s+)+/i;
+  let parts = delim.test(text) ? text.split(delim) : [text];
+  parts = parts.map((p) => stripEdgeFillers(p, isLead)).filter(Boolean);
+  // Speech engines often drop commas: "categories fruits animals vehicles"
+  if (plural && parts.length === 1 && !delim.test(text) && parts[0].includes(" ")) {
+    const tokens = parts[0].split(/\s+/);
+    const kept = tokens.filter((w) => !EDGE_FILLER_RE.test(w));
+    parts = kept.length > 0 ? kept : tokens;
+  }
+  // Drop pieces that are only a command word ("citrus and add words ..." -> "add")
+  const commandOnly = /^(?:create|make|add|build|new|with|having|then|also|please|named|called|banao|banayein|bana|karo|بناؤ|بنائیں)$/i;
+  return parts
+    .filter((p) => !commandOnly.test(p.trim()))
+    .map((p) => p.split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "))
+    .filter((p) => p.length > 0);
+}
+
+/**
+ * Parse one spoken sentence into a full tree, e.g.
+ * "category fruits sub category citrus words orange, lemon sub category berries words strawberry
+ *  category animals sub categories pets and farm"
+ * Each "category/shelf" starts a new shelf, each "sub category" a new sub-category under the
+ * current shelf, and "words" add words to the current sub-category.
+ */
+export function parseVoicePlan(raw: string): VoicePlan {
+  const text = (raw || "").replace(/\s+/g, " ").trim();
+  const segments: { kind: MarkerKind | "lead"; plural: boolean; content: string }[] = [];
+  const re = new RegExp(PLAN_MARKER_RE.source, "gi");
+  let last = 0;
+  let pendingKind: MarkerKind | "lead" = "lead";
+  let pendingPlural = false;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    const markerStart = m.index + m[1].length;
+    segments.push({ kind: pendingKind, plural: pendingPlural, content: text.slice(last, markerStart) });
+    pendingKind = markerKind(m[2]);
+    pendingPlural = markerIsPlural(m[2]);
+    last = markerStart + m[2].length;
+  }
+  segments.push({ kind: pendingKind, plural: pendingPlural, content: text.slice(last) });
+
+  const shelves: VoicePlanShelf[] = [];
+  let curShelf: VoicePlanShelf | null = null;
+  let curSub: VoicePlanSub | null = null;
+  const implicitShelf = (): VoicePlanShelf => {
+    if (!curShelf) {
+      curShelf = { id: `s${shelves.length}`, name: null, subs: [], words: [] };
+      shelves.push(curShelf);
+    }
+    return curShelf;
+  };
+  const toWords = (parentId: string, start: number, names: string[]): VoicePlanWord[] =>
+    names.map((name, k) => ({ id: `${parentId}.w${start + k}`, name }));
+
+  segments.forEach((seg, i) => {
+    let kind = seg.kind;
+    if (kind === "lead") {
+      // Unmarked text at the start: "fruits with subcategories ..." -> shelf, "fruits words ..." -> sub-category
+      // No keyword heard at all ("create a the name of book" — engine dropped "category"):
+      // treat it as shelf name(s), with command words stripped -> "Book"
+      const next = segments[i + 1]?.kind;
+      kind = next === "words" ? "sub" : "shelf";
+    }
+    let items = splitPlanItems(seg.content, seg.plural, seg.kind === "lead");
+    // A shelf / sub-category can't be named just "of", "the", "and" ("sub period of subcategory ...")
+    if (kind !== "words") items = items.filter((it) => !EDGE_FILLER_RE.test(it.toLowerCase()));
+    if (items.length === 0) return;
+    if (kind === "shelf") {
+      items.forEach((name) => {
+        const s: VoicePlanShelf = { id: `s${shelves.length}`, name, subs: [], words: [] };
+        shelves.push(s);
+        curShelf = s;
+      });
+      curSub = null;
+    } else if (kind === "sub") {
+      const s = implicitShelf();
+      items.forEach((name) => {
+        const sub: VoicePlanSub = { id: `${s.id}.b${s.subs.length}`, name, words: [] };
+        s.subs.push(sub);
+        curSub = sub;
+      });
+    } else {
+      const target: VoicePlanSub | VoicePlanShelf = curSub ?? implicitShelf();
+      target.words.push(...toWords(target.id, target.words.length, items));
+    }
+  });
+
+  return summarizeVoicePlan(shelves);
+}
+
+/** Recompute counts / nesting for a (possibly edited) list of shelves. */
+export function summarizeVoicePlan(shelves: VoicePlanShelf[]): VoicePlan {
+  const subCount = shelves.reduce((n, s) => n + s.subs.length, 0);
+  const wordCount = shelves.reduce((n, s) => n + s.words.length + s.subs.reduce((k, sub) => k + sub.words.length, 0), 0);
+  const nested = shelves.some(
+    (s) => (s.name !== null && (s.subs.length > 0 || s.words.length > 0)) || s.subs.some((sub) => sub.words.length > 0),
+  );
+  return {
+    shelves,
+    nested,
+    shelfCount: shelves.filter((s) => s.name !== null).length,
+    subCount,
+    wordCount,
+  };
+}
+
 /**
  * Intelligent parser for full voice commands spoken by a parent or child.
  * Supports:

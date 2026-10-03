@@ -18,6 +18,11 @@ export interface VoiceHandlers {
   onFinal?: (text: string) => void;
   onError?: (message: string) => void;
   onEnd?: () => void;
+  /**
+   * true = onPartial/onFinal always receive the WHOLE session transcript so far
+   * (every sentence spoken since the mic opened), not just the latest segment.
+   */
+  accumulate?: boolean;
 }
 
 // Minimal Web Speech API shape (RN tsconfig has no DOM lib).
@@ -94,6 +99,20 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
       webInstance.continuous = true;
       webInstance.interimResults = true;
       webInstance.onresult = (e: WSEvent) => {
+        if (h.accumulate) {
+          // Join every result of this session so earlier sentences are never dropped
+          let all = "";
+          let lastIsFinal = true;
+          for (let i = 0; i < e.results.length; i++) {
+            all += " " + e.results[i][0].transcript;
+            lastIsFinal = e.results[i].isFinal;
+          }
+          const full = all.replace(/\s+/g, " ").trim();
+          if (!full) return;
+          if (lastIsFinal) h.onFinal?.(full);
+          else h.onPartial?.(full);
+          return;
+        }
         let interim = "";
         let final = "";
         for (let i = e.resultIndex; i < e.results.length; i++) {

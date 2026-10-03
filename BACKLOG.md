@@ -239,3 +239,78 @@
     - `frontend/src/modules/customCategories.ts.tmp.12260.69526ba1b3ec`
     - `frontend/src/modules/customCategories.ts.tmp.12260.766770bba924`
     - `frontend/src/modules/customCategories.ts.tmp.12260.c91f0311bcd5`
+- **16:38** 🌿 Commit `[17db848]` — **"fix delete words and edit words"**
+  - 📁 **Changed Files (7):**
+    - `BACKLOG.md`
+    - `frontend/App.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/src/modules/verbForms.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+- **16:38** 🌿 Commit `[17db848]` — **"fix delete words and edit words"**
+  - 📁 **Changed Files (7):**
+    - `BACKLOG.md`
+    - `frontend/App.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/src/modules/verbForms.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+- **16:38** 🌿 Commit `[17db848]` — **"fix delete words and edit words"**
+  - 📁 **Changed Files (7):**
+    - `BACKLOG.md`
+    - `frontend/App.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/src/modules/verbForms.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+
+## 2026-10-03
+
+- **10:02:36 – 10:02:36** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+- **10:11:54 – 10:31:33** ⏱️ Active Coding Session (**20 min**)
+  - 📁 **Files Worked On (16):**
+    - `frontend/src/modules/voiceCategories.ts`
+    - `frontend/src/modules/voiceCategories.ts.tmp.432.cc64a1f5d163`
+    - `frontend/src/modules/voiceCategories.ts.tmp.432.44d9d32ce5e8`
+    - `frontend/src/screens/sedzIRGAP`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/src/screens/MyCategoriesScreen.tsx.tmp.432.9f4c0789f34c`
+    - `frontend/src/screens/MyCategoriesScreen.tsx.tmp.432.714889b82101`
+    - `frontend/src/screens/MyCategoriesScreen.tsx.tmp.432.bbe6d86eabf6`
+    - `frontend/src/screens/MyCategoriesScreen.tsx.tmp.432.3cb169adfa37`
+    - `frontend/src/screens/MyCategoriesScreen.tsx.tmp.432.cf1ee8c527d7`
+    - `frontend/src/screens/MyCategoriesScreen.tsx.tmp.432.a03906a0aabf`
+    - `frontend/src/modules/voice.ts`
+    - `frontend/src/modules/voiceCategories.ts.tmp.432.d764b64ec60f`
+    - `frontend/src/screens/sedRcOupF`
+    - `frontend/src/screens/sed0O8sw5`
+    - `frontend/src/screens/seddvhEdh`
+
+- **10:43:29 – 10:43:58** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `frontend/src/modules/voiceCategories.ts`
+
+- **10:51:49 – 11:03:29** ⏱️ Active Coding Session (**12 min**)
+  - 📁 **Files Worked On (16):**
+    - `DOCUMENTATION.md`
+    - `README.md`
+    - `frontend/src/modules/voiceCategories.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx.tmp.432.f46d481f2ddc`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/src/screens/sedzGgZMD`
+    - `frontend/src/screens/MyCategoriesScreen.tsx.tmp.432.eddb46a17204`
+    - `frontend/src/screens/MyCategoriesScreen.tsx.tmp.432.dbe8f59151ca`
+    - `frontend/src/screens/sedr8b4dj`
+    - `frontend/src/screens/sedI4yisb`
+    - `frontend/src/screens/MyCategoriesScreen.tsx.tmp.432.01ec9637eb86`
+    - `frontend/src/screens/MyCategoriesScreen.tsx.tmp.432.73487f71d48b`
+    - `frontend/src/screens/sedwv3vVW`
+    - `.gitignore`
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `ANGEL_TALK_OVERVIEW.md.tmp.432.a88d1721fad7`

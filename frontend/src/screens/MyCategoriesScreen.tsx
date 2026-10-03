@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -37,12 +37,13 @@ import {
   setSeedLanguage,
 } from "../modules/customCategories";
 import { getPictogramUrl } from "../modules/aacPictograms";
+import { searchImages } from "../modules/imageSearch";
 import { generateAllVerbForms, isLikelyVerb, detectVerbForm } from "../modules/verbForms";
 import WordEditor from "../components/WordEditor";
 import UniversalImagePickerModal from "../components/UniversalImagePickerModal";
 import LangBadge from "../components/LangBadge";
 import { startListening, stopListening, isListening } from "../modules/voice";
-import { parseVoiceCategoryCommand, cleanVoiceSpeechName, getCategoryIconForName, getCategoryColorForName, type ParsedVoiceResult } from "../modules/voiceCategories";
+import { parseVoiceCategoryCommand, parseVoicePlan, summarizeVoicePlan, cleanVoiceSpeechName, getCategoryIconForName, getCategoryColorForName, type ParsedVoiceResult, type VoicePlan, type VoicePlanShelf } from "../modules/voiceCategories";
 
 const PASTEL_PALETTE = [
   "#D5E8DF", // mint
@@ -134,6 +135,13 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   const [voiceImageUri, setVoiceImageUri] = useState<string | undefined>();
   const [voiceItems, setVoiceItems] = useState<string[]>([]);
   const [voiceSubItems, setVoiceSubItems] = useState<string[]>([]);
+  // Full tree spoken in one go: shelves -> sub-categories -> words
+  const [voicePlan, setVoicePlan] = useState<VoicePlan | null>(null);
+  // Custom pictures picked per row of the spoken tree: row key -> imageUri
+  const [voicePlanImages, setVoicePlanImages] = useState<Record<string, string>>({});
+  // Pictures found online (ARASAAC) for names the offline library doesn't know: lower name -> uri
+  const [voicePlanAutoImages, setVoicePlanAutoImages] = useState<Record<string, string>>({});
+  const voiceAutoImageTried = useRef<Set<string>>(new Set());
   const [voiceShelfId, setVoiceShelfId] = useState<string | null>(null);
   const [voiceSubCatId, setVoiceSubCatId] = useState<string | null>(null);
   const [bulkVoiceActive, setBulkVoiceActive] = useState<"words" | "shelves" | "subcats" | null>(null);
@@ -148,7 +156,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
   // Universal 3-Option Image Picker Target (Gallery, App Library, Chrome Search)
   const [imagePickerTarget, setImagePickerTarget] = useState<{
-    type: "word" | "shelf" | "tableWord" | "bulkWord" | "bulkShelf" | "bulkSubCat" | "editCat" | "voiceCat";
+    type: "word" | "shelf" | "tableWord" | "bulkWord" | "bulkShelf" | "bulkSubCat" | "editCat" | "voiceCat" | "voicePlan";
     wordId?: string;
     label: string;
     currentUri?: string;
@@ -255,6 +263,122 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     if (!voiceTargetShelf) return [];
     return childCategories(voiceTargetShelf.id);
   }, [voiceTargetShelf, tick]);
+
+  // Flat list of the spoken tree (shelf -> sub-category -> words), one row per item like Bulk Creator
+  const voicePlanRows = useMemo(() => {
+    const rows: { key: string; kind: "shelf" | "sub" | "word"; name: string; parent: string; level: number }[] = [];
+    if (!voicePlan) return rows;
+    const selectedShelfName = voiceTargetShelf?.name || currentShelf?.name || "Selected shelf";
+    voicePlan.shelves.forEach((shelf) => {
+      const shelfName = shelf.name || selectedShelfName;
+      if (shelf.name !== null) {
+        rows.push({ key: shelf.id, kind: "shelf", name: shelf.name, parent: "", level: 0 });
+      }
+      const base = shelf.name !== null ? 1 : 0;
+      shelf.words.forEach((w) => rows.push({ key: w.id, kind: "word", name: w.name, parent: shelfName, level: base }));
+      shelf.subs.forEach((sub) => {
+        rows.push({ key: sub.id, kind: "sub", name: sub.name, parent: shelfName, level: base });
+        sub.words.forEach((w) =>
+          rows.push({ key: w.id, kind: "word", name: w.name, parent: sub.name || "…", level: base + 1 }),
+        );
+      });
+    });
+    return rows;
+  }, [voicePlan, voiceTargetShelf, currentShelf]);
+
+  /** Apply a caregiver edit to the spoken tree. Editing stops the mic so voice can't overwrite the fix. */
+  function editVoicePlan(mutate: (shelves: VoicePlanShelf[]) => void) {
+    if (voiceListening) stopVoiceCapture();
+    setVoicePlan((prev) => {
+      if (!prev) return prev;
+      const shelves = prev.shelves.map((s) => ({
+        ...s,
+        words: s.words.map((w) => ({ ...w })),
+        subs: s.subs.map((b) => ({ ...b, words: b.words.map((w) => ({ ...w })) })),
+      }));
+      mutate(shelves);
+      const kept = shelves.filter((s) => s.name !== null || s.subs.length > 0 || s.words.length > 0);
+      return kept.length > 0 ? summarizeVoicePlan(kept) : null;
+    });
+  }
+
+  function renameVoiceNode(id: string, name: string) {
+    editVoicePlan((shelves) => {
+      for (const s of shelves) {
+        if (s.id === id) s.name = name;
+        s.words.forEach((w) => { if (w.id === id) w.name = name; });
+        for (const b of s.subs) {
+          if (b.id === id) b.name = name;
+          b.words.forEach((w) => { if (w.id === id) w.name = name; });
+        }
+      }
+    });
+  }
+
+  function removeVoiceNode(id: string) {
+    editVoicePlan((shelves) => {
+      const idx = shelves.findIndex((s) => s.id === id);
+      if (idx !== -1) shelves.splice(idx, 1);
+      for (const s of shelves) {
+        s.words = s.words.filter((w) => w.id !== id);
+        s.subs = s.subs.filter((b) => b.id !== id);
+        s.subs.forEach((b) => { b.words = b.words.filter((w) => w.id !== id); });
+      }
+    });
+  }
+
+  /** "+ Sub-category" on a shelf row, "+ Word" on a sub-category row. Starts empty, ready to type. */
+  function addVoiceChild(parentId: string, kind: "sub" | "word") {
+    const id = `${parentId}.n${Date.now()}`;
+    editVoicePlan((shelves) => {
+      for (const s of shelves) {
+        if (s.id === parentId && kind === "sub") s.subs.push({ id, name: "", words: [] });
+        if (s.id === parentId && kind === "word") s.words.push({ id, name: "" });
+        for (const b of s.subs) {
+          if (b.id === parentId) b.words.push({ id, name: "" });
+        }
+      }
+    });
+  }
+
+  /** One-level list (only shelves, only sub-categories or only words): switch what the items become. */
+  function retypeFlatVoicePlan(type: "category" | "subcategory" | "word") {
+    if (!voicePlan || voicePlan.nested) return;
+    const names = voicePlanRows.map((r) => r.name).filter((n) => n.trim());
+    const shelves: VoicePlanShelf[] =
+      type === "category"
+        ? names.map((n, i) => ({ id: `s${i}`, name: n, subs: [], words: [] }))
+        : type === "subcategory"
+        ? [{ id: "s0", name: null, subs: names.map((n, j) => ({ id: `s0.b${j}`, name: n, words: [] })), words: [] }]
+        : [{ id: "s0", name: null, subs: [], words: names.map((n, k) => ({ id: `s0.w${k}`, name: n })) }];
+    setVoicePlanImages({});
+    setVoicePlan(shelves.length > 0 ? summarizeVoicePlan(shelves) : null);
+  }
+
+  /** Automatic picture for a spoken item: offline pictogram first, then the online match. */
+  function voiceAutoImage(name: string): string | undefined {
+    return getPictogramUrl(name) || voicePlanAutoImages[name.trim().toLowerCase()] || undefined;
+  }
+
+  // Names with no offline pictogram: look them up online once (debounced while the user is still speaking)
+  useEffect(() => {
+    const missing = voicePlanRows
+      .map((r) => r.name.trim().toLowerCase())
+      .filter((n) => n && !getPictogramUrl(n) && !voiceAutoImageTried.current.has(n));
+    if (missing.length === 0) return;
+    const timer = setTimeout(() => {
+      missing.forEach((n) => {
+        voiceAutoImageTried.current.add(n);
+        searchImages(n, "arasaac")
+          .then(({ hits }) => {
+            const uri = hits[0]?.full || hits[0]?.thumb;
+            if (uri) setVoicePlanAutoImages((prev) => ({ ...prev, [n]: uri }));
+          })
+          .catch(() => {});
+      });
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [voicePlanRows]);
 
   // Active category being viewed/edited (either a selected sub-category or the main shelf)
   const activeCategory = useMemo(() => {
@@ -811,6 +935,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       setEditCatImageUri(uri);
     } else if (imagePickerTarget.type === "voiceCat") {
       setVoiceImageUri(uri);
+    } else if (imagePickerTarget.type === "voicePlan") {
+      setVoicePlanImages((prev) => ({ ...prev, [imagePickerTarget.label]: uri }));
     } else if (imagePickerTarget.type === "tableWord" && imagePickerTarget.wordId) {
       updateWord(activeCategory?.id || currentShelf?.id || "", imagePickerTarget.wordId, { imageUri: uri });
       refresh();
@@ -833,6 +959,12 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       setEditCatImageUri(undefined);
     } else if (imagePickerTarget.type === "voiceCat") {
       setVoiceImageUri(undefined);
+    } else if (imagePickerTarget.type === "voicePlan") {
+      setVoicePlanImages((prev) => {
+        const next = { ...prev };
+        delete next[imagePickerTarget.label];
+        return next;
+      });
     } else if (imagePickerTarget.type === "tableWord" && imagePickerTarget.wordId) {
       updateWord(activeCategory?.id || currentShelf?.id || "", imagePickerTarget.wordId, { imageUri: undefined });
       refresh();
@@ -865,6 +997,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     setVoiceImageUri(undefined);
     setVoiceItems([]);
     setVoiceSubItems([]);
+    setVoicePlan(null);
+    setVoicePlanImages({});
+    voiceAutoImageTried.current = new Set();
     setVoiceTargetType("category");
     const initialShelf = currentShelf || cats[0] || null;
     setVoiceShelfId(initialShelf?.id || null);
@@ -885,6 +1020,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     const recognitionLang = lang.startsWith("ur") ? "ur-PK" : lang.startsWith("ar") ? "ar-SA" : lang;
     startListening({
       lang: recognitionLang,
+      // Keep every sentence spoken while the mic is open (line 1 + line 2 + line 3 ...)
+      accumulate: true,
       onPartial: (text) => {
         setVoiceRawTranscript(text);
         applyVoiceText(text);
@@ -892,7 +1029,6 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       onFinal: (text) => {
         setVoiceRawTranscript(text);
         applyVoiceText(text);
-        setVoiceListening(false);
       },
       onError: () => setVoiceListening(false),
       onEnd: () => setVoiceListening(false),
@@ -900,6 +1036,47 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   }
 
   function applyVoiceText(text: string) {
+    const plan = parseVoicePlan(text);
+    const hasItems = plan.shelfCount + plan.subCount + plan.wordCount > 0;
+    // Every voice result goes into the editable list, so any mishearing can be fixed before saving
+    setVoicePlan(hasItems ? plan : null);
+
+    // Simple (one-level) commands: take the clean names from the same parser, so
+    // "create category the name of apple" -> "Apple" (no "the name of" leftovers)
+    const named = plan.shelves.filter((s) => s.name);
+    const implicit = plan.shelves.find((s) => s.name === null);
+    let simpleType: "category" | "subcategory" | "word" | null = null;
+    let simpleItems: string[] = [];
+    if (!plan.nested) {
+      if (named.length > 0) {
+        simpleType = "category";
+        simpleItems = named.map((s) => s.name as string);
+      } else if (implicit && implicit.subs.length > 0) {
+        simpleType = "subcategory";
+        simpleItems = implicit.subs.map((s) => s.name);
+      } else if (implicit && implicit.words.length > 0) {
+        simpleType = "word";
+        simpleItems = implicit.words.map((w) => w.name);
+      }
+    }
+
+    if (simpleType) {
+      const first = simpleItems[0];
+      setVoiceName(first);
+      setVoiceIcon(getCategoryIconForName(first));
+      setVoiceColor(getCategoryColorForName(first));
+      setVoiceImageUri(getPictogramUrl(first) || undefined);
+      setVoiceItems(simpleItems);
+      setVoiceSubItems([]);
+      setVoiceTargetType(simpleType);
+      return;
+    }
+    if (plan.nested && implicit) {
+      // Tree without a spoken shelf: show the chooser for where it goes
+      setVoiceTargetType(implicit.subs.length > 0 ? "subcategory" : "word");
+      return;
+    }
+
     const parsed = parseVoiceCategoryCommand(text);
     setVoiceName(parsed.cleanName);
     setVoiceIcon(parsed.icon);
@@ -913,6 +1090,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       setVoiceTargetType("subcategory");
     } else {
       setVoiceTargetType("category");
+    }
+    // A tree without a spoken shelf goes into the selected shelf — show the shelf chooser
+    if (plan.nested && plan.shelves.some((s) => s.name === null)) {
+      setVoiceTargetType("subcategory");
     }
   }
 
@@ -931,12 +1112,12 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     const recognitionLang = lang.startsWith("ur") ? "ur-PK" : lang.startsWith("ar") ? "ar-SA" : lang;
     startListening({
       lang: recognitionLang,
+      accumulate: true,
       onPartial: (text) => {
         handleBulkVoiceInput(text, target);
       },
       onFinal: (text) => {
         handleBulkVoiceInput(text, target);
-        setBulkVoiceActive(null);
       },
       onError: () => setBulkVoiceActive(null),
       onEnd: () => setBulkVoiceActive(null),
@@ -961,8 +1142,163 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     }
   }
 
+  /** Spoken words -> tiles to insert (verbs expand into their 1st/2nd/3rd/4th forms). */
+  function buildVoiceWordInserts(items: string[], plainEmoji: string, customImageFor?: (item: string) => string | undefined) {
+    const toInsert: {
+      label: string;
+      phrase: string;
+      color: string;
+      emoji: string;
+      imageUri?: string;
+      size: TileSize;
+      useTextToSpeech: boolean;
+      verbForms?: CustomWord["verbForms"];
+      verbFormTag?: "1st" | "2nd" | "3rd" | "4th";
+    }[] = [];
+
+    for (const item of items) {
+      const cName = cleanVoiceSpeechName(item);
+      if (!cName) continue;
+      const customImg = customImageFor?.(item);
+      const vForms = generateAllVerbForms(cName);
+      if (vForms) {
+        const form1 = capWord(vForms.base);
+        const forms = [
+          { label: form1, tag: "1st" as const },
+          { label: capWord(vForms.past), tag: "2nd" as const },
+          { label: capWord(vForms.participle), tag: "3rd" as const },
+          { label: capWord(vForms.continuous), tag: "4th" as const },
+        ];
+        for (const f of forms) {
+          toInsert.push({
+            label: f.label,
+            phrase: f.label,
+            color: voiceColor || PASTEL_PALETTE[0],
+            emoji: vForms.emoji || "⚡",
+            imageUri: customImg || getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
+            size: "md",
+            useTextToSpeech: true,
+            verbForms: vForms,
+            verbFormTag: f.tag,
+          });
+        }
+      } else {
+        const cLabel = capWord(cName);
+        toInsert.push({
+          label: cLabel,
+          phrase: cLabel,
+          color: voiceColor || PASTEL_PALETTE[0],
+          emoji: plainEmoji,
+          imageUri: customImg || getPictogramUrl(cLabel) || undefined,
+          size: "md",
+          useTextToSpeech: true,
+        });
+      }
+    }
+    return toInsert;
+  }
+
+  /**
+   * Create everything from one spoken sentence: shelves, their sub-categories and their words.
+   * Existing shelves / sub-categories with the same name are reused instead of duplicated.
+   */
+  function saveVoicePlan(plan: VoicePlan): boolean {
+    const sameName = (a: string, b: string) =>
+      a.trim().toLowerCase() === b.trim().toLowerCase() ||
+      (canonicalWordEn(a) || a).trim().toLowerCase() === (canonicalWordEn(b) || b).trim().toLowerCase();
+
+    const findOrCreateShelf = (name: string, customImg?: string): CustomCategory => {
+      const existing = topLevelCategories().find((c) => sameName(c.name, name));
+      if (existing) {
+        if (customImg) updateCategory(existing.id, { imageUri: customImg });
+        return existing;
+      }
+      return createBlankCategory({
+        name,
+        icon: getCategoryIconForName(name),
+        color: getCategoryColorForName(name),
+        imageUri: customImg || voiceAutoImage(name),
+      });
+    };
+    const findOrCreateSub = (shelf: CustomCategory, name: string, customImg?: string): CustomCategory => {
+      const existing = childCategories(shelf.id).find((c) => sameName(c.name, name));
+      if (existing) {
+        if (customImg) updateCategory(existing.id, { imageUri: customImg });
+        return existing;
+      }
+      return createBlankCategory({
+        name,
+        parentCategoryId: shelf.id,
+        icon: getCategoryIconForName(name),
+        color: shelf.color || "#235E50",
+        imageUri: customImg || voiceAutoImage(name),
+      });
+    };
+
+    let firstShelf: CustomCategory | null = null;
+    let firstSub: CustomCategory | null = null;
+
+    /** Spoken/edited words -> tiles, each with its own picked picture (or the auto one). */
+    const insertsFor = (words: { id: string; name: string }[]) => {
+      const named = words.filter((w) => w.name.trim());
+      const byName = new Map(named.map((w) => [w.name, w.id]));
+      return buildVoiceWordInserts(named.map((w) => w.name), "🔹", (name) => {
+        const id = byName.get(name);
+        return (id && voicePlanImages[id]) || (getPictogramUrl(name) ? undefined : voiceAutoImage(name));
+      });
+    };
+
+    // A shelf named in the list but left empty can't be created
+    if (plan.shelves.some((s) => s.name !== null && !s.name.trim() && (s.subs.length > 0 || s.words.length > 0))) {
+      Alert.alert("Shelf name missing", "Please type a name for every shelf, or remove the empty row.");
+      return false;
+    }
+
+    for (const node of plan.shelves) {
+      if (node.name !== null && !node.name.trim()) continue;
+      const shelf = node.name ? findOrCreateShelf(capWord(node.name.trim()), voicePlanImages[node.id]) : voiceTargetShelf || currentShelf;
+      if (!shelf) {
+        Alert.alert("Parent Shelf Required", "Please say a shelf name (\"category ...\") or select a shelf first.");
+        return false;
+      }
+      if (!firstShelf) firstShelf = shelf;
+
+      for (const subNode of node.subs) {
+        if (!subNode.name.trim()) continue;
+        const sub = findOrCreateSub(shelf, capWord(subNode.name.trim()), voicePlanImages[subNode.id]);
+        if (!firstSub) firstSub = sub;
+        const inserts = insertsFor(subNode.words);
+        if (inserts.length > 0) addWordsBulk(sub.id, inserts);
+      }
+
+      // Words spoken straight after a shelf: they must live in a sub-category
+      if (node.words.some((w) => w.name.trim())) {
+        const targetSub =
+          (!node.name && voiceSubCatId && getCategory(voiceSubCatId)?.parentCategoryId === shelf.id
+            ? getCategory(voiceSubCatId)
+            : undefined) ||
+          childCategories(shelf.id)[0] ||
+          findOrCreateSub(shelf, "General");
+        if (!firstSub) firstSub = targetSub;
+        const inserts = insertsFor(node.words);
+        if (inserts.length > 0) addWordsBulk(targetSub.id, inserts);
+      }
+    }
+
+    if (firstShelf) setSelectedShelfId(firstShelf.id);
+    setSelectedSubCatId(firstSub && firstSub.parentCategoryId === firstShelf?.id ? firstSub.id : null);
+    return true;
+  }
+
   function handleSaveVoice() {
     stopVoiceCapture();
+    // The editable list is the source of truth whenever voice produced one
+    if (voicePlan) {
+      if (!saveVoicePlan(voicePlan)) return;
+      setVoiceOpen(false);
+      refresh();
+      return;
+    }
     const fallback = voiceName.trim() || cleanVoiceSpeechName(voiceRawTranscript) || "New Category";
     const finalItems = voiceItems.length > 0 ? voiceItems : [fallback];
 
@@ -1060,60 +1396,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         }
       }
 
-      const wordsToAdd = finalItems;
-      const toInsert: {
-        label: string;
-        phrase: string;
-        color: string;
-        emoji: string;
-        imageUri?: string;
-        size: TileSize;
-        useTextToSpeech: boolean;
-        verbForms?: CustomWord["verbForms"];
-        verbFormTag?: "1st" | "2nd" | "3rd" | "4th";
-      }[] = [];
-
-      for (const item of wordsToAdd) {
-        const cName = cleanVoiceSpeechName(item);
-        if (!cName) continue;
-        const vForms = generateAllVerbForms(cName);
-        if (vForms) {
-          const form1 = capWord(vForms.base);
-          const form2 = capWord(vForms.past);
-          const form3 = capWord(vForms.participle);
-          const form4 = capWord(vForms.continuous);
-          const forms = [
-            { label: form1, tag: "1st" as const },
-            { label: form2, tag: "2nd" as const },
-            { label: form3, tag: "3rd" as const },
-            { label: form4, tag: "4th" as const },
-          ];
-          for (const f of forms) {
-            toInsert.push({
-              label: f.label,
-              phrase: f.label,
-              color: voiceColor || PASTEL_PALETTE[0],
-              emoji: vForms.emoji || "⚡",
-              imageUri: getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
-              size: "md",
-              useTextToSpeech: true,
-              verbForms: vForms,
-              verbFormTag: f.tag,
-            });
-          }
-        } else {
-          const cLabel = capWord(cName);
-          toInsert.push({
-            label: cLabel,
-            phrase: cLabel,
-            color: voiceColor || PASTEL_PALETTE[0],
-            emoji: voiceIcon || "🔹",
-            imageUri: getPictogramUrl(cLabel) || undefined,
-            size: "md",
-            useTextToSpeech: true,
-          });
-        }
-      }
+      const toInsert = buildVoiceWordInserts(finalItems, voiceIcon || "🔹");
       if (toInsert.length > 0) {
         addWordsBulk(targetCat.id, toInsert);
         if (voiceTargetShelf) setSelectedShelfId(voiceTargetShelf.id);
@@ -2309,6 +2592,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 <Text style={styles.voiceExampleHint}>
                   Try: "create category of name of apple" or "fruits" or "add word pizza"
                 </Text>
+                <Text style={styles.voiceExampleHint}>
+                  All at once: "category fruits sub category citrus words orange, lemon category animals sub category pets words dog, cat"
+                </Text>
 
                 {/* Spoken Transcript Bubble */}
                 <View style={styles.voiceTranscriptWrap}>
@@ -2325,6 +2611,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   </Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
                     {[
+                      "category fruits sub category citrus words orange, lemon sub category berries words strawberry and grapes category animals sub categories pets and farm",
                       "categories fruits, animals, vehicles",
                       "fruits with subcategories berries, citrus, melons",
                       "subcategories breakfast, lunch, dinner, drinks",
@@ -2355,11 +2642,12 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 </View>
               </View>
 
-              {/* Target Type Selector (Auto-detected, user can toggle) */}
+              {/* Target Type Selector (Auto-detected, user can toggle) — hidden for a full spoken tree */}
+              {!voicePlan?.nested && (<>
               <Text style={[styles.fieldLabel, { marginTop: 14 }]}>What would you like to create?</Text>
               <View style={styles.voiceTypeRow}>
                 <Pressable
-                  onPress={() => setVoiceTargetType("category")}
+                  onPress={() => { setVoiceTargetType("category"); retypeFlatVoicePlan("category"); }}
                   style={[styles.voiceTypePill, voiceTargetType === "category" && styles.voiceTypePillActive]}
                 >
                   <Ionicons
@@ -2378,7 +2666,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 </Pressable>
 
                 <Pressable
-                  onPress={() => setVoiceTargetType("subcategory")}
+                  onPress={() => { setVoiceTargetType("subcategory"); retypeFlatVoicePlan("subcategory"); }}
                   style={[styles.voiceTypePill, voiceTargetType === "subcategory" && styles.voiceTypePillActive]}
                 >
                   <Ionicons
@@ -2397,7 +2685,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 </Pressable>
 
                 <Pressable
-                  onPress={() => setVoiceTargetType("word")}
+                  onPress={() => { setVoiceTargetType("word"); retypeFlatVoicePlan("word"); }}
                   style={[styles.voiceTypePill, voiceTargetType === "word" && styles.voiceTypePillActive]}
                 >
                   <Ionicons
@@ -2415,9 +2703,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   </Text>
                 </Pressable>
               </View>
+              </>)}
 
               {/* If Sub-category chosen: Target Parent Shelf Selector */}
-              {voiceTargetType === "subcategory" && (
+              {voiceTargetType === "subcategory" && (!voicePlan || voicePlan.shelves.some((s) => s.name === null)) && (
                 <View style={{ marginTop: 10, marginBottom: 4 }}>
                   <Text style={styles.fieldLabel}>Choose Parent Shelf</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modalTargetRow}>
@@ -2440,7 +2729,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               )}
 
               {/* If Word(s) chosen: 2-Step Category & Sub-category Selector */}
-              {voiceTargetType === "word" && (
+              {voiceTargetType === "word" && (!voicePlan || voicePlan.shelves.some((s) => s.name === null)) && (
                 <View style={{ marginTop: 10, marginBottom: 4 }}>
                   <Text style={styles.fieldLabel}>1. Choose Shelf (Category)</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.modalTargetRow, { marginBottom: 6 }]}>
@@ -2503,6 +2792,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               )}
 
               {/* Clean Output Preview (Filtered of Noise) */}
+              {!voicePlan && (
               <View style={styles.voiceSmartFilterBanner}>
                 <Ionicons name="sparkles" size={16} color="#1F594A" />
                 <View style={{ flex: 1 }}>
@@ -2514,9 +2804,121 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   </Text>
                 </View>
               </View>
+              )}
+
+              {/* Full tree spoken in one sentence: shelves -> sub-categories -> words */}
+              {voicePlan && (
+                <View style={{ marginTop: 12 }}>
+                  <View style={styles.bulkPreviewHeaderRow}>
+                    <Text style={styles.bulkPreviewTitle}>
+                      {voicePlan.shelfCount} shelves · {voicePlan.subCount} sub-categories · {voicePlan.wordCount} words
+                    </Text>
+                    <Text style={styles.bulkImageTip}>Tap 🖼️ to pick custom photo</Text>
+                  </View>
+                  <Text style={[styles.fieldHint, { marginBottom: 6 }]}>
+                    ✏️ Check the list: tap any name to fix it, ✕ to remove, or + to add. Nothing is created until you press the button below.
+                  </Text>
+                  <View style={styles.bulkItemsList}>
+                    {voicePlanRows.map((row) => {
+                      const customImg = voicePlanImages[row.key];
+                      const displayImg = customImg || voiceAutoImage(row.name);
+                      const isV = row.kind === "word" && !!generateAllVerbForms(row.name);
+                      const openPicker = () =>
+                        setImagePickerTarget({ type: "voicePlan", label: row.key, currentUri: displayImg });
+                      return (
+                        <View
+                          key={row.key}
+                          style={[
+                            styles.bulkWordItemCard,
+                            isV && styles.bulkWordItemCardVerb,
+                            { marginLeft: row.level * 14 },
+                          ]}
+                        >
+                          <Pressable onPress={openPicker} style={styles.bulkWordItemThumbWrap} accessibilityLabel={`Choose picture for ${row.name}`}>
+                            {displayImg ? (
+                              <Image source={{ uri: displayImg }} style={styles.bulkWordItemThumb} resizeMode="contain" />
+                            ) : (
+                              <Text style={{ fontSize: 20 }}>{row.kind === "word" ? "🔹" : getCategoryIconForName(row.name)}</Text>
+                            )}
+                            <View style={styles.bulkWordThumbBadge}>
+                              <Ionicons name="camera" size={9} color="#FFFFFF" />
+                            </View>
+                          </Pressable>
+
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <TextInput
+                              value={row.name}
+                              onChangeText={(txt) => renameVoiceNode(row.key, txt)}
+                              placeholder={row.kind === "shelf" ? "Shelf name" : row.kind === "sub" ? "Sub-category name" : "Word"}
+                              placeholderTextColor="#9E9E9E"
+                              autoFocus={!row.name}
+                              style={[
+                                styles.bulkWordItemName,
+                                {
+                                  paddingVertical: 2,
+                                  paddingHorizontal: 6,
+                                  borderWidth: 1,
+                                  borderColor: row.name.trim() ? "#DCE7E2" : "#E8A0A0",
+                                  borderRadius: 6,
+                                  backgroundColor: "#FFFFFF",
+                                },
+                              ]}
+                            />
+                            <Text style={[styles.bulkWordItemType, isV ? styles.bulkWordItemTypeVerb : styles.bulkWordItemTypeNoun]}>
+                              {row.kind === "shelf"
+                                ? "📁 Main shelf"
+                                : row.kind === "sub"
+                                ? `📑 Sub-category in "${row.parent}"`
+                                : isV
+                                ? `✨ Verb (4 forms) in "${row.parent}"`
+                                : `🔹 Word in "${row.parent}"`}
+                            </Text>
+                            {row.kind !== "word" && (
+                              <Pressable onPress={() => addVoiceChild(row.key, row.kind === "shelf" ? "sub" : "word")} hitSlop={6}>
+                                <Text style={{ fontSize: 11, fontWeight: "700", color: "#235E50", marginTop: 3 }}>
+                                  {row.kind === "shelf" ? "+ Sub-category" : "+ Word"}
+                                </Text>
+                              </Pressable>
+                            )}
+                          </View>
+
+                          <View style={{ alignItems: "flex-end", gap: 6 }}>
+                            <Pressable onPress={openPicker} style={[styles.bulkPickImgBtn, customImg ? styles.bulkPickImgBtnActive : null]}>
+                              <Ionicons name={customImg ? "checkmark-circle" : "image"} size={13} color={customImg ? "#1F594A" : "#FFFFFF"} />
+                              <Text style={[styles.bulkPickImgBtnText, customImg ? styles.bulkPickImgBtnTextActive : null]}>
+                                {customImg ? "Photo set" : "Picture"}
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              onPress={() => removeVoiceNode(row.key)}
+                              hitSlop={6}
+                              accessibilityLabel={`Remove ${row.name}`}
+                              style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
+                            >
+                              <Ionicons name="close-circle-outline" size={14} color="#C44545" />
+                              <Text style={{ fontSize: 11, fontWeight: "700", color: "#C44545" }}>Remove</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                  <Pressable
+                    onPress={() =>
+                      editVoicePlan((shelves) => {
+                        shelves.push({ id: `s.n${Date.now()}`, name: "", subs: [], words: [] });
+                      })
+                    }
+                    style={{ alignSelf: "flex-start", marginTop: 8 }}
+                    hitSlop={6}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: "800", color: "#235E50" }}>+ Shelf</Text>
+                  </Pressable>
+                </View>
+              )}
 
               {/* Detected Bulk Items Tag Cloud / Chips */}
-              {voiceItems.length > 1 && (
+              {!voicePlan && voiceItems.length > 1 && (
                 <View style={styles.voiceBulkItemsBox}>
                   <View style={styles.voiceBulkItemsHeader}>
                     <Ionicons name="flash" size={14} color="#1F594A" />
@@ -2549,7 +2951,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               )}
 
               {/* Detected Sub-categories if hierarchical */}
-              {voiceSubItems.length > 0 && (
+              {!voicePlan && voiceSubItems.length > 0 && (
                 <View style={[styles.voiceBulkItemsBox, { backgroundColor: "#EBF5F1", borderColor: "#A2CEC0" }]}>
                   <View style={styles.voiceBulkItemsHeader}>
                     <Ionicons name="file-tray-stacked-outline" size={14} color="#1F594A" />
@@ -2576,7 +2978,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 </View>
               )}
 
-              {/* Clean Name Input (Parent can edit if needed) */}
+              {/* Clean Name Input (Parent can edit if needed) — not used when a full tree was spoken */}
+              {!voicePlan && (<>
               <Text style={[styles.fieldLabel, { marginTop: 14 }]}>
                 {voiceTargetType === "word" ? "Word / Items to add" : "Category name"}
               </Text>
@@ -2648,6 +3051,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   );
                 })}
               </View>
+              </>)}
             </ScrollView>
 
             <View style={styles.modalFooter}>
@@ -2663,11 +3067,19 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               <Pressable
                 onPress={handleSaveVoice}
                 style={styles.actionPillBtn}
-                disabled={!voiceName.trim() && voiceItems.length === 0}
+                disabled={!voicePlan && !voiceName.trim() && voiceItems.length === 0}
               >
                 <Ionicons name="checkmark" size={16} color="#FFFFFF" />
                 <Text style={styles.actionPillBtnText}>
-                  {voiceTargetType === "category"
+                  {voicePlan?.nested
+                    ? "Create All"
+                    : voicePlan
+                    ? voicePlan.shelfCount > 0
+                      ? voicePlan.shelfCount > 1 ? `Add ${voicePlan.shelfCount} Shelves` : "Add Shelf"
+                      : voicePlan.subCount > 0
+                      ? voicePlan.subCount > 1 ? `Add ${voicePlan.subCount} Sub-categories` : "Add Sub-category"
+                      : voicePlan.wordCount > 1 ? `Add ${voicePlan.wordCount} Words` : "Add Word"
+                    : voiceTargetType === "category"
                     ? voiceItems.length > 1
                       ? `Add ${voiceItems.length} Shelves in Bulk`
                       : voiceSubItems.length > 0
