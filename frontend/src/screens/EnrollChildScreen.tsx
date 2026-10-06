@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, TextInput, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as ImageManipulator from "expo-image-manipulator";
 import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile, DiagnosisType, ContentTag } from "../types";
 import { DIAGNOSIS_LABELS } from "../types";
-import { captureEmbedding } from "../modules/faceEngine";
+import { captureEmbedding, normalize } from "../modules/faceEngine";
 import { addChild, defaultTags } from "../modules/storage";
 import { useSettings } from "../context/SettingsContext";
 import { t, diagnosisLabel } from "../modules/i18n";
@@ -39,6 +40,7 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
   const [streaming, setStreaming] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [captureError, setCaptureError] = useState(false);
+  const shotsRef = useRef<number[][]>([]);
 
   useEffect(() => {
     if (step === "camera" && permission?.granted === false) {
@@ -74,12 +76,34 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
         return;
       }
 
+      shotsRef.current.push(emb);
+
       if (capturePhase < 2) {
-        setEmbedding((prev) => (prev.length ? prev.map((v, i) => (v + emb[i]) / 2) : emb));
         setCapturePhase((p) => p + 1);
       } else {
-        const finalEmb = embedding.map((v, i) => (v + emb[i]) / 2);
+        const shots = shotsRef.current;
+        const merged: number[] = new Array(emb.length).fill(0);
+        for (const s of shots) {
+          for (let i = 0; i < emb.length; i++) {
+            merged[i] += s[i];
+          }
+        }
+        const avg = merged.map((v) => v / (shots.length || 1));
+        const finalEmb = normalize(avg);
         setCaptured(true);
+
+        // Generate a tiny 96x96 avatar thumbnail (~3KB) to prevent storage quota exhaustion
+        let avatarUri: string | undefined = photo.uri;
+        try {
+          const thumb = await ImageManipulator.manipulateAsync(
+            photo.uri,
+            [{ resize: { width: 96, height: 96 } }],
+            { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          if (thumb?.uri) avatarUri = thumb.uri;
+        } catch {
+          // fallback to photo.uri
+        }
 
         const allowedTags: ContentTag[] = defaultTags;
         const child: ChildProfile = {
@@ -89,7 +113,7 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
           diagnoses,
           allowedTags,
           embedding: finalEmb,
-          photoUrl: photo.uri,
+          photoUrl: avatarUri,
           enrolledAt: Date.now(),
           stars: 0,
           badges: [],
@@ -132,6 +156,7 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
   }
 
   function handleAddAnother() {
+    shotsRef.current = [];
     setStep("info");
     setName("");
     setAge("");

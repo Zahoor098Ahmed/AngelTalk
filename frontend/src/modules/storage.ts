@@ -122,9 +122,28 @@ export function loadChildren(): ChildProfile[] {
   return childrenCache;
 }
 
+function sanitizeChildrenForStorage(children: ChildProfile[]): ChildProfile[] {
+  return children.map((c) => {
+    // If photoUrl is an enormous raw base64 string (> 50KB), strip it to prevent QuotaExceededError in localStorage
+    if (c.photoUrl && c.photoUrl.startsWith("data:") && c.photoUrl.length > 50000) {
+      return { ...c, photoUrl: undefined };
+    }
+    return c;
+  });
+}
+
 export function saveChildren(children: ChildProfile[]): void {
   childrenCache = children;
-  AsyncStorage.setItem(CHILDREN_KEY, JSON.stringify(children)).catch(() => {});
+  const sanitized = sanitizeChildrenForStorage(children);
+  const payload = JSON.stringify(sanitized);
+  AsyncStorage.setItem(CHILDREN_KEY, payload).catch((err) => {
+    console.warn("[storage] Warning: saving children failed, trying stripped fallback:", err);
+    // Extreme fallback: strip all photoUrls
+    const stripped = sanitized.map((c) => ({ ...c, photoUrl: undefined }));
+    AsyncStorage.setItem(CHILDREN_KEY, JSON.stringify(stripped)).catch((err2) => {
+      console.error("[storage] Fatal: Could not save children to AsyncStorage:", err2);
+    });
+  });
 }
 
 export function addChild(child: ChildProfile): void {

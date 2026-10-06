@@ -15,7 +15,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile } from "../types";
 import { loadChildren, deleteChild } from "../modules/storage";
-import { captureEmbedding, findMatch } from "../modules/faceEngine";
+import { captureEmbedding, findMatch, normalize, EMBEDDING_DIMENSION } from "../modules/faceEngine";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../modules/i18n";
 import { speak } from "../modules/tts";
@@ -96,10 +96,22 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
       if (cancelled || !cameraRef.current) return;
 
       const children = loadChildren();
+      setChildrenList(children);
       if (children.length === 0) {
         // No enrolled children yet
         setPhase("nomatch");
         setStatusMsg(t("noChildEnrolled", lang));
+        return;
+      }
+
+      const hasCompatibleEmbeddings = children.some(
+        (c) => c.embedding && c.embedding.length === EMBEDDING_DIMENSION
+      );
+      if (!hasCompatibleEmbeddings) {
+        console.warn("[FaceScan] Enrolled profiles have legacy face embeddings. Re-enrollment required.");
+        setPhase("nomatch");
+        setStatusMsg("Face profile update required. Tap Add Child to re-enroll face.");
+        speak("Please re-enroll face to continue", lang, settings.soundEnabled);
         return;
       }
 
@@ -129,7 +141,8 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
           }
 
           if (embedding) {
-            const match = findMatch(embedding, children);
+            const normalized = normalize(embedding);
+            const match = findMatch(normalized, children);
             if (match) {
               setFoundName(match.child.name);
               setPhase("found");
@@ -163,6 +176,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
   }, [permission?.granted, streaming, facing]);
 
   function restartScan() {
+    setChildrenList(loadChildren());
     setPhase("scanning");
     setStreaming(false);
     setTimeout(() => setStreaming(true), 200);
@@ -286,7 +300,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
 
         {phase === "scanning" && (
           <View style={{ flexDirection: "row", gap: 10, marginTop: 10, flexWrap: "wrap", justifyContent: "center" }}>
-            {childrenList.length > 0 && (
+            {/* {childrenList.length > 0 && (
               <Pressable
                 onPress={() => {
                   setChildrenList(loadChildren());
@@ -299,7 +313,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
                   {t("selectChildProfileBtn", lang)}
                 </Text>
               </Pressable>
-            )}
+            )} */}
             <Pressable
               onPress={() => (onEnrollChild ? onEnrollChild() : onParentArea())}
               style={styles.pillBtnPrimary}
@@ -329,23 +343,21 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
             </>
           ) : (
             <>
-              <View style={styles.actionRow}>
-                <BigButton variant="mint" onPress={restartScan} style={{ flex: 1 }}>
-                  <Ionicons name="refresh" size={18} color="white" style={{ marginRight: 6 }} />
-                  <Text style={styles.btnText}>{t("scanAgainBtn", lang)}</Text>
-                </BigButton>
-                <BigButton
-                  variant="primary"
-                  onPress={() => {
-                    setChildrenList(loadChildren());
-                    setChildSelectModal(true);
-                  }}
-                  style={{ flex: 1 }}
-                >
-                  <Ionicons name="person" size={18} color="white" style={{ marginRight: 6 }} />
-                  <Text style={styles.btnText}>{t("selectChildBtn", lang)}</Text>
-                </BigButton>
-              </View>
+              <BigButton variant="mint" onPress={restartScan} style={{ width: "100%" }}>
+                <Ionicons name="refresh" size={18} color="white" style={{ marginRight: 6 }} />
+                <Text style={styles.btnText}>{t("scanAgainBtn", lang)}</Text>
+              </BigButton>
+              {/* <BigButton
+                variant="primary"
+                onPress={() => {
+                  setChildrenList(loadChildren());
+                  setChildSelectModal(true);
+                }}
+                style={{ flex: 1 }}
+              >
+                <Ionicons name="person" size={18} color="white" style={{ marginRight: 6 }} />
+                <Text style={styles.btnText}>{t("selectChildBtn", lang)}</Text>
+              </BigButton> */}
               <BigButton
                 variant="ghost"
                 onPress={onEnrollChild ?? onParentArea}
@@ -361,7 +373,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
 
       {(phase === "error" || cameraUnavailable) && (
         <View style={{ width: "100%", maxWidth: 360, gap: 10, paddingHorizontal: 20 }}>
-          {childrenList.length > 0 && (
+          {/* {childrenList.length > 0 && (
             <BigButton
               variant="primary"
               onPress={() => {
@@ -373,7 +385,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
               <Ionicons name="person" size={18} color="white" style={{ marginRight: 6 }} />
               <Text style={styles.btnText}>{t("selectChildBtn", lang)}</Text>
             </BigButton>
-          )}
+          )} */}
           <BigButton variant="mint" onPress={onEnrollChild ?? onParentArea} style={{ width: "100%" }}>
             <Ionicons name="person-add" size={18} color="white" style={{ marginRight: 6 }} />
             <Text style={styles.btnText}>{t("addChild", lang)}</Text>
@@ -390,7 +402,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
           <Pressable onPress={onEnrollChild ?? onParentArea} style={styles.parentBtn}>
             <Text style={styles.parentBtnText}>➕ {t("addChild", lang)}</Text>
           </Pressable>
-          {childrenList.length > 0 && (
+          {/* {childrenList.length > 0 && (
             <Pressable
               onPress={() => {
                 setChildrenList(loadChildren());
@@ -400,7 +412,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
             >
               <Text style={styles.parentBtnText}>👤 {t("selectChildProfileBtn", lang)}</Text>
             </Pressable>
-          )}
+          )} */}
           <Pressable onPress={onParentArea} style={styles.parentBtn}>
             <Text style={styles.parentBtnText}>🔒 {t("parentPin", lang)}</Text>
           </Pressable>
@@ -421,6 +433,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
       </View>
 
       {/* Manual Child Profile Selection Modal */}
+      {/*
       <Modal visible={childSelectModal} animationType="slide" transparent>
         <View style={styles.modalBg}>
           <View style={styles.modalCard}>
@@ -494,6 +507,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
           </View>
         </View>
       </Modal>
+      */}
     </SafeAreaView>
   );
 }
