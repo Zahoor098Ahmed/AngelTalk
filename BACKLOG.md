@@ -359,3 +359,30 @@
     - `frontend/src/screens/EnrollChildScreen.tsx`
     - `frontend/src/modules/faceEngine.ts`
     - `frontend/src/screens/FaceScanScreen.tsx`
+
+- **16:38:13 – 16:40:14** ⏱️ Active Coding Session (**2 min**)
+  - 📁 **Files Worked On (3):**
+    - `frontend/src/modules/faceEngine.ts`
+    - `frontend/src/screens/FaceScanScreen.tsx`
+    - `.gitignore`
+- **16:47** 🌿 Commit `[b2865a7]` — **"fix face auth"**
+  - 📁 **Changed Files (5):**
+    - `BACKLOG.md`
+    - `frontend/src/modules/faceEngine.ts`
+    - `frontend/src/modules/storage.ts`
+    - `frontend/src/screens/EnrollChildScreen.tsx`
+    - `frontend/src/screens/FaceScanScreen.tsx`
+- **16:47** 🌿 Commit `[b2865a7]` — **"fix face auth"**
+  - 📁 **Changed Files (5):**
+    - `BACKLOG.md`
+    - `frontend/src/modules/faceEngine.ts`
+    - `frontend/src/modules/storage.ts`
+    - `frontend/src/screens/EnrollChildScreen.tsx`
+    - `frontend/src/screens/FaceScanScreen.tsx`
+- **16:48** 🌿 Commit `[b2865a7]` — **"fix face auth"**
+  - 📁 **Changed Files (5):**
+    - `BACKLOG.md`
+    - `frontend/src/modules/faceEngine.ts`
+    - `frontend/src/modules/storage.ts`
+    - `frontend/src/screens/EnrollChildScreen.tsx`
+    - `frontend/src/screens/FaceScanScreen.tsx`
