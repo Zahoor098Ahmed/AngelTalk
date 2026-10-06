@@ -1,5 +1,5 @@
 /**
- * Built-in AAC & Clipart Symbol Library for BloomSpeech.
+ * Built-in AAC & Clipart Symbol Library for Angel Talk.
  * Provides curated, categorized, high-resolution communication symbols
  * stored in the app / CDN for instant one-tap selection.
  */

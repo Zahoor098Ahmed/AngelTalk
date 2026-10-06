@@ -1,6 +1,6 @@
-# BloomSpeech — Full Technical Documentation
+# Angel Talk — Full Technical Documentation
 
-> **Update:** This app has now been physically split out into its own standalone Expo project at `apps/BloomSpeech/` (own `package.json`, `app.json`, `App.tsx`, own bundle id `com.timeglobaltech.bloomspeech`). Everything below was written during the pre-split analysis and describes the underlying feature set accurately, but file paths below still say `frontend/src/...` — read those as "this file, now living under `apps/BloomSpeech/src/...`". Files genuinely shared with BloomLearn (§13) were duplicated into both apps rather than symlinked/shared via a workspace package, as a pragmatic first pass — see the split's final report for the tradeoff.
+> **Update:** This app is a standalone Expo project at `Angel Talk/` (own `package.json`, `app.json`, `App.tsx`, bundle id `com.timeglobaltech.angeltalk`). Everything below describes the underlying feature set accurately. Files genuinely shared with BloomLearn (§13) were duplicated into both apps rather than symlinked/shared via a workspace package, as a pragmatic first pass — see the split's final report for the tradeoff.
 
 ## 1. Overview
 

@@ -7,7 +7,7 @@ import { BOOK_VOCAB_ASSETS } from "./bookVocab.generated";
  * a word that matches a real book illustration shows THAT picture instead of
  * an ARASAAC pictogram or an AI drawing.
  *
- * NOTE: content-pipeline/README.md flags that BloomSpeech has no Admin review
+ * NOTE: content-pipeline/README.md flags that Angel Talk has no Admin review
  * screen yet — these entries haven't had a human approval pass. Treat this as
  * a first real-time-lookup wire-up, not a finished, reviewed vocabulary.
  */

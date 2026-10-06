@@ -3078,7 +3078,7 @@ export function restoreBackup(data: unknown, mode: "replace" | "merge" = "replac
   const issues: string[] = [];
   const file = data as Partial<BackupFile>;
   if (!file || !Array.isArray(file.categories)) {
-    return { ok: false, restoredCategories: 0, restoredWords: 0, restoredImages: 0, issues: ["File is not a valid BloomSpeech backup."] };
+    return { ok: false, restoredCategories: 0, restoredWords: 0, restoredImages: 0, issues: ["File is not a valid Angel Talk backup."] };
   }
 
   const incoming = file.categories.filter((c): c is CustomCategory => !!c && Array.isArray((c as CustomCategory).words));

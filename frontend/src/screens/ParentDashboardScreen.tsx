@@ -191,7 +191,7 @@ export default function ParentDashboardScreen({
   }
 
   function handleShareProgressWithDoctor() {
-    const report = `📋 BLOOMSPEECH PARENT & CLINICAL PROGRESS UPDATE
+    const report = `📋 ANGEL TALK PARENT & CLINICAL PROGRESS UPDATE
 Child: ${child.name} (Age ${child.age})
 Diagnoses: ${child.diagnoses.map((d) => DIAGNOSIS_LABELS[d] || d).join(", ")}
 Date: ${new Date().toLocaleDateString()}
@@ -229,7 +229,7 @@ ${
     : "No recent journal logs."
 }
 
-Sent via BloomSpeech AAC & Pediatric Support Portal.`;
+Sent via Angel Talk AAC & Pediatric Support Portal.`;
 
     Share.share({ message: report, title: `${child.name}_Progress_Report.txt` });
   }
@@ -786,7 +786,7 @@ Sent via BloomSpeech AAC & Pediatric Support Portal.`;
                   </Text>
                   <Text style={styles.passcardLine}>
                     <Text style={{ fontWeight: "700" }}>Communication: </Text>
-                    {child.passcard?.communicationStyle || "Uses BloomSpeech AAC Tablet"}
+                    {child.passcard?.communicationStyle || "Uses Angel Talk AAC Tablet"}
                   </Text>
                   <Text style={styles.passcardLine}>
                     <Text style={{ fontWeight: "700" }}>Top Sensory Triggers: </Text>
@@ -892,8 +892,8 @@ Sent via BloomSpeech AAC & Pediatric Support Portal.`;
               <Pressable
                 onPress={() => {
                   tapFeedback();
-                  const report = `BloomSpeech Routine Adherence: ${avgAdherence}%\nActive Days: ${recordedDays.length}/7\nGenerated for: ${child.name}`;
-                  Share.share({ message: report, title: "BloomSpeech_Schedule_Report.txt" });
+                  const report = `Angel Talk Routine Adherence: ${avgAdherence}%\nActive Days: ${recordedDays.length}/7\nGenerated for: ${child.name}`;
+                  Share.share({ message: report, title: "Angel_Talk_Schedule_Report.txt" });
                 }}
                 style={styles.exportBtn}
               >
@@ -904,7 +904,7 @@ Sent via BloomSpeech AAC & Pediatric Support Portal.`;
               <Pressable
                 onPress={() => {
                   tapFeedback();
-                  const printable = `📋 BLOOMSPEECH VISUAL ROUTINE CHECKLIST 📋
+                  const printable = `📋 ANGEL TALK VISUAL ROUTINE CHECKLIST 📋
 Child: ${child.name} (Age ${child.age})
 Date: ${new Date().toLocaleDateString()}
 

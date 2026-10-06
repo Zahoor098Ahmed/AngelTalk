@@ -40,7 +40,7 @@ export default function ParentSetupScreen({ onNavigate, onBack }: Props) {
   const children = useMemo(() => loadChildren(), []);
   const totalStars = children.reduce((s, c) => s + (c.stars ?? 0), 0);
 
-  // BloomSpeech only wires up the screens the Talk Board actually has —
+  // Angel Talk only wires up the screens the Talk Board actually has —
   // Parent Hub / Doctor Panel / Admin Panel / Sentence Picture belong to
   // other apps (or the original combined project) and are not reachable
   // here, so they are deliberately not listed as options on this screen.

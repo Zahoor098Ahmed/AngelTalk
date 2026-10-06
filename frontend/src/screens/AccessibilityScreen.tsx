@@ -96,7 +96,7 @@ export default function AccessibilityScreen({ onBack }: Props) {
     const b = buildBackup();
     if (b.categoryCount === 0) return setNotice({ title: "Backup", message: t("accNothingToBackup", lang) });
     try {
-      await Share.share({ title: "BloomSpeech board backup", message: JSON.stringify(b) });
+      await Share.share({ title: "Angel Talk board backup", message: JSON.stringify(b) });
     } catch {
       /* dismissed */
     }

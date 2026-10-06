@@ -116,7 +116,7 @@
 - **05:34:23 – 05:46:43** ⏱️ Active Coding Session (**12 min**)
   - 📁 **Changed Files (17):**
     - `BACKLOG.md`
-    - `BloomSpeech/frontend/src/types.ts`
+    - `AngelTalk/frontend/src/types.ts`
     - `frontend/App.tsx`
     - `frontend/src/components/MoodFace.tsx`
     - `frontend/src/components/TabBar.tsx`
@@ -296,7 +296,7 @@
   - 📁 **Files Worked On (1):**
     - `frontend/src/modules/voiceCategories.ts`
 
-- **10:51:49 – 11:03:29** ⏱️ Active Coding Session (**12 min**)
+- **10:51:49 – 11:04:58** ⏱️ Active Coding Session (**13 min**)
   - 📁 **Files Worked On (16):**
     - `DOCUMENTATION.md`
     - `README.md`
@@ -314,3 +314,92 @@
     - `.gitignore`
     - `ANGEL_TALK_OVERVIEW.md`
     - `ANGEL_TALK_OVERVIEW.md.tmp.432.a88d1721fad7`
+
+- **11:10** 🌿 Commit `[61eac10]` — **"fix create categories from voice"**
+  - 📁 **Changed Files (5):**
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `BACKLOG.md`
+    - `frontend/src/modules/voice.ts`
+    - `frontend/src/modules/voiceCategories.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+- **11:10** 🌿 Commit `[61eac10]` — **"fix create categories from voice"**
+  - 📁 **Changed Files (5):**
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `BACKLOG.md`
+    - `frontend/src/modules/voice.ts`
+    - `frontend/src/modules/voiceCategories.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+
+- **12:41:06 – 12:41:06** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+- **14:50:49 – 14:50:49** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+## 2026-10-06
+
+- **10:28:07 – 10:28:07** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+- **10:39** 🌿 Commit `[61eac10]` — **"fix create categories from voice"**
+  - 📁 **Changed Files (5):**
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `BACKLOG.md`
+    - `frontend/src/modules/voice.ts`
+    - `frontend/src/modules/voiceCategories.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+- **10:39** 🌿 Commit `[61eac10]` — **"fix create categories from voice"**
+  - 📁 **Changed Files (5):**
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `BACKLOG.md`
+    - `frontend/src/modules/voice.ts`
+    - `frontend/src/modules/voiceCategories.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+- **10:39** 🌿 Commit `[61eac10]` — **"fix create categories from voice"**
+  - 📁 **Changed Files (5):**
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `BACKLOG.md`
+    - `frontend/src/modules/voice.ts`
+    - `frontend/src/modules/voiceCategories.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+- **10:39** 🌿 Commit `[61eac10]` — **"fix create categories from voice"**
+  - 📁 **Changed Files (5):**
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `BACKLOG.md`
+    - `frontend/src/modules/voice.ts`
+    - `frontend/src/modules/voiceCategories.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+- **10:39** 🌿 Commit `[61eac10]` — **"fix create categories from voice"**
+  - 📁 **Changed Files (5):**
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `BACKLOG.md`
+    - `frontend/src/modules/voice.ts`
+    - `frontend/src/modules/voiceCategories.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+
+- **10:35:47 – 10:54:07** ⏱️ Active Coding Session (**18 min**)
+  - 📁 **Files Worked On (10):**
+    - `README.md`
+    - `DOCUMENTATION.md`
+    - `frontend/src/screens/ParentDashboardScreen.tsx`
+    - `frontend/src/screens/ParentSetupScreen.tsx`
+    - `frontend/src/screens/AccessibilityScreen.tsx`
+    - `frontend/src/modules/phraseMatch.ts`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/builtInImageLibrary.ts`
+    - `frontend/src/modules/bookVocab.ts`
+    - `frontend/src/modules/i18n.ts`
+
+- **10:47:24 – 10:54:07** ⏱️ Active Coding Session (**7 min**)
+  - 📁 **Files Worked On (9):**
+    - `frontend/src/screens/ParentDashboardScreen.tsx`
+    - `frontend/src/screens/ParentSetupScreen.tsx`
+    - `frontend/src/screens/AccessibilityScreen.tsx`
+    - `frontend/src/modules/phraseMatch.ts`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/builtInImageLibrary.ts`
+    - `frontend/src/modules/bookVocab.ts`
+    - `frontend/src/modules/i18n.ts`
+    - `DOCUMENTATION.md`

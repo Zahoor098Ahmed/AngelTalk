@@ -78,7 +78,7 @@ function seedStarterPrepositions() {
     category: p.category,
     level: p.level,
     bookSource: null,
-    licenseRef: "Built-in starter set — BloomSpeech",
+    licenseRef: "Built-in starter set — Angel Talk",
     createdAt: now,
     updatedAt: now,
     matchCount: 0,
