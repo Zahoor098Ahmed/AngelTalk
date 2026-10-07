@@ -5,7 +5,13 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"],
+    "icon": "./assets/icon.png",
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.timeglobaltech.angeltalk",
@@ -17,15 +23,59 @@
     },
     "android": {
       "package": "com.timeglobaltech.angeltalk",
-      "versionCode": 1,
-      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO", "android.permission.READ_MEDIA_IMAGES"]
+      "versionCode": 2,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundImage": "./assets/adaptive-icon-background.png",
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png",
+        "backgroundColor": "#A45CF0"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "plugins": [
-      ["expo-camera", { "cameraPermission": "Angel Talk uses the camera so a parent can add a photo for a communication tile." }],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Angel Talk uses the camera so a parent can add a photo for a communication tile."
+        }
+      ],
       "expo-font",
-      ["expo-audio", { "microphonePermission": "Angel Talk uses the microphone so a parent can add a word by speaking it." }],
-      ["expo-image-picker", { "photosPermission": "Angel Talk lets a parent pick a photo from the gallery for a communication tile." }],
-      "expo-secure-store"
-    ]
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Angel Talk uses the microphone so a parent can add a word by speaking it."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Angel Talk lets a parent pick a photo from the gallery for a communication tile."
+        }
+      ],
+      "expo-secure-store",
+      "expo-asset",
+      "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#f5f0e6"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "4e2fca78-9f8a-4de8-9a2c-fed27be75832"
+      }
+    }
   }
 }

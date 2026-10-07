@@ -29,7 +29,7 @@ const DEFAULT_SHAPES: SoftBackdropShape[] = [
 
 export default function SoftBackdrop({ shapes = DEFAULT_SHAPES }: { shapes?: SoftBackdropShape[] }) {
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {shapes.map((s, i) => (
         <View
           key={i}

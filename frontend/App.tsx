@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView } from "react-native";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import { SettingsProvider, useSettings } from "./src/context/SettingsContext";
@@ -306,6 +306,7 @@ function MoreMenu({
 }) {
   // Layout never mirrors for Arabic/Urdu — only text changes
   const isRtl = false && isRTL(lang);
+  const insets = useSafeAreaInsets();
 
   const tabShortcuts: { tab: TabScreen; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
     { tab: "home", label: t("homeHub", lang), icon: "home", color: colors.forest },
@@ -346,7 +347,7 @@ function MoreMenu({
           <LangBadge />
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 + insets.bottom, gap: 14 }}>
           {/* Main App Tabs */}
           <Text style={[styles.menuSectionHeader, isRtl && { textAlign: "right" }]}>
             {t("mainAppsSection", lang)}

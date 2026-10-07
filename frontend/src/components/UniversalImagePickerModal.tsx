@@ -21,7 +21,7 @@ import {
   searchBuiltInSymbols,
   type BuiltInSymbol,
 } from "../modules/builtInImageLibrary";
-import { compressImageForTile } from "../modules/imageSearch";
+import { compressImageForTile, saveLocalTileImage } from "../modules/imageSearch";
 
 interface Props {
   visible: boolean;
@@ -137,10 +137,10 @@ export default function UniversalImagePickerModal({
         quality: 0.8,
       });
       if (!res.canceled && res.assets && res.assets[0]?.uri) {
-        const uri = res.assets[0].uri;
-        const compressed = await compressImageForTile(uri);
-        setPreviewUri(compressed);
-        onSelectImage(compressed);
+        // Copy out of the picker's cache into permanent app storage
+        const saved = (await saveLocalTileImage(res.assets[0].uri, `pick_${Date.now()}`)) || res.assets[0].uri;
+        setPreviewUri(saved);
+        onSelectImage(saved);
         onClose();
       }
     } catch (err) {
@@ -156,9 +156,9 @@ export default function UniversalImagePickerModal({
         quality: 0.8,
       });
       if (!res.canceled && res.assets && res.assets[0]?.uri) {
-        const uri = res.assets[0].uri;
-        setPreviewUri(uri);
-        onSelectImage(uri);
+        const saved = (await saveLocalTileImage(res.assets[0].uri, `photo_${Date.now()}`)) || res.assets[0].uri;
+        setPreviewUri(saved);
+        onSelectImage(saved);
         onClose();
       }
     } catch (err) {

@@ -6,9 +6,8 @@ import { LANGUAGES, t, applyLanguageDirection } from "../modules/i18n";
 import type { LanguageCode } from "../types";
 import { loadPasscode, hasPasscode, setPasscode, clearPasscode } from "../modules/passcode";
 import { loadPixabayKey, hasPixabayKey, setPixabayKey } from "../modules/imageSearch";
-import { buildBackup, restoreBackup, retranslateSeedBoard, setSeedLanguage } from "../modules/customCategories";
-import { loadChildren } from "../modules/storage";
-import { ensureVoicePracticeLoaded, getStorageFootprintBytes, getClipsForChild } from "../learning/voicePractice";
+import { buildBackup, ensureCategoriesLoaded, restoreBackup, retranslateSeedBoard, setSeedLanguage } from "../modules/customCategories";
+import { loadChildren } from "../modules/storage";import { ensureVoicePracticeLoaded, getStorageFootprintBytes, getClipsForChild } from "../learning/voicePractice";
 import { previewVoice } from "../modules/tts";
 import { colors, radius } from "../theme";
 
@@ -93,6 +92,7 @@ export default function AccessibilityScreen({ onBack }: Props) {
   }
 
   async function exportBoard() {
+    await ensureCategoriesLoaded();
     const b = buildBackup();
     if (b.categoryCount === 0) return setNotice({ title: "Backup", message: t("accNothingToBackup", lang) });
     try {
@@ -432,7 +432,7 @@ export default function AccessibilityScreen({ onBack }: Props) {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{notice?.title || "Notice"}</Text>
             <Text style={styles.modalBody}>{notice?.message}</Text>
-            <Pressable onPress={() => setNotice(null)} style={[styles.modalBtn, { backgroundColor: colors.forest, marginTop: 14 }]}>
+            <Pressable onPress={() => setNotice(null)} style={[styles.modalBtn, { flexGrow: 0, flexBasis: "auto", backgroundColor: colors.forest, marginTop: 14 }]}>
               <Text style={{ color: "white", fontWeight: "700", textAlign: "center" }}>OK</Text>
             </Pressable>
           </View>

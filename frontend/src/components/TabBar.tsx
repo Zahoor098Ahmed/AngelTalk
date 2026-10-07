@@ -1,5 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TabScreen } from "../types";
 import { colors } from "../theme";
 import { useResponsive } from "../modules/responsive";
@@ -24,11 +25,12 @@ export default function TabBar({ active, onChange, labels }: TabBarProps) {
   const { isSmallPhone, isTablet } = useResponsive();
   const { settings } = useSettings();
   const lang = settings.language;
+  const insets = useSafeAreaInsets();
   const iconSize = isSmallPhone ? 20 : isTablet ? 24 : 22;
   const labelFontSize = isSmallPhone ? 9.5 : isTablet ? 11.5 : 10.5;
 
   return (
-    <View style={styles.bar}>
+    <View style={[styles.bar, { paddingBottom: 8 + insets.bottom }]}>
       <View style={[styles.innerContainer, isTablet && styles.innerContainerTablet]}>
         {TABS.map((tab) => {
           const isActive = active === tab.key;

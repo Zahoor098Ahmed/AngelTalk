@@ -49,7 +49,7 @@ export default function VoiceCommandMatchScreen({ onBack }: Props) {
 
   // Animated mic pulse
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const autoStopTimer = useRef<NodeJS.Timeout | null>(null);
+  const autoStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     ensurePhraseLibraryLoaded().then(() => setReady(true));

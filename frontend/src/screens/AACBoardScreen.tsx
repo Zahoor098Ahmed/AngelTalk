@@ -33,6 +33,7 @@ import { playWord, playSentence, stopSentence, type SpokenWord } from "../module
 import { dictUrl } from "../modules/imageLibrary";
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { recordWordUsage, recordSentencePlayed, recordCorrectionUsed } from "../modules/storage";
+import { ensurePredictionLoaded, learnSentence, predictNext, suggestionTiles } from "../modules/wordPrediction";
 import { tapFeedback, selectFeedback } from "../modules/haptics";
 import { t, wordLabel, canonicalWordEn } from "../modules/i18n";
 import LangBadge from "../components/LangBadge";
@@ -207,6 +208,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   const [speaking, setSpeaking] = useState(false);
 
   useEffect(() => {
+    void ensurePredictionLoaded();
     ensureCategoriesLoaded().then(() => {
       setReady(true);
       // Auto-select "Core" (or first category) on load so communication cards appear immediately
@@ -318,6 +320,12 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     }
   }, [currentId, ready, tick, lang]);
 
+  // Predictive next-word tiles under the sentence strip ("I" -> want, need, like…)
+  const suggestions: CustomWord[] = useMemo(
+    () => (ready && sentence.length > 0 ? suggestionTiles(predictNext(sentence.map((c) => c.label)), lang) : []),
+    [ready, sentence, lang, tick],
+  );
+
   const bottomTabs = useMemo(() => (ready ? bottomTabCategories(lang) : []), [ready, tick, lang]);
 
   function speakWords(): SpokenWord[] {
@@ -412,6 +420,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     setSpeaking(true);
     const labels = sentence.map((c) => wordLabel(c.label, lang));
     recordSentencePlayed(child.id, labels);
+    learnSentence(labels);
 
     // Natural English formatting across categories for daily routine sentences
     const spokenText = lang === "en-US" ? formatNaturalEnglishSentence(labels) : labels.join(" ");
@@ -553,7 +562,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 sentence.map((c, idx) => (
                   <View key={c.id} style={styles.miniCard}>
                     <View style={styles.miniCardMedia}>
-                      <CardPic label={c.label} imageUri={c.imageUri} emoji={c.emoji} size={30} />
+                      <CardPic label={c.label} imageUri={c.imageUri} emoji={c.emoji} size={50} />
                     </View>
                     <Text style={styles.miniCardText} numberOfLines={1}>
                       {wordLabel(c.label, lang)}
@@ -606,6 +615,35 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
             </Pressable>
           </View>
         </View>
+
+        {/* Next-word suggestions, shown as board tiles */}
+        {suggestions.length > 0 && (
+          <View style={styles.suggestWrap}>
+            <View style={styles.suggestHeader}>
+              <Ionicons name="bulb" size={13} color={colors.forest} />
+              <Text style={styles.suggestHeaderText}>{lang === "ar-SA" ? "الكلمة التالية" : lang === "ur-PK" ? "اگلا لفظ" : "Next word"}</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestScroll}>
+              {suggestions.map((w) => (
+                <Pressable
+                  key={w.id}
+                  onPress={() => tapWord(w)}
+                  style={({ pressed }) => [styles.tile, styles.wordTile, styles.suggestTile, pressed && styles.tilePressed]}
+                  accessibilityLabel={wordLabel(w.label, lang)}
+                >
+                  <View style={styles.wordBody}>
+                    <CardPic label={w.label} imageUri={w.imageUri} emoji={w.emoji} size={52} />
+                  </View>
+                  <View style={styles.wordLabelBar}>
+                    <Text style={styles.wordLabelText} numberOfLines={1}>
+                      {wordLabel(w.label, lang)}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Tala Subcategory Breadcrumb Bar */}
         {path.length > 1 && (
@@ -917,7 +955,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-    minHeight: 84,
+    minHeight: 112,
   },
   msgScroll: {
     alignItems: "center",
@@ -952,10 +990,37 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
 
+  // Next-word suggestion row
+  suggestWrap: {
+    marginHorizontal: 10,
+    marginBottom: 6,
+  },
+  suggestHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 4,
+    paddingBottom: 4,
+  },
+  suggestHeaderText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.forestDark,
+  },
+  suggestScroll: {
+    gap: 8,
+    paddingRight: 8,
+  },
+  suggestTile: {
+    width: 92,
+    aspectRatio: undefined,
+    height: 104,
+  },
+
   // Mini Card in Sentence Strip
   miniCard: {
-    width: 64,
-    height: 68,
+    width: 86,
+    height: 96,
     borderRadius: 10,
     backgroundColor: "#ffffff",
     borderWidth: 1.5,
@@ -978,7 +1043,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   miniCardText: {
-    fontSize: 10.5,
+    fontSize: 12.5,
     fontWeight: "800",
     color: "#1e293b",
     textAlign: "center",

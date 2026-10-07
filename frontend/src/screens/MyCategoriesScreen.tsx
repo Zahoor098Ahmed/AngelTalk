@@ -4258,10 +4258,12 @@ const styles = StyleSheet.create({
   },
   headerActionsRowMobile: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "flex-end",
     gap: 8,
     width: "100%",
+    marginTop: 6,
   },
   backBtn: {
     width: 36,

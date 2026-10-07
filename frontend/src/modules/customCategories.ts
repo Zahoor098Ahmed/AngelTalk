@@ -3,7 +3,6 @@ import type { CustomCategory, CustomWord, TileSize, LanguageCode } from "../type
 import { starterLabel, wordLabel, canonicalWordEn, translateDynamic } from "./i18n";
 import { getPictogramUrl } from "./aacPictograms";
 import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, isContinuousForm, type VerbForms } from "./verbForms";
-
 const SEED_WORD_EN: Record<string, string[]> = {
   Core: ["I", "am", "is", "are", "was", "I want", "More", "Help", "No", "Yes", "All done", "I need", "I feel", "I like", "Can I have", "Please", "Thank you", "Stop", "Go", "to", "the", "Look", "Where"],
   Food: ["Water", "Milk", "Juice", "Apple", "Banana", "Bread", "Cookie", "Rice", "Chicken", "Snack", "Pizza", "Sandwich", "Fruit"],
@@ -99,6 +98,20 @@ export function isDeletedWord(catId: string, label: string, verbFormTag?: Custom
   return false;
 }
 
+/** A caregiver re-creating a deleted category on purpose: lift the delete block for that name. */
+export function unblockDeletedCategory(name: string, parentId?: string | null) {
+  const norms = new Set([(name || "").trim().toLowerCase()]);
+  const en = (canonicalWordEn(name) || "").trim().toLowerCase();
+  if (en) norms.add(en);
+  let changed = false;
+  for (const norm of norms) {
+    if (!norm) continue;
+    changed = deletedItemKeys.delete(`cat::${norm}`) || changed;
+    if (parentId) changed = deletedItemKeys.delete(`subcat::${parentId}::${norm}`) || changed;
+  }
+  if (changed) persistDeletedKeys();
+}
+
 export function unblockDeletedWord(catId: string, label: string, wordId?: string) {
   const norms = new Set([(label || "").trim().toLowerCase()]);
   const en = (canonicalWordEn(label) || "").trim().toLowerCase();
@@ -140,7 +153,19 @@ function migrate(list: CustomCategory[]): CustomCategory[] {
   });
 }
 
-export async function ensureCategoriesLoaded(): Promise<void> {
+let loadingPromise: Promise<void> | null = null;
+
+export function ensureCategoriesLoaded(): Promise<void> {
+  if (!loadingPromise) {
+    loadingPromise = loadCategories().catch((e) => {
+      loadingPromise = null;
+      throw e;
+    });
+  }
+  return loadingPromise;
+}
+
+async function loadCategories(): Promise<void> {
   await ensureDeletedKeysLoaded();
   if (loaded) return;
   try {
@@ -160,17 +185,19 @@ export async function ensureCategoriesLoaded(): Promise<void> {
         c.name === "بنیادی" ||
         c.name === "أساسي"
     );
-    if (!hasCore && cache.length > 0) {
+    if (!hasCore) {
       deletedItemKeys.add("cat::core");
       deletedItemKeys.add("cat::بنیادی");
       deletedItemKeys.add("cat::أساسي");
       persistDeletedKeys();
     }
-    ensureAllStandardCategories();
-    cleanAndDeduplicateCategories();
-    retranslateSeedBoard(seedLang);
-    refreshSayItForMeImages();
   }
+  // Also on a fresh install: the starter board only holds the top-level folders,
+  // their sub-folders and words (Family, Drinks, Verbs A–Z…) are filled in here.
+  ensureAllStandardCategories();
+  cleanAndDeduplicateCategories();
+  retranslateSeedBoard(seedLang);
+  refreshSayItForMeImages();
 }
 
 /**
@@ -268,6 +295,72 @@ const STARTER: { name: string; icon: string; color?: string; words: [string, str
     icon: "✨",
     color: "#8a6bc9",
     words: [],
+  },
+  {
+    name: "Subjects",
+    icon: "🧑‍🤝‍🧑",
+    color: "#6C63FF",
+    words: [
+      ["All", "💯"],
+      ["Anybody", "🙋"],
+      ["Anyone", "🙋"],
+      ["Anything", "❔"],
+      ["Both", "✌️"],
+      ["Each", "☝️"],
+      ["Everybody", "👨‍👩‍👧‍👦"],
+      ["Everyone", "👨‍👩‍👧‍👦"],
+      ["Everything", "🌍"],
+      ["Few", "🤏"],
+      ["He", "👦"],
+      ["Her", "👧"],
+      ["Hers", "👧"],
+      ["Herself", "👧"],
+      ["Him", "👦"],
+      ["Himself", "👦"],
+      ["His", "👦"],
+      ["I", "🧒"],
+      ["It", "📦"],
+      ["Its", "📦"],
+      ["Itself", "📦"],
+      ["Many", "🔢"],
+      ["Me", "🧒"],
+      ["Mine", "🧒"],
+      ["My", "🧒"],
+      ["Myself", "🧒"],
+      ["No one", "🚫"],
+      ["Nobody", "🚫"],
+      ["None", "🚫"],
+      ["Nothing", "⭕"],
+      ["Our", "🤝"],
+      ["Ours", "🤝"],
+      ["Ourselves", "🤝"],
+      ["She", "👧"],
+      ["Some", "🔹"],
+      ["Somebody", "👤"],
+      ["Someone", "👤"],
+      ["Something", "🎁"],
+      ["That", "👉"],
+      ["Their", "👥"],
+      ["Theirs", "👥"],
+      ["Them", "👥"],
+      ["Themselves", "👥"],
+      ["These", "👇"],
+      ["They", "👥"],
+      ["This", "☝️"],
+      ["Those", "👈"],
+      ["Us", "🤝"],
+      ["We", "🤝"],
+      ["What", "❓"],
+      ["Which", "🤔"],
+      ["Who", "🙋"],
+      ["Whom", "🙋"],
+      ["Whose", "🙋"],
+      ["You", "🫵"],
+      ["Your", "🫵"],
+      ["Yours", "🫵"],
+      ["Yourself", "🫵"],
+      ["Yourselves", "🫵"],
+    ],
   },
   {
     name: "Red",
@@ -1065,7 +1158,7 @@ export const STARTER_SUBCATEGORIES: {
 const FOLDER_NAMES: Partial<Record<LanguageCode, Record<string, string>>> = {
   "ar-SA": {
     Core: "أساسي", Food: "طعام", Feelings: "مشاعر", People: "أشخاص", Actions: "أفعال",
-    Places: "أماكن", Things: "أشياء", Red: "أحمر",
+    Places: "أماكن", Things: "أشياء", Red: "أحمر", Subjects: "الضمائر",
     Schools: "مدرسة", Sentences: "جمل", Tools: "أدوات", Emotion: "عاطفة", Attributes: "صفات",
     Sports: "رياضة", Hygiene: "نظافة", Music: "موسيقى", "Say It For Me": "قلها لي",
     "My Words": "كلماتي", "New Folder": "مجلد جديد",
@@ -1094,7 +1187,7 @@ const FOLDER_NAMES: Partial<Record<LanguageCode, Record<string, string>>> = {
   },
   "ur-PK": {
     Core: "بنیادی", Food: "کھانا", Feelings: "احساسات", People: "لوگ", Actions: "کام",
-    Places: "مقامات", Things: "چیزیں", Red: "لال",
+    Places: "مقامات", Things: "چیزیں", Red: "لال", Subjects: "ضمیریں",
     Schools: "اسکول", Sentences: "جملے", Tools: "اوزار", Emotion: "جذبات", Attributes: "خصوصیات",
     Sports: "کھیل", Hygiene: "صفائی", Music: "موسیقی", "Say It For Me": "میرے لیے کہو",
     "My Words": "میرے الفاظ", "New Folder": "نیا فولڈر",
@@ -1334,6 +1427,41 @@ function ensureAllStandardCategories() {
           changed = true;
         }
       });
+    } else if (s.name === "Subjects") {
+      // Keep the pronoun list complete and in its A–Z order on existing installs too
+      const used = new Set<string>();
+      const target = s.words
+        .filter(([label]) => !isDeletedWord(hit.id, label))
+        .map(([label, emoji], wi) => {
+          const localized = starterLabel(label, seedLang) || label;
+          const existing = hit.words.find(
+            (w) =>
+              !used.has(w.id) &&
+              ((w.seedLabel || "").toLowerCase() === label.toLowerCase() ||
+                (canonicalWordEn(w.label) || w.label).toLowerCase() === label.toLowerCase() ||
+                w.label === localized)
+          );
+          if (existing) used.add(existing.id);
+          return existing
+            ? { ...existing, order: wi, seedLabel: label }
+            : {
+                id: uid("w"),
+                label: localized,
+                phrase: localized,
+                emoji,
+                imageUri: getPictogramUrl(label) || undefined,
+                useTextToSpeech: true,
+                size: "md" as TileSize,
+                order: wi,
+                seedLabel: label,
+              };
+        });
+      const custom = hit.words.filter((w) => !used.has(w.id) && w.isCustom);
+      const next = [...target, ...custom.map((w, i) => ({ ...w, order: target.length + i }))];
+      if (next.length !== hit.words.length || next.some((w, i) => w.id !== hit.words[i]?.id)) {
+        hit.words = next;
+        changed = true;
+      }
     }
   });
 
@@ -1483,7 +1611,7 @@ function ensureAllStandardCategories() {
   });
 
   // Ensure priority shelves appear first: Core, People, Feelings, Actions, Food, Places, Things, Red
-  const priorityOrder = ["core", "people", "feelings", "actions", "food", "places", "things", "red", "say it for me"];
+  const priorityOrder = ["core", "subjects", "people", "feelings", "actions", "food", "places", "things", "red", "say it for me"];
   cache.forEach((c) => {
     const enName = (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase();
     const pIdx = priorityOrder.indexOf(enName);
@@ -1610,6 +1738,7 @@ export function createCategory(input: {
       isCustom: true,
     })),
   };
+  unblockDeletedCategory(cat.name);
   cache = [cat, ...cache];
   persist();
   return cat;
@@ -1626,6 +1755,7 @@ function mutate(id: string, fn: (c: CustomCategory) => void): CustomCategory | u
 }
 
 export function renameCategory(id: string, name: string) {
+  if (name.trim()) unblockDeletedCategory(name, cache.find((c) => c.id === id)?.parentCategoryId);
   return mutate(id, (c) => {
     c.name = name.trim() || c.name;
   });
@@ -2635,6 +2765,7 @@ export function createBlankCategory(input: {
     order: siblings.length,
     words: [],
   };
+  unblockDeletedCategory(cat.name, cat.parentCategoryId);
   cache = [...cache, cat];
   persist();
   return cat;
@@ -2672,6 +2803,7 @@ export function createBlankCategoriesBulk(
       order: siblings.length,
       words: [],
     };
+    unblockDeletedCategory(name, parentId);
     cache.push(cat);
     createdList.push(cat);
   }
@@ -2684,6 +2816,7 @@ export function createBlankCategoriesBulk(
 }
 
 export function updateCategoryMeta(id: string, patch: Partial<Pick<CustomCategory, "name" | "color" | "icon" | "imageUri">>) {
+  if (patch.name) unblockDeletedCategory(patch.name, cache.find((c) => c.id === id)?.parentCategoryId);
   return mutate(id, (c) => Object.assign(c, patch));
 }
 

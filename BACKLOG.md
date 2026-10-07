@@ -353,7 +353,7 @@
     - `frontend/src/modules/bookVocab.ts`
     - `frontend/src/modules/i18n.ts`
 
-- **16:29:20 – 16:39:05** ⏱️ Active Coding Session (**10 min**)
+- **16:29:20 – 17:01:14** ⏱️ Active Coding Session (**32 min**)
   - 📁 **Files Worked On (4):**
     - `frontend/src/modules/storage.ts`
     - `frontend/src/screens/EnrollChildScreen.tsx`
@@ -386,3 +386,90 @@
     - `frontend/src/modules/storage.ts`
     - `frontend/src/screens/EnrollChildScreen.tsx`
     - `frontend/src/screens/FaceScanScreen.tsx`
+- **17:03** 🌿 Commit `[435f007]` — **"fix face auth"**
+  - 📁 **Changed Files (5):**
+    - `BACKLOG.md`
+    - `frontend/src/modules/faceEngine.ts`
+    - `frontend/src/modules/storage.ts`
+    - `frontend/src/screens/EnrollChildScreen.tsx`
+    - `frontend/src/screens/FaceScanScreen.tsx`
+- **17:03** 🌿 Commit `[2eb8c40]` — **"docs: update BACKLOG.md"**
+  - 📁 **Changed Files (1):**
+    - `BACKLOG.md`
+- **17:03** 🌿 Commit `[435f007]` — **"fix face auth"**
+  - 📁 **Changed Files (5):**
+    - `BACKLOG.md`
+    - `frontend/src/modules/faceEngine.ts`
+    - `frontend/src/modules/storage.ts`
+    - `frontend/src/screens/EnrollChildScreen.tsx`
+    - `frontend/src/screens/FaceScanScreen.tsx`
+- **17:03** 🌿 Commit `[2eb8c40]` — **"docs: update BACKLOG.md"**
+  - 📁 **Changed Files (1):**
+    - `BACKLOG.md`
+- **17:01:13 – 17:01:13** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (4):**
+    - `frontend/src/modules/faceEngine.ts`
+    - `frontend/src/modules/storage.ts`
+    - `frontend/src/screens/EnrollChildScreen.tsx`
+    - `frontend/src/screens/FaceScanScreen.tsx`
+
+## 2026-10-07
+
+- **09:48:33 – 09:48:33** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+- **10:05:27 – 11:52:44** ⏱️ Active Coding Session (**107 min**)
+  - 📁 **Files Worked On (30):**
+    - `frontend/package.json`
+    - `frontend/app.json`
+    - `frontend/seddMdYUd`
+    - `frontend/.gitignore`
+    - `frontend/tsconfig.json`
+    - `frontend/src/components/sedP2V9nY`
+    - `frontend/src/components/SoftBackdrop.tsx`
+    - `frontend/src/screens/VoiceCommandMatchScreen.tsx`
+    - `.gitignore`
+    - `sed16beXQ`
+    - `frontend/src/components/TabBar.tsx.tmp.9164.cb167568228a`
+    - `frontend/src/components/TabBar.tsx`
+    - `frontend/App.tsx.tmp.9164.9f51bfdb2670`
+    - `frontend/App.tsx`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/assets/icon.png`
+    - `frontend/assets/adaptive-icon-background.png`
+    - `frontend/assets/adaptive-icon-monochrome.png`
+    - `frontend/assets/adaptive-icon.png`
+    - `frontend/assets/favicon.png`
+    - `frontend/assets/splash-icon.png`
+    - `frontend/app.json.tmp.9164.a8b4d34720a2`
+    - `frontend/src/components/Logo.tsx`
+    - `frontend/eas.json.tmp.9164.30094d38f3bd`
+    - `frontend/eas.json`
+    - `frontend/app.json.V2S6viqICcjSmtm_X1hFTYjpj7m0ba_eN4zG5LYSDaY`
+    - `frontend/src/modules/devBoardTransfer.ts`
+    - `frontend/src/screens/AccessibilityScreen.tsx`
+    - `frontend/src/modules/defaultBoard.ts`
+    - `frontend/src/modules/defaultBoard.json`
+
+- **14:21:46 – 14:21:46** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+- **15:09:29 – 15:22:51** ⏱️ Active Coding Session (**13 min**)
+  - 📁 **Files Worked On (2):**
+    - `.gitignore`
+    - `frontend/src/modules/customCategories.ts`
+
+- **15:48:32 – 16:22:58** ⏱️ Active Coding Session (**34 min**)
+  - 📁 **Files Worked On (10):**
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/sedZUMObv`
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/src/modules/customCategories.ts.tmp.9164.e4f4abd33bee`
+    - `frontend/src/modules/seds8rSoK`
+    - `frontend/src/components/UniversalImagePickerModal.tsx`
+    - `frontend/app.json`
+    - `frontend/src/modules/wordPrediction.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `.gitignore`
