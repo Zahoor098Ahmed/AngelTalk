@@ -185,12 +185,12 @@ export default function HomeScreen(props: Props) {
           <View style={[styles.headerInner, isTablet && styles.headerInnerTablet]}>
             <View style={styles.headerTop}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <Mascot mood="happy" size={44} animate={!settings.reduceMotion} />
+                <Mascot mood="happy" size={58} animate={!settings.reduceMotion} />
                 <View>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                     <Ionicons
                       name={hour < 12 ? "sunny-outline" : hour < 17 ? "partly-sunny-outline" : "moon-outline"}
-                      size={13}
+                      size={16}
                       color="rgba(255,255,255,0.8)"
                     />
                     <Text style={styles.greeting}>{greeting}</Text>
@@ -200,7 +200,7 @@ export default function HomeScreen(props: Props) {
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <View style={styles.starBadgeHeader}>
-                  <Ionicons name="star" size={13} color="#fbbf24" />
+                  <Ionicons name="star" size={17} color="#fbbf24" />
                   <Text style={styles.starBadgeHeaderText}>{child.stars ?? 0}</Text>
                 </View>
                 <LangBadge dark />
@@ -210,7 +210,7 @@ export default function HomeScreen(props: Props) {
                   hitSlop={8}
                   accessibilityLabel="Settings and Menu"
                 >
-                  <Ionicons name="grid-outline" size={18} color="white" />
+                  <Ionicons name="grid-outline" size={23} color="white" />
                 </Pressable>
               </View>
             </View>
@@ -247,12 +247,12 @@ export default function HomeScreen(props: Props) {
                   accessibilityLabel={`Express ${u.label}`}
                 >
                   <View style={styles.urgentIconCircle}>
-                    <UrgentActionIcon type={u.type} size={isSmallPhone ? 22 : isTablet ? 28 : 25} />
+                    <UrgentActionIcon type={u.type} size={isSmallPhone ? 30 : isTablet ? 40 : 34} />
                   </View>
                   <Text
                     style={[
                       styles.urgentTileLabel,
-                      { color: u.textColor, fontSize: isSmallPhone ? 11 : isTablet ? 13.5 : 12 },
+                      { color: u.textColor, fontSize: isSmallPhone ? 12.5 : isTablet ? 15.5 : 14 },
                     ]}
                   >
                     {u.label === "Bathroom" ? t("bathroom", lang) : wordLabel(u.label, lang)}
@@ -300,11 +300,11 @@ export default function HomeScreen(props: Props) {
                       pressed && { transform: [{ scale: 0.95 }] },
                     ]}
                   >
-                    <MoodFace mood={m.mood} size={isSmallPhone ? 28 : isTablet ? 38 : 34} />
+                    <MoodFace mood={m.mood} size={isSmallPhone ? 38 : isTablet ? 52 : 46} />
                     <Text
                       style={[
                         styles.moodBtnText,
-                        { color: m.color, fontSize: isSmallPhone ? 10 : isTablet ? 12.5 : 11 },
+                        { color: m.color, fontSize: isSmallPhone ? 11.5 : isTablet ? 14.5 : 13 },
                         isSel && { fontWeight: "900", color: colors.forest },
                       ]}
                       numberOfLines={1}
@@ -423,7 +423,7 @@ export default function HomeScreen(props: Props) {
                 ]}
               >
                 <View style={styles.quickIconBadge}>
-                  <Ionicons name={q.icon} size={isTablet ? 26 : 22} color={q.iconColor} />
+                  <Ionicons name={q.icon} size={isTablet ? 34 : 30} color={q.iconColor} />
                 </View>
                 <Text style={[styles.quickLabel, isTablet && { fontSize: 16 }]}>{t(q.labelKey, lang)}</Text>
                 <Text style={styles.quickDesc} numberOfLines={2}>{q.desc}</Text>
@@ -569,12 +569,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  greeting: { color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: "600" },
-  name: { color: "white", fontSize: 22, fontWeight: "900", marginTop: 2 },
+  greeting: { color: "rgba(255,255,255,0.85)", fontSize: 16, fontWeight: "600" },
+  name: { color: "white", fontSize: 28, fontWeight: "900", marginTop: 2 },
   settingsBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
@@ -584,11 +584,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 5,
     backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
   },
-  starBadgeHeaderText: { color: "white", fontSize: 13, fontWeight: "800" },
+  starBadgeHeaderText: { color: "white", fontSize: 16, fontWeight: "800" },
 
   body: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 14 },
   bodyTablet: { maxWidth: 860, alignSelf: "center", width: "100%", paddingHorizontal: 28 },
@@ -622,9 +622,9 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   urgentIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
@@ -793,9 +793,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   quickIconBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     backgroundColor: "rgba(255,255,255,0.75)",
     alignItems: "center",
     justifyContent: "center",

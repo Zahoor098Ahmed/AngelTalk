@@ -473,3 +473,122 @@
     - `frontend/src/modules/wordPrediction.ts`
     - `frontend/src/screens/AACBoardScreen.tsx`
     - `.gitignore`
+- **17:04** 🌿 Commit `[7c5d9c9]` — **"edit catogires"**
+  - 📁 **Changed Files (30):**
+    - `.expo/README.md`
+    - `.expo/devices.json`
+    - `.gitignore`
+    - `BACKLOG.md`
+    - `frontend/.expo/README.md`
+    - `frontend/.expo/devices.json`
+    - `frontend/.gitignore`
+    - `frontend/App.tsx`
+    - `frontend/app.json`
+    - `frontend/assets/adaptive-icon-background.png`
+    - `frontend/assets/adaptive-icon-monochrome.png`
+    - `frontend/assets/adaptive-icon.png`
+    - `frontend/assets/favicon.png`
+    - `frontend/assets/icon.png`
+    - `frontend/assets/splash-icon.png`
+    - `frontend/eas.json`
+    - `frontend/package-lock.json`
+    - `frontend/package.json`
+    - `frontend/src/components/Logo.tsx`
+    - `frontend/src/components/SoftBackdrop.tsx`
+    - `frontend/src/components/TabBar.tsx`
+    - `frontend/src/components/UniversalImagePickerModal.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/src/modules/wordPrediction.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/AccessibilityScreen.tsx`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/src/screens/VoiceCommandMatchScreen.tsx`
+    - `frontend/tsconfig.json`
+- **17:04** 🌿 Commit `[7c5d9c9]` — **"edit catogires"**
+  - 📁 **Changed Files (30):**
+    - `.expo/README.md`
+    - `.expo/devices.json`
+    - `.gitignore`
+    - `BACKLOG.md`
+    - `frontend/.expo/README.md`
+    - `frontend/.expo/devices.json`
+    - `frontend/.gitignore`
+    - `frontend/App.tsx`
+    - `frontend/app.json`
+    - `frontend/assets/adaptive-icon-background.png`
+    - `frontend/assets/adaptive-icon-monochrome.png`
+    - `frontend/assets/adaptive-icon.png`
+    - `frontend/assets/favicon.png`
+    - `frontend/assets/icon.png`
+    - `frontend/assets/splash-icon.png`
+    - `frontend/eas.json`
+    - `frontend/package-lock.json`
+    - `frontend/package.json`
+    - `frontend/src/components/Logo.tsx`
+    - `frontend/src/components/SoftBackdrop.tsx`
+    - `frontend/src/components/TabBar.tsx`
+    - `frontend/src/components/UniversalImagePickerModal.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/src/modules/wordPrediction.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/AccessibilityScreen.tsx`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/src/screens/VoiceCommandMatchScreen.tsx`
+    - `frontend/tsconfig.json`
+
+## 2026-10-08
+
+- **10:04:47 – 10:04:47** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+- **10:11:44 – 10:56:53** ⏱️ Active Coding Session (**45 min**)
+  - 📁 **Files Worked On (12):**
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/HomeScreen.tsx`
+    - `frontend/src/components/TabBar.tsx`
+    - `frontend/src/modules/wordPrediction.ts.tmp.8636.475243bd642d`
+    - `frontend/src/modules/wordPrediction.ts`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/src/modules/responsive.ts`
+    - `frontend/src/screens/FaceScanScreen.tsx`
+    - `frontend/src/screens/EnrollChildScreen.tsx`
+    - `frontend/App.tsx`
+
+- **11:05:30 – 11:54:37** ⏱️ Active Coding Session (**49 min**)
+  - 📁 **Files Worked On (22):**
+    - `.gitignore`
+    - `frontend/src/types.ts`
+    - `frontend/src/components/PinGate.tsx`
+    - `frontend/src/modules/faceEngine.ts`
+    - `frontend/src/modules/storage.ts`
+    - `frontend/src/screens/EnrollChildScreen.tsx`
+    - `frontend/src/screens/FaceScanScreen.tsx`
+    - `frontend/src/modules/i18n.ts`
+    - `frontend/package.json`
+    - `frontend/metro.config.js`
+    - `frontend/src/modules/faceAI.ts`
+    - `frontend/src/components/FaceAIHost.tsx`
+    - `frontend/App.tsx`
+    - `frontend/assets/faceai/LICENSE-face-api.txt`
+    - `frontend/assets/faceai/face-api.js.txt`
+    - `frontend/assets/faceai/face_landmark_68_tiny_model.bin`
+    - `frontend/assets/faceai/face_recognition_model.bin`
+    - `frontend/assets/faceai/tiny_face_detector_model.bin`
+    - `frontend/src/modules/faceai-face_landmark_68_tiny_model.json`
+    - `frontend/src/modules/faceai-face_recognition_model.json`
+    - `frontend/src/modules/faceai-tiny_face_detector_model.json`
+    - `frontend/src/modules/faceAI.ts.tmp.8636.71d97a399983`
+
+- **12:04:15 – 12:23:21** ⏱️ Active Coding Session (**19 min**)
+  - 📁 **Files Worked On (6):**
+    - `frontend/src/modules/faceAI.ts`
+    - `.gitignore`
+    - `frontend/src/modules/responsive.ts`
+    - `frontend/src/screens/FaceScanScreen.tsx`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/components/TabBar.tsx`

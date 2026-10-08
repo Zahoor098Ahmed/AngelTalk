@@ -8,6 +8,7 @@ import {
   Image,
   I18nManager,
   Alert,
+  TextInput,
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -23,6 +24,7 @@ import {
   getCategory,
   createBlankCategory,
   bottomTabCategories,
+  verbFolderLetter,
   coreWords,
   setSeedLanguage,
   retranslateSeedBoard,
@@ -33,7 +35,7 @@ import { playWord, playSentence, stopSentence, type SpokenWord } from "../module
 import { dictUrl } from "../modules/imageLibrary";
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { recordWordUsage, recordSentencePlayed, recordCorrectionUsed } from "../modules/storage";
-import { ensurePredictionLoaded, learnSentence, predictNext, suggestionTiles } from "../modules/wordPrediction";
+import { ensurePredictionLoaded, learnSentence, predictNext, predictPhrases, searchWords, suggestionTiles, tileForText } from "../modules/wordPrediction";
 import { tapFeedback, selectFeedback } from "../modules/haptics";
 import { t, wordLabel, canonicalWordEn } from "../modules/i18n";
 import LangBadge from "../components/LangBadge";
@@ -188,20 +190,26 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       if (child.buttonDensity <= 28) return 6;
       return 7;
     }
-    if (width >= 880) return 7;
-    if (width >= 680) return 6;
-    if (width >= 500) return 5;
-    return Math.min(5, Math.max(3, settings.boardColumns || 4));
+    // Fewer, bigger tiles so pictures stay clear for the child
+    if (width >= 1100) return 6;
+    if (width >= 820) return 5;
+    if (width >= 560) return 4;
+    return Math.min(4, Math.max(3, settings.boardColumns || 4));
   }, [width, settings.boardColumns, child.buttonDensity]);
 
   // Scale the picture to the tile's actual box size instead of a fixed
   // constant — on wide screens with few columns a hardcoded small icon was
   // left floating in a mostly-empty card.
-  const cardPicSize = Math.round(Math.min(130, Math.max(36, (width / cols) * 0.5)));
+  // Tile is (width / cols - cell padding) wide with aspectRatio 0.95; leave room for the label bar.
+  const tileW = width / cols - 8;
+  const cardPicSize = Math.round(Math.min(200, Math.max(40, Math.min(tileW * 0.86, tileW / 0.95 - 38))));
+  // Folder tiles also carry a top tab ("FOLDER" pill), so their picture gets a little less height
+  const folderPicSize = Math.round(Math.min(190, Math.max(36, Math.min(tileW * 0.8, tileW / 0.95 - 62))));
 
   const [ready, setReady] = useState(false);
   const [path, setPath] = useState<string[]>([]); // category id stack
   const [sentence, setSentence] = useState<Chip[]>([]);
+  const [typed, setTyped] = useState(""); // word the child is typing in the sentence box
   const [tick, setTick] = useState(0); // re-read after edits elsewhere
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [voiceTarget, setVoiceTarget] = useState<string | null>(null);
@@ -322,8 +330,21 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
 
   // Predictive next-word tiles under the sentence strip ("I" -> want, need, like…)
   const suggestions: CustomWord[] = useMemo(
-    () => (ready && sentence.length > 0 ? suggestionTiles(predictNext(sentence.map((c) => c.label)), lang) : []),
-    [ready, sentence, lang, tick],
+    () => (ready && sentence.length > 0 && !typed.trim() ? suggestionTiles(predictNext(sentence.map((c) => c.label)), lang) : []),
+    [ready, sentence, typed, lang, tick],
+  );
+  // Words matching what the child is typing ("co" -> come, cookie…)
+  const searchHits: CustomWord[] = useMemo(
+    () => (ready && typed.trim() ? searchWords(typed, lang) : []),
+    [ready, typed, lang, tick],
+  );
+  // Google-style whole-phrase suggestions ("I want" -> to eat, more please…)
+  const phraseRows: CustomWord[][] = useMemo(
+    () =>
+      ready && sentence.length > 0 && !typed.trim()
+        ? predictPhrases(sentence.map((c) => c.label)).map((ph) => suggestionTiles(ph, lang))
+        : [],
+    [ready, sentence, typed, lang, tick],
   );
 
   const bottomTabs = useMemo(() => (ready ? bottomTabCategories(lang) : []), [ready, tick, lang]);
@@ -365,17 +386,59 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       isPhraseMode
     );
     // Always add tapped word to sentence strip at the top
-    setSentence((prev) => [
-      ...prev,
-      {
-        id: `${w.id}-${prev.length}-${Date.now().toString(36).slice(-4)}`,
-        label: spokenText,
-        emoji: w.emoji,
-        imageUri: w.imageUri || getPictogramUrl(canonicalWordEn(w.phrase || w.label)) || undefined,
-        audioUri: w.audioUri,
-        useTextToSpeech: w.useTextToSpeech,
-      },
-    ]);
+    setSentence((prev) => [...prev, toChip(w, prev.length)]);
+  }
+
+  function toChip(w: CustomWord, idx: number): Chip {
+    return {
+      id: `${w.id}-${idx}-${Date.now().toString(36).slice(-4)}`,
+      label: wordLabel(w.phrase || w.label, lang),
+      emoji: w.emoji,
+      imageUri: w.imageUri || getPictogramUrl(canonicalWordEn(w.phrase || w.label)) || undefined,
+      audioUri: w.audioUri,
+      useTextToSpeech: w.useTextToSpeech,
+    };
+  }
+
+  function addWords(ws: CustomWord[]) {
+    if (ws.length === 0) return;
+    setSentence((prev) => [...prev, ...ws.map((w, i) => toChip(w, prev.length + i))]);
+  }
+
+  /** Typing: every finished word (followed by a space) becomes a picture box. */
+  function onTypeChange(v: string) {
+    if (/\s/.test(v)) {
+      const parts = v.split(/\s+/);
+      const rest = parts.pop() ?? "";
+      const done = parts.filter(Boolean);
+      if (done.length) {
+        tapFeedback();
+        addWords(done.map((part) => tileForText(part, lang)));
+      }
+      setTyped(rest);
+    } else {
+      setTyped(v);
+    }
+  }
+
+  function submitTyped() {
+    const v = typed.trim();
+    if (!v) return;
+    tapFeedback();
+    addWords(v.split(/\s+/).map((part) => tileForText(part, lang)));
+    setTyped("");
+  }
+
+  function pickSearchHit(w: CustomWord) {
+    tapWord(w);
+    setTyped("");
+  }
+
+  function pickPhrase(tiles: CustomWord[]) {
+    tapFeedback();
+    addWords(tiles);
+    const text = tiles.map((w) => wordLabel(w.phrase || w.label, lang)).join(" ");
+    void playWord({ label: text, phrase: text, useTextToSpeech: true }, lang, settings.speechRate, voiceType, true);
   }
 
   function removeChipAt(index: number) {
@@ -562,7 +625,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 sentence.map((c, idx) => (
                   <View key={c.id} style={styles.miniCard}>
                     <View style={styles.miniCardMedia}>
-                      <CardPic label={c.label} imageUri={c.imageUri} emoji={c.emoji} size={50} />
+                      <CardPic label={c.label} imageUri={c.imageUri} emoji={c.emoji} size={76} />
                     </View>
                     <Text style={styles.miniCardText} numberOfLines={1}>
                       {wordLabel(c.label, lang)}
@@ -579,6 +642,30 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 ))
               )}
             </ScrollView>
+            {/* Type or search a word */}
+            <View style={styles.typeRow}>
+              <Ionicons name="search" size={20} color={colors.textLight} />
+              <TextInput
+                value={typed}
+                onChangeText={onTypeChange}
+                onSubmitEditing={submitTyped}
+                onKeyPress={(e) => {
+                  if (e.nativeEvent.key === "Backspace" && typed === "") undoLastChip();
+                }}
+                placeholder={lang === "ar-SA" ? "اكتب كلمة أو ابحث…" : lang === "ur-PK" ? "لفظ لکھیں یا تلاش کریں…" : "Type or search a word…"}
+                placeholderTextColor={colors.textLight}
+                style={styles.typeInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="done"
+                blurOnSubmit={false}
+              />
+              {typed.trim() ? (
+                <Pressable onPress={submitTyped} style={styles.typeAddBtn} accessibilityLabel="Add typed word">
+                  <Ionicons name="add" size={18} color="#ffffff" />
+                </Pressable>
+              ) : null}
+            </View>
           </View>
 
           {/* Action buttons matching the tablet photo */}
@@ -616,11 +703,77 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
           </View>
         </View>
 
+        {/* Search results for the word being typed */}
+        {searchHits.length > 0 && (
+          <View style={styles.suggestWrap}>
+            <View style={styles.suggestHeader}>
+              <Ionicons name="search" size={17} color={colors.forest} />
+              <Text style={styles.suggestHeaderText}>{lang === "ar-SA" ? "كلمات" : lang === "ur-PK" ? "الفاظ" : "Words"}</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.suggestScroll}>
+              {searchHits.map((w) => (
+                <Pressable
+                  key={w.id}
+                  onPress={() => pickSearchHit(w)}
+                  style={({ pressed }) => [styles.tile, styles.wordTile, styles.suggestTile, pressed && styles.tilePressed]}
+                  accessibilityLabel={wordLabel(w.label, lang)}
+                >
+                  <View style={styles.wordBody}>
+                    <CardPic label={w.label} imageUri={w.imageUri} emoji={w.emoji} size={86} />
+                  </View>
+                  <View style={styles.wordLabelBar}>
+                    <Text style={styles.wordLabelText} numberOfLines={1}>
+                      {wordLabel(w.label, lang)}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Google-style phrase suggestions: the sentence so far + what could come next, all as boxes */}
+        {phraseRows.length > 0 && (
+          <View style={styles.suggestWrap}>
+            <View style={styles.suggestHeader}>
+              <Ionicons name="sparkles" size={17} color={colors.forest} />
+              <Text style={styles.suggestHeaderText}>{lang === "ar-SA" ? "اقتراحات" : lang === "ur-PK" ? "تجاویز" : "Suggestions"}</Text>
+            </View>
+            {phraseRows.map((row) => (
+              <Pressable
+                key={row.map((w) => w.id).join("|")}
+                onPress={() => pickPhrase(row)}
+                style={({ pressed }) => [styles.phraseRow, pressed && styles.tilePressed]}
+              >
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.phraseRowInner}>
+                  {sentence.slice(-2).map((c) => (
+                    <View key={`ctx-${c.id}`} style={[styles.phraseBox, styles.phraseBoxCtx]}>
+                      <CardPic label={c.label} imageUri={c.imageUri} emoji={c.emoji} size={52} />
+                      <Text style={[styles.phraseBoxText, { color: colors.textMid }]} numberOfLines={1}>
+                        {wordLabel(c.label, lang)}
+                      </Text>
+                    </View>
+                  ))}
+                  {row.map((w) => (
+                    <View key={w.id} style={styles.phraseBox}>
+                      <CardPic label={w.label} imageUri={w.imageUri} emoji={w.emoji} size={52} />
+                      <Text style={styles.phraseBoxText} numberOfLines={1}>
+                        {wordLabel(w.label, lang)}
+                      </Text>
+                    </View>
+                  ))}
+                </ScrollView>
+                <Ionicons name="add-circle" size={34} color={colors.forest} />
+              </Pressable>
+            ))}
+          </View>
+        )}
+
         {/* Next-word suggestions, shown as board tiles */}
         {suggestions.length > 0 && (
           <View style={styles.suggestWrap}>
             <View style={styles.suggestHeader}>
-              <Ionicons name="bulb" size={13} color={colors.forest} />
+              <Ionicons name="bulb" size={17} color={colors.forest} />
               <Text style={styles.suggestHeaderText}>{lang === "ar-SA" ? "الكلمة التالية" : lang === "ur-PK" ? "اگلا لفظ" : "Next word"}</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggestScroll}>
@@ -632,7 +785,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                   accessibilityLabel={wordLabel(w.label, lang)}
                 >
                   <View style={styles.wordBody}>
-                    <CardPic label={w.label} imageUri={w.imageUri} emoji={w.emoji} size={52} />
+                    <CardPic label={w.label} imageUri={w.imageUri} emoji={w.emoji} size={86} />
                   </View>
                   <View style={styles.wordLabelBar}>
                     <Text style={styles.wordLabelText} numberOfLines={1}>
@@ -704,7 +857,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                     >
                       <View style={styles.folderTopTab}>
                         <View style={[styles.folderTabPill, { backgroundColor: c }]}>
-                          <Ionicons name="folder-open" size={9} color="#ffffff" />
+                          <Ionicons name="folder-open" size={13} color="#ffffff" />
                           <Text style={styles.folderTabPillText}>{wordLabel("Folder", lang)}</Text>
                         </View>
                         {childCount > 0 && (
@@ -716,15 +869,21 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                         )}
                       </View>
                       <View style={[styles.folderBody, { backgroundColor: c + "10" }]}>
-                        {f.imageUri ? (
+                        {verbFolderLetter(f) ? (
+                          <View style={[styles.letterBadge, { width: folderPicSize, height: folderPicSize, borderRadius: folderPicSize * 0.24, borderColor: c }]}>
+                            <Text style={[styles.letterBadgeText, { color: c, fontSize: Math.round(folderPicSize * 0.66) }]}>
+                              {verbFolderLetter(f)}
+                            </Text>
+                          </View>
+                        ) : f.imageUri ? (
                           <CardPic
                             label={f.name}
                             imageUri={f.imageUri}
                             emoji={f.icon ?? "📁"}
-                            size={cardPicSize}
+                            size={folderPicSize}
                           />
                         ) : (
-                          <Text style={styles.folderIcon}>{f.icon ?? "📁"}</Text>
+                          <Text style={[styles.folderIcon, { fontSize: Math.round(folderPicSize * 0.7) }]}>{f.icon ?? "📁"}</Text>
                         )}
                       </View>
                       <View style={[styles.folderLabelBar, { backgroundColor: c }]}>
@@ -840,7 +999,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                     active && { backgroundColor: (bt.color || colors.forest) + "28" },
                   ]}
                 >
-                  <CardPic label={bt.name} emoji={bt.icon} size={28} />
+                  <CardPic label={bt.name} emoji={bt.icon} size={64} />
                 </View>
                 <Text
                   style={[
@@ -955,7 +1114,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-    minHeight: 112,
+    minHeight: 132,
   },
   msgScroll: {
     alignItems: "center",
@@ -984,7 +1143,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   liveSentenceText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "700",
     color: colors.forestDark,
     fontStyle: "italic",
@@ -1003,7 +1162,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   suggestHeaderText: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: "800",
     color: colors.forestDark,
   },
@@ -1012,15 +1171,81 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   suggestTile: {
-    width: 92,
+    width: 122,
     aspectRatio: undefined,
-    height: 104,
+    height: 140,
+  },
+
+  // Type / search box in the sentence strip
+  typeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 6,
+    marginHorizontal: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+  },
+  typeInput: {
+    flex: 1,
+    paddingVertical: 10,
+    fontSize: 17,
+    fontWeight: "600",
+    color: colors.textDark,
+  },
+  typeAddBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.forest,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Google-style phrase suggestion rows
+  phraseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginBottom: 6,
+  },
+  phraseRowInner: {
+    gap: 8,
+    alignItems: "center",
+  },
+  phraseBox: {
+    width: 92,
+    alignItems: "center",
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.forest,
+    backgroundColor: "#ffffff",
+  },
+  phraseBoxCtx: {
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
+  },
+  phraseBoxText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#0f172a",
+    marginTop: 2,
+    paddingHorizontal: 2,
   },
 
   // Mini Card in Sentence Strip
   miniCard: {
-    width: 86,
-    height: 96,
+    width: 104,
+    height: 116,
     borderRadius: 10,
     backgroundColor: "#ffffff",
     borderWidth: 1.5,
@@ -1043,7 +1268,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   miniCardText: {
-    fontSize: 12.5,
+    fontSize: 14.5,
     fontWeight: "800",
     color: "#1e293b",
     textAlign: "center",
@@ -1145,7 +1370,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#ffffff",
-    padding: 6,
+    padding: 3,
   },
   wordLabelBar: {
     paddingVertical: 6,
@@ -1158,7 +1383,7 @@ const styles = StyleSheet.create({
   wordLabelText: {
     color: "#0f172a",
     fontWeight: "800",
-    fontSize: 12,
+    fontSize: 14,
     textAlign: "center",
   },
 
@@ -1176,27 +1401,38 @@ const styles = StyleSheet.create({
   folderTabPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 6,
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   folderTabPillText: {
     color: "#ffffff",
-    fontSize: 8.5,
+    fontSize: 11.5,
     fontWeight: "800",
     textTransform: "uppercase",
   },
   folderCountPill: {
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 6,
-    borderWidth: 1,
-    backgroundColor: "rgba(255,255,255,0.75)",
+    minWidth: 26,
+    alignItems: "center",
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    backgroundColor: "rgba(255,255,255,0.9)",
   },
   folderCountText: {
-    fontSize: 8.5,
+    fontSize: 14,
     fontWeight: "800",
+  },
+  letterBadge: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    backgroundColor: "#ffffff",
+  },
+  letterBadgeText: {
+    fontWeight: "900",
   },
   folderBody: {
     flex: 1,
@@ -1214,7 +1450,7 @@ const styles = StyleSheet.create({
   folderLabelText: {
     color: "#ffffff",
     fontWeight: "800",
-    fontSize: 12,
+    fontSize: 14,
     textAlign: "center",
   },
   emptyBoard: {
@@ -1240,7 +1476,7 @@ const styles = StyleSheet.create({
   },
   bottomTab: {
     alignItems: "center",
-    width: 66,
+    width: 110,
     borderRadius: 12,
     paddingVertical: 5,
     paddingHorizontal: 2,
@@ -1250,15 +1486,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#f1f5f9",
   },
   bottomTabIcon: {
-    width: 38,
-    height: 38,
+    width: 72,
+    height: 72,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 2,
   },
   bottomTabLabel: {
-    fontSize: 10,
+    fontSize: 14.5,
     fontWeight: "700",
     color: colors.textDark,
     textAlign: "center",

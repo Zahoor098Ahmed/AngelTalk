@@ -123,6 +123,12 @@ export interface ChildProfile {
   diagnoses: DiagnosisType[];
   allowedTags: ContentTag[];
   embedding: number[];
+  /** Face AI descriptors (128 numbers each) of the enrolment photos. */
+  faceDescriptors?: number[][];
+  /** Looks recognised later with high confidence (newest few); enrolment descriptors are kept forever. */
+  learnedFaceDescriptors?: number[][];
+  /** Face AI version the descriptors were made with (see FACE_AI_VERSION). */
+  faceVersion?: number;
   enrolledAt: number;
   stars: number;
   badges: string[];

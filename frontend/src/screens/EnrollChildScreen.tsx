@@ -6,7 +6,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile, DiagnosisType, ContentTag } from "../types";
 import { DIAGNOSIS_LABELS } from "../types";
-import { captureEmbedding, normalize } from "../modules/faceEngine";
+import { describeFace, ensureFaceAI, FACE_AI_VERSION, type FaceIssue } from "../modules/faceAI";
 import { addChild, defaultTags } from "../modules/storage";
 import { useSettings } from "../context/SettingsContext";
 import { t, diagnosisLabel } from "../modules/i18n";
@@ -14,6 +14,7 @@ import { speak } from "../modules/tts";
 import Mascot from "../components/Mascot";
 import BigButton from "../components/BigButton";
 import { colors, radius } from "../theme";
+import { useScreenScale } from "../modules/responsive";
 
 interface Props {
   onDone: (child?: ChildProfile) => void;
@@ -41,6 +42,7 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
   const [isCapturing, setIsCapturing] = useState(false);
   const [captureError, setCaptureError] = useState(false);
   const shotsRef = useRef<number[][]>([]);
+  const [faceIssue, setFaceIssue] = useState<FaceIssue | null>(null);
 
   useEffect(() => {
     if (step === "camera" && permission?.granted === false) {
@@ -69,27 +71,20 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
         setCaptureError(true);
         return;
       }
-      const dims = photo.width && photo.height ? { width: photo.width, height: photo.height } : undefined;
-      const emb = await captureEmbedding(photo.uri, dims);
-      if (emb.length === 0) {
+      const result = await describeFace(photo.uri);
+      if (!("descriptor" in result)) {
+        setFaceIssue(result.issue);
         setCaptureError(true);
         return;
       }
+      setFaceIssue(null);
 
-      shotsRef.current.push(emb);
+      shotsRef.current.push(result.descriptor);
 
       if (capturePhase < 2) {
         setCapturePhase((p) => p + 1);
       } else {
         const shots = shotsRef.current;
-        const merged: number[] = new Array(emb.length).fill(0);
-        for (const s of shots) {
-          for (let i = 0; i < emb.length; i++) {
-            merged[i] += s[i];
-          }
-        }
-        const avg = merged.map((v) => v / (shots.length || 1));
-        const finalEmb = normalize(avg);
         setCaptured(true);
 
         // Generate a tiny 96x96 avatar thumbnail (~3KB) to prevent storage quota exhaustion
@@ -112,7 +107,9 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
           age: parseInt(age, 10) || 5,
           diagnoses,
           allowedTags,
-          embedding: finalEmb,
+          embedding: [],
+          faceDescriptors: shots,
+          faceVersion: FACE_AI_VERSION,
           photoUrl: avatarUri,
           enrolledAt: Date.now(),
           stars: 0,
@@ -169,11 +166,18 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
 
   const stepLabels = [t("enrollStep1", lang), t("enrollStep2", lang), t("enrollStep3", lang)];
 
+  // Start loading the face AI before the first Capture tap
+  useEffect(() => {
+    if (step === "camera") ensureFaceAI().catch(() => {});
+  }, [step]);
+  const { s, camSize } = useScreenScale();
+  const contentMax = Math.min(680, 440 * s);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <ScrollView contentContainerStyle={styles.container}>
-          <View style={{ width: "100%", maxWidth: 440 }}>
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+          <View style={{ width: "100%", maxWidth: contentMax }}>
             <Pressable
               onPress={() => {
                 if (step === "camera") {
@@ -183,51 +187,57 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
                 }
               }}
             >
-              <Text style={styles.backText}>← {t("back", lang)}</Text>
+              <Text style={[styles.backText, { fontSize: 16 * s }]}>← {t("back", lang)}</Text>
             </Pressable>
           </View>
 
-          <Mascot mood={step === "done" ? "love" : "happy"} size={70} />
-          <Text style={styles.title}>{step === "info" ? t("addChild", lang) : step === "camera" ? t("enrollFace", lang) : t("childAdded", lang)}</Text>
+          {/* Centred body fills the screen height */}
+          <View style={[styles.body, { gap: 20 * s }]}>
+          <Mascot mood={step === "done" ? "love" : "happy"} size={Math.round(70 * s)} />
+          <Text style={[styles.title, { fontSize: 24 * s }]}>{step === "info" ? t("addChild", lang) : step === "camera" ? t("enrollFace", lang) : t("childAdded", lang)}</Text>
 
           {step === "info" && (
-            <View style={styles.form}>
+            <View style={[styles.form, { maxWidth: contentMax, gap: 16 * s }]}>
               <View>
-                <Text style={styles.label}>{t("childName", lang)}</Text>
-                <TextInput value={name} onChangeText={setName} placeholder={t("namePlaceholder", lang)} style={styles.input} />
+                <Text style={[styles.label, { fontSize: 15 * s }]}>{t("childName", lang)}</Text>
+                <TextInput value={name} onChangeText={setName} placeholder={t("namePlaceholder", lang)} style={[styles.input, { fontSize: 17 * s, paddingVertical: 14 * s }]} />
               </View>
               <View>
-                <Text style={styles.label}>{t("childAge", lang)}</Text>
+                <Text style={[styles.label, { fontSize: 15 * s }]}>{t("childAge", lang)}</Text>
                 <TextInput
                   value={age}
                   onChangeText={setAge}
                   keyboardType="number-pad"
                   placeholder={t("agePlaceholder", lang)}
-                  style={styles.input}
+                  style={[styles.input, { fontSize: 17 * s, paddingVertical: 14 * s }]}
                 />
               </View>
               <View>
-                <Text style={[styles.label, { marginBottom: 10 }]}>{t("diagnosis", lang)} {t("selectAllThatApply", lang)}</Text>
+                <Text style={[styles.label, { marginBottom: 10, fontSize: 15 * s }]}>{t("diagnosis", lang)} {t("selectAllThatApply", lang)}</Text>
                 <View style={styles.tagWrap}>
                   {ALL_DIAGNOSES.map((d) => {
                     const active = diagnoses.includes(d);
                     return (
-                      <Pressable key={d} onPress={() => toggleDiagnosis(d)} style={[styles.tag, active && styles.tagActive]}>
-                        <Text style={[styles.tagText, active && { color: "white" }]}>{diagnosisLabel(d, DIAGNOSIS_LABELS[d], lang)}</Text>
+                      <Pressable
+                        key={d}
+                        onPress={() => toggleDiagnosis(d)}
+                        style={[styles.tag, { paddingVertical: 8 * s, paddingHorizontal: 14 * s }, active && styles.tagActive]}
+                      >
+                        <Text style={[styles.tagText, { fontSize: 13 * s }, active && { color: "white" }]}>{diagnosisLabel(d, DIAGNOSIS_LABELS[d], lang)}</Text>
                       </Pressable>
                     );
                   })}
                 </View>
               </View>
-              <BigButton variant="primary" disabled={!name.trim() || !age} onPress={() => setStep("camera")} style={{ width: "100%", marginTop: 8 }}>
+              <BigButton variant="primary" disabled={!name.trim() || !age} onPress={() => setStep("camera")} style={{ width: "100%", marginTop: 8, minHeight: 64 * s }} textStyle={{ fontSize: 18 * s }}>
                 {t("next", lang)} →
               </BigButton>
             </View>
           )}
 
           {step === "camera" && (
-            <View style={styles.cameraStep}>
-              <Text style={styles.stepLabel}>{stepLabels[capturePhase]}</Text>
+            <View style={[styles.cameraStep, { maxWidth: Math.max(380 * s, camSize + 40), gap: 16 * s }]}>
+              <Text style={[styles.stepLabel, { fontSize: 16 * s }]}>{stepLabels[capturePhase]}</Text>
 
               <View style={{ flexDirection: "row", gap: 8 }}>
                 {[0, 1, 2].map((i) => (
@@ -235,7 +245,7 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
                 ))}
               </View>
 
-              <View style={styles.cameraCircle}>
+              <View style={[styles.cameraCircle, { width: camSize, height: camSize, borderRadius: camSize / 2 }]}>
                 {permission?.granted ? (
                   <CameraView
                     ref={cameraRef}
@@ -251,41 +261,63 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
               </View>
 
               {captureError && (
-                <View style={{ alignItems: "center", gap: 6 }}>
-                  <Text style={styles.errorText}>{t("faceCaptureFailed", lang)}</Text>
-                  <Text style={{ fontSize: 12, color: colors.textMid, textAlign: "center" }}>
-                    Position face in good lighting, or skip this step to finish enrollment.
+                <View style={[styles.errorBox, { padding: 12 * s, gap: 6 * s }]}>
+                  <Text style={[styles.errorText, { fontSize: 16 * s }]}>⚠️ {t("faceCaptureFailed", lang)}</Text>
+                  <Text style={{ fontSize: 14 * s, color: colors.textMid, textAlign: "center", lineHeight: 20 * s }}>
+                    {faceIssue === "noFace"
+                      ? lang === "ar-SA"
+                        ? "لم يتم العثور على وجه. ضع الوجه في منتصف الدائرة واقترب قليلاً."
+                        : lang === "ur-PK"
+                        ? "چہرہ نہیں ملا۔ چہرہ دائرے کے بیچ میں لائیں اور تھوڑا قریب آئیں۔"
+                        : "No face found. Bring the face to the middle of the circle and come a little closer."
+                      : faceIssue === "notReady"
+                      ? lang === "ar-SA"
+                        ? "نظام التعرف على الوجه لم يجهز بعد. انتظر لحظة وحاول مرة أخرى."
+                        : lang === "ur-PK"
+                        ? "چہرہ پہچاننے کا نظام ابھی تیار نہیں۔ ایک لمحہ رکیں اور دوبارہ کوشش کریں۔"
+                        : "Face recognition is still getting ready. Wait a moment and try again."
+                      : lang === "ar-SA"
+                      ? "انظر مباشرة إلى الكاميرا مع إضاءة جيدة على الوجه، أو تخطَّ هذه الخطوة."
+                      : lang === "ur-PK"
+                      ? "سیدھا کیمرے کی طرف دیکھیں اور چہرے پر اچھی روشنی ہو، یا یہ مرحلہ چھوڑ دیں۔"
+                      : "Look straight at the camera with good light on the face, or skip this step to finish enrollment."}
                   </Text>
                 </View>
               )}
 
               <View style={{ width: "100%", gap: 10, marginTop: 4 }}>
-                <BigButton variant="primary" onPress={capture} disabled={!permission?.granted || !streaming || isCapturing} style={{ width: "100%" }}>
+                <BigButton variant="primary" onPress={capture} disabled={!permission?.granted || !streaming || isCapturing} style={{ width: "100%", minHeight: 64 * s }} textStyle={{ fontSize: 18 * s }}>
                   📸 {isCapturing ? t("capturingEllipsis", lang) : capturePhase < 2 ? t("captureBtn", lang) : t("finishBtn", lang)}
                 </BigButton>
 
-                <BigButton variant="ghost" onPress={finishWithoutCamera} style={{ width: "100%" }}>
-                  <Text style={{ color: colors.forest, fontWeight: "700" }}>{t("continueWithoutCamera", lang)}</Text>
+                <BigButton variant="ghost" onPress={finishWithoutCamera} style={{ width: "100%", minHeight: 56 * s }}>
+                  <Text style={{ color: colors.forest, fontWeight: "700", fontSize: 15 * s }}>{t("continueWithoutCamera", lang)}</Text>
                 </BigButton>
               </View>
             </View>
           )}
 
           {step === "done" && (
-            <View style={styles.doneStep}>
-              <Text style={{ fontSize: 56 }}>🎉</Text>
-              <Text style={styles.doneText}>
+            <View style={[styles.doneStep, { gap: 20 * s, width: "100%", maxWidth: contentMax }]}>
+              <Text style={{ fontSize: 56 * s }}>🎉</Text>
+              <Text style={[styles.doneText, { fontSize: 20 * s }]}>
                 <Text style={{ fontWeight: "800" }}>{name}</Text> {t("hasBeenAdded", lang)}
               </Text>
-              <Text style={styles.doneSub}>{t("faceUnlockHint", lang)}</Text>
-              <BigButton variant="mint" onPress={() => onDone(newChild ?? undefined)} style={{ width: "100%", maxWidth: 320 }}>
+              <Text style={[styles.doneSub, { fontSize: 14 * s }]}>{t("faceUnlockHint", lang)}</Text>
+              <BigButton
+                variant="mint"
+                onPress={() => onDone(newChild ?? undefined)}
+                style={{ width: "100%", maxWidth: 320 * s, minHeight: 64 * s }}
+                textStyle={{ fontSize: 18 * s }}
+              >
                 {newChild ? `${t("startWithChild", lang)} ${newChild.name} →` : t("doneCheck", lang)}
               </BigButton>
               <Pressable onPress={handleAddAnother} style={{ paddingVertical: 10 }}>
-                <Text style={{ color: colors.textMid, fontSize: 14 }}>{t("addAnotherChild", lang)}</Text>
+                <Text style={{ color: colors.textMid, fontSize: 14 * s }}>{t("addAnotherChild", lang)}</Text>
               </Pressable>
             </View>
           )}
+          </View>
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -293,7 +325,8 @@ export default function EnrollChildScreen({ onDone, onBack }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { alignItems: "center", padding: 20, paddingTop: 28, gap: 20 },
+  container: { flexGrow: 1, alignItems: "center", padding: 20, paddingTop: 20 },
+  body: { flex: 1, width: "100%", alignItems: "center", justifyContent: "center", paddingVertical: 12 },
   backText: { color: colors.textMid, fontSize: 16 },
   title: { fontSize: 24, fontWeight: "800", color: colors.textDark, textAlign: "center" },
   form: { width: "100%", maxWidth: 440, gap: 16 },
@@ -310,5 +343,13 @@ const styles = StyleSheet.create({
   doneStep: { alignItems: "center", gap: 20 },
   doneText: { fontSize: 20, color: colors.textDark, textAlign: "center" },
   doneSub: { color: colors.textMid, textAlign: "center" },
-  errorText: { color: "#c45", fontSize: 13, textAlign: "center" },
+  errorText: { color: "#c45", fontSize: 13, fontWeight: "800", textAlign: "center" },
+  errorBox: {
+    width: "100%",
+    alignItems: "center",
+    borderRadius: radius,
+    borderWidth: 1.5,
+    borderColor: "#f3c4c4",
+    backgroundColor: "#fff5f5",
+  },
 });

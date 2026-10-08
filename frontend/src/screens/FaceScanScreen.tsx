@@ -14,14 +14,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile } from "../types";
-import { loadChildren, deleteChild } from "../modules/storage";
-import { captureEmbedding, findMatch, normalize, EMBEDDING_DIMENSION } from "../modules/faceEngine";
+import { loadChildren, deleteChild, updateChild } from "../modules/storage";
+import { describeFace, ensureFaceAI, hasFaceProfile, learnFace, matchFace, LEARN_DISTANCE } from "../modules/faceAI";
 import { useSettings } from "../context/SettingsContext";
 import { t } from "../modules/i18n";
 import { speak } from "../modules/tts";
 import Mascot from "../components/Mascot";
 import BigButton from "../components/BigButton";
 import { colors, radius, radiusSm } from "../theme";
+import { useScreenScale } from "../modules/responsive";
 
 interface Props {
   onMatch: (child: ChildProfile) => void;
@@ -36,6 +37,17 @@ type Phase = "scanning" | "found" | "nomatch" | "error";
 export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdminPortal, onEnrollChild }: Props) {
   const { settings } = useSettings();
   const lang = settings.language;
+  const { s, camSize, width } = useScreenScale();
+  // Wide enough: put the action buttons side by side so nothing needs scrolling
+  const sideBySide = width >= 560;
+  const actionRowStyle = {
+    width: "100%" as const,
+    maxWidth: sideBySide ? 640 * Math.min(s, 1.2) : 360 * s,
+    flexDirection: sideBySide ? ("row" as const) : ("column" as const),
+    gap: 10 * s,
+    paddingHorizontal: 20,
+  };
+  const actionBtn = sideBySide ? { flex: 1 } : { width: "100%" as const };
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [phase, setPhase] = useState<Phase>("scanning");
@@ -104,9 +116,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
         return;
       }
 
-      const hasCompatibleEmbeddings = children.some(
-        (c) => c.embedding && c.embedding.length === EMBEDDING_DIMENSION
-      );
+      const hasCompatibleEmbeddings = children.some(hasFaceProfile);
       if (!hasCompatibleEmbeddings) {
         console.warn("[FaceScan] Enrolled profiles have legacy face embeddings. Re-enrollment required.");
         setPhase("nomatch");
@@ -115,15 +125,32 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
         return;
       }
 
-      // Perform up to 3 scanning passes (total ~5-6 seconds)
-      for (let pass = 1; pass <= 3; pass++) {
+      // Load the face AI (a few seconds on first launch)
+      try {
+        setStatusMsg(lang === "ar-SA" ? "جارٍ تجهيز التعرف على الوجه…" : lang === "ur-PK" ? "چہرہ پہچاننے کا نظام تیار ہو رہا ہے…" : "Getting face recognition ready…");
+        await ensureFaceAI();
+      } catch (err) {
+        console.warn("[FaceScan] face AI failed to load:", err);
+        if (!cancelled) {
+          setPhase("error");
+          setStatusMsg(t("cameraUnavailableMsg", lang));
+        }
+        return;
+      }
+      if (cancelled) return;
+
+      // A login needs two shots in a row that match the same child
+      let pending: { id: string; distance: number } | null = null;
+      let sawFace = false;
+
+      // Perform up to 4 scanning passes (total ~7 seconds)
+      for (let pass = 1; pass <= 4; pass++) {
         if (cancelled || !cameraRef.current) return;
         setScanAttempt(pass);
         setStatusMsg(pass === 1 ? t("checkingFaceEllipsis", lang) : t("adjustingLighting", lang).replace("{n}", String(pass)));
 
         try {
-          // Take 2 quick shots per pass and merge embeddings
-          let embedding: number[] | null = null;
+          // Take 2 quick shots per pass; each one is checked on its own
           for (let shot = 0; shot < 2; shot++) {
             if (cancelled || !cameraRef.current) return;
             const photo = await cameraRef.current.takePictureAsync({
@@ -133,37 +160,41 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
             if (cancelled) return;
             if (!photo?.uri) continue;
 
-            const dims = photo.width && photo.height ? { width: photo.width, height: photo.height } : undefined;
-            const emb = await captureEmbedding(photo.uri, dims);
-            if (emb.length === 0) continue;
-            embedding = embedding ? embedding.map((v, i) => (v + emb[i]) / 2) : emb;
-            if (shot < 1) await new Promise((r) => setTimeout(r, 180));
-          }
-
-          if (embedding) {
-            const normalized = normalize(embedding);
-            const match = findMatch(normalized, children);
-            if (match) {
-              setFoundName(match.child.name);
-              setPhase("found");
-              setStatusMsg(t("welcomeBack", lang).replace("{name}", match.child.name));
-              speak(`${t("hello", lang)}, ${match.child.name}!`, lang, settings.soundEnabled);
-              await new Promise((r) => setTimeout(r, 1100));
-              if (!cancelled) onMatch(match.child);
-              return;
+            const result = await describeFace(photo.uri);
+            if (cancelled) return;
+            const descriptor = "descriptor" in result ? result.descriptor : null;
+            if (descriptor) sawFace = true;
+            const match = descriptor ? matchFace(descriptor, children) : null;
+            if (!match || !pending || pending.id !== match.child.id) {
+              // no face / no match / first sighting: wait for a confirming shot
+              pending = match ? { id: match.child.id, distance: match.distance } : null;
+              if (shot < 1) await new Promise((r) => setTimeout(r, 180));
+              continue;
             }
+            // Confirmed by two shots; only learn from a clearly certain match
+            if (descriptor && Math.max(pending.distance, match.distance) <= LEARN_DISTANCE) {
+              updateChild(learnFace(match.child, descriptor));
+            }
+            setFoundName(match.child.name);
+            setPhase("found");
+            setStatusMsg(t("welcomeBack", lang).replace("{name}", match.child.name));
+            speak(`${t("hello", lang)}, ${match.child.name}!`, lang, settings.soundEnabled);
+            await new Promise((r) => setTimeout(r, 1100));
+            if (!cancelled) onMatch(match.child);
+            return;
           }
         } catch (err) {
           console.warn("[FaceScan] pass error:", err);
         }
 
         // Brief pause before next pass
-        if (pass < 3) await new Promise((r) => setTimeout(r, 600));
+        if (pass < 4) await new Promise((r) => setTimeout(r, 500));
       }
 
       if (!cancelled) {
         setPhase("nomatch");
-        setStatusMsg(t("noMatch", lang));
+        // No face at all in any shot: ask to come into the circle instead of "no match"
+        setStatusMsg(sawFace ? t("noMatch", lang) : t("positionFaceHint", lang));
         speak(t("noMatch", lang), lang, settings.soundEnabled);
       }
     }
@@ -209,18 +240,25 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
 
   const scanTranslateY = scanAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: [-110, 110],
+    outputRange: [-(camSize / 2 - 20), camSize / 2 - 20],
   });
 
   return (
     <SafeAreaView style={styles.container}>
+      <ScrollView style={{ flex: 1, width: "100%" }} contentContainerStyle={[styles.body, { gap: 20 * s }]}>
       <View style={{ alignItems: "center" }}>
-        <Text style={styles.greeting}>{greeting} 👋</Text>
-        <Text style={styles.title}>{t("appName", lang)}</Text>
+        <Text style={[styles.greeting, { fontSize: 15 * s }]}>{greeting} 👋</Text>
+        <Text style={[styles.title, { fontSize: 32 * s }]}>{t("appName", lang)}</Text>
       </View>
 
       {/* Camera circular frame */}
-      <View style={[styles.cameraWrap, phase === "found" && { borderColor: colors.greenDeep }]}>
+      <View
+        style={[
+          styles.cameraWrap,
+          { width: camSize, height: camSize, borderRadius: camSize / 2 },
+          phase === "found" && { borderColor: colors.greenDeep },
+        ]}
+      >
         {cameraReady ? (
           <CameraView
             ref={cameraRef}
@@ -247,7 +285,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
         )}
 
         {/* Circular reticle guide */}
-        <View style={styles.reticleGuide} pointerEvents="none" />
+        <View style={[styles.reticleGuide, { borderRadius: camSize / 2 }]} pointerEvents="none" />
 
         {phase === "found" && (
           <View style={[styles.overlay, { backgroundColor: "rgba(45,95,79,0.88)" }]}>
@@ -260,8 +298,8 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
 
         {phase === "nomatch" && (
           <View style={[styles.overlay, { backgroundColor: "rgba(30,41,59,0.85)" }]}>
-            <Text style={{ fontSize: 42 }}>😊</Text>
-            <Text style={styles.overlayText}>{t("didntCatchFace", lang)}</Text>
+            <Text style={{ fontSize: 42 * s }}>😊</Text>
+            <Text style={[styles.overlayText, { fontSize: 14 * s }]}>{t("didntCatchFace", lang)}</Text>
           </View>
         )}
 
@@ -284,10 +322,10 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
         )}
       </View>
 
-      <Mascot mood={phase === "found" ? "excited" : phase === "nomatch" ? "love" : "thinking"} size={84} />
+      <Mascot mood={phase === "found" ? "excited" : phase === "nomatch" ? "love" : "thinking"} size={Math.round(84 * s)} />
 
       <View style={{ alignItems: "center", paddingHorizontal: 20 }}>
-        <Text style={styles.statusText}>
+        <Text style={[styles.statusText, { fontSize: 20 * s }]}>
           {phase === "scanning"
             ? t("scanningFaceEllipsis", lang)
             : phase === "found"
@@ -296,7 +334,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
             ? t("lookedEverywhere", lang)
             : t("cameraUnavailableMsg", lang)}
         </Text>
-        <Text style={styles.statusSub}>{statusMsg}</Text>
+        <Text style={[styles.statusSub, { fontSize: 14 * s }]}>{statusMsg}</Text>
 
         {phase === "scanning" && (
           <View style={{ flexDirection: "row", gap: 10, marginTop: 10, flexWrap: "wrap", justifyContent: "center" }}>
@@ -316,10 +354,10 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
             )} */}
             <Pressable
               onPress={() => (onEnrollChild ? onEnrollChild() : onParentArea())}
-              style={styles.pillBtnPrimary}
+              style={[styles.pillBtnPrimary, { paddingVertical: 8 * s, paddingHorizontal: 16 * s, borderRadius: 20 * s }]}
             >
-              <Ionicons name="person-add" size={16} color="white" />
-              <Text style={{ color: "white", fontSize: 13, fontWeight: "700" }}>
+              <Ionicons name="person-add" size={16 * s} color="white" />
+              <Text style={{ color: "white", fontSize: 13 * s, fontWeight: "700" }}>
                 {t("addChild", lang)}
               </Text>
             </Pressable>
@@ -329,21 +367,21 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
 
       {/* Action buttons on nomatch or error */}
       {phase === "nomatch" && (
-        <View style={{ width: "100%", maxWidth: 360, gap: 10, paddingHorizontal: 20 }}>
+        <View style={actionRowStyle}>
           {childrenList.length === 0 ? (
             <>
-              <BigButton variant="mint" onPress={onEnrollChild ?? onParentArea} style={{ width: "100%" }}>
+              <BigButton variant="mint" onPress={onEnrollChild ?? onParentArea} style={actionBtn}>
                 <Ionicons name="person-add" size={18} color="white" style={{ marginRight: 6 }} />
                 <Text style={styles.btnText}>{t("addChild", lang)}</Text>
               </BigButton>
-              <BigButton variant="ghost" onPress={restartScan} style={{ width: "100%" }}>
+              <BigButton variant="ghost" onPress={restartScan} style={actionBtn}>
                 <Ionicons name="refresh" size={16} color={colors.forest} style={{ marginRight: 6 }} />
                 <Text style={{ color: colors.forest, fontWeight: "700" }}>{t("scanAgainBtn", lang)}</Text>
               </BigButton>
             </>
           ) : (
             <>
-              <BigButton variant="mint" onPress={restartScan} style={{ width: "100%" }}>
+              <BigButton variant="mint" onPress={restartScan} style={actionBtn}>
                 <Ionicons name="refresh" size={18} color="white" style={{ marginRight: 6 }} />
                 <Text style={styles.btnText}>{t("scanAgainBtn", lang)}</Text>
               </BigButton>
@@ -361,7 +399,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
               <BigButton
                 variant="ghost"
                 onPress={onEnrollChild ?? onParentArea}
-                style={{ width: "100%", borderWidth: 1.5, borderColor: colors.forest }}
+                style={{ ...actionBtn, borderWidth: 1.5, borderColor: colors.forest }}
               >
                 <Ionicons name="person-add" size={18} color={colors.forest} style={{ marginRight: 6 }} />
                 <Text style={{ color: colors.forest, fontWeight: "700", fontSize: 15 }}>{t("addChild", lang)}</Text>
@@ -372,7 +410,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
       )}
 
       {(phase === "error" || cameraUnavailable) && (
-        <View style={{ width: "100%", maxWidth: 360, gap: 10, paddingHorizontal: 20 }}>
+        <View style={actionRowStyle}>
           {/* {childrenList.length > 0 && (
             <BigButton
               variant="primary"
@@ -380,28 +418,32 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
                 setChildrenList(loadChildren());
                 setChildSelectModal(true);
               }}
-              style={{ width: "100%" }}
+              style={actionBtn}
             >
               <Ionicons name="person" size={18} color="white" style={{ marginRight: 6 }} />
               <Text style={styles.btnText}>{t("selectChildBtn", lang)}</Text>
             </BigButton>
           )} */}
-          <BigButton variant="mint" onPress={onEnrollChild ?? onParentArea} style={{ width: "100%" }}>
+          <BigButton variant="mint" onPress={onEnrollChild ?? onParentArea} style={actionBtn}>
             <Ionicons name="person-add" size={18} color="white" style={{ marginRight: 6 }} />
             <Text style={styles.btnText}>{t("addChild", lang)}</Text>
           </BigButton>
-          <BigButton variant="ghost" onPress={onNoMatch} style={{ width: "100%" }}>
+          <BigButton variant="ghost" onPress={onNoMatch} style={actionBtn}>
             <Text style={{ color: colors.forest, fontWeight: "700" }}>{t("continueWithoutCamera", lang)}</Text>
           </BigButton>
         </View>
       )}
 
+      </ScrollView>
+
       {/* Footer controls */}
       <View style={styles.footer}>
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-          <Pressable onPress={onEnrollChild ?? onParentArea} style={styles.parentBtn}>
-            <Text style={styles.parentBtnText}>➕ {t("addChild", lang)}</Text>
-          </Pressable>
+          {phase !== "nomatch" && phase !== "error" && !cameraUnavailable && (
+            <Pressable onPress={onEnrollChild ?? onParentArea} style={styles.parentBtn}>
+              <Text style={[styles.parentBtnText, { fontSize: 13 * s }]}>➕ {t("addChild", lang)}</Text>
+            </Pressable>
+          )}
           {/* {childrenList.length > 0 && (
             <Pressable
               onPress={() => {
@@ -414,7 +456,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
             </Pressable>
           )} */}
           <Pressable onPress={onParentArea} style={styles.parentBtn}>
-            <Text style={styles.parentBtnText}>🔒 {t("parentPin", lang)}</Text>
+            <Text style={[styles.parentBtnText, { fontSize: 13 * s }]}>🔒 {t("parentPin", lang)}</Text>
           </Pressable>
           {onAdminPortal && (
             <Pressable
@@ -517,9 +559,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
     alignItems: "center",
-    padding: 24,
-    paddingTop: 36,
-    gap: 20,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+  body: {
+    flexGrow: 1,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
   },
   greeting: { fontSize: 15, color: colors.textLight },
   title: { fontSize: 32, fontWeight: "800", color: colors.textDark, marginTop: 4 },
@@ -600,7 +648,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   btnText: { color: "white", fontWeight: "700", fontSize: 15 },
-  footer: { marginTop: "auto", paddingBottom: 16 },
+  footer: { paddingTop: 12, paddingBottom: 16 },
   parentBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.04)" },
   parentBtnText: { color: colors.textLight, fontSize: 13, fontWeight: "600" },
   modalBg: {

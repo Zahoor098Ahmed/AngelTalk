@@ -14,6 +14,18 @@ export interface ResponsiveInfo {
 }
 
 /**
+ * Size multiplier for full-screen, centred flows (face scan, enrolment): ~1 on a
+ * typical phone, smaller on tiny phones, up to 1.6× on tablets / large browser
+ * windows, so the content fills the screen instead of sitting small at the top.
+ */
+export function useScreenScale(): { s: number; camSize: number; width: number; height: number } {
+  const { width, height } = useWindowDimensions();
+  const s = Math.min(1.6, Math.max(0.85, Math.min(width / 400, height / 760)));
+  const camSize = Math.round(Math.min(460, Math.max(210, Math.min(width * 0.72, height * 0.33))));
+  return { s, camSize, width, height };
+}
+
+/**
  * Responsive layout hook that dynamically adapts to mobile screens, tablets,
  * and device orientation changes in real time.
  */
