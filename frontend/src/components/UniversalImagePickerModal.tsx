@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   type BuiltInSymbol,
 } from "../modules/builtInImageLibrary";
 import { compressImageForTile, saveLocalTileImage } from "../modules/imageSearch";
+import { ensureUsedPicturesLoaded, rememberPicture } from "../modules/usedPictures";
 
 interface Props {
   visible: boolean;
@@ -52,6 +53,16 @@ export default function UniversalImagePickerModal({
 }: Props) {
   const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<TabKey>("library");
+  const [usedTick, setUsedTick] = useState(0); // re-read the "Used" pictures once loaded
+  useEffect(() => {
+    if (visible) ensureUsedPicturesLoaded().then(() => setUsedTick((n) => n + 1));
+  }, [visible]);
+  /** Every picture picked here is remembered for the library's "⭐ Used" section. */
+  const choosePicture = (uri: string, name?: string) => {
+    rememberPicture(uri, name || defaultSearchTerm || title.replace(/^Picture for\s*/i, "").replace(/["“”]/g, ""));
+    setUsedTick((n) => n + 1);
+    onSelectImage(uri);
+  };
   const [previewUri, setPreviewUri] = useState<string | undefined>(currentImageUri);
 
   // App Library Tab state
@@ -98,7 +109,7 @@ export default function UniversalImagePickerModal({
           const uri = res.assets[0].uri;
           const compressed = await compressImageForTile(uri);
           setPreviewUri(compressed);
-          onSelectImage(compressed);
+          choosePicture(compressed);
           onClose();
           return;
         }
@@ -118,7 +129,7 @@ export default function UniversalImagePickerModal({
             if (result) {
               const compressed = await compressImageForTile(result);
               setPreviewUri(compressed);
-              onSelectImage(compressed);
+              choosePicture(compressed);
               onClose();
             }
           };
@@ -140,7 +151,7 @@ export default function UniversalImagePickerModal({
         // Copy out of the picker's cache into permanent app storage
         const saved = (await saveLocalTileImage(res.assets[0].uri, `pick_${Date.now()}`)) || res.assets[0].uri;
         setPreviewUri(saved);
-        onSelectImage(saved);
+        choosePicture(saved);
         onClose();
       }
     } catch (err) {
@@ -158,7 +169,7 @@ export default function UniversalImagePickerModal({
       if (!res.canceled && res.assets && res.assets[0]?.uri) {
         const saved = (await saveLocalTileImage(res.assets[0].uri, `photo_${Date.now()}`)) || res.assets[0].uri;
         setPreviewUri(saved);
-        onSelectImage(saved);
+        choosePicture(saved);
         onClose();
       }
     } catch (err) {
@@ -167,75 +178,82 @@ export default function UniversalImagePickerModal({
   }
 
   // Option 2: App Library Selection
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  usedTick; // recompute when the "Used" list changes
   const filteredSymbols = searchBuiltInSymbols(libraryQuery, libraryCategory);
 
   function handleSelectSymbol(symbol: BuiltInSymbol) {
     setPreviewUri(symbol.url);
-    onSelectImage(symbol.url);
+    choosePicture(symbol.url, symbol.name);
     onClose();
   }
 
   // Option 3: Chrome / Web Search
+  // All sources run at once (each capped at a few seconds) and pictures show as soon as any arrive,
+  // so one slow site can't keep the spinner going.
+  const webSearchId = useRef(0);
   async function performWebSearch(searchTerm?: string) {
     const q = (searchTerm ?? webQuery).trim();
     if (!q) return;
+    const id = ++webSearchId.current;
     setWebSearching(true);
     setWebError(null);
-    try {
-      // 1. Search ARASAAC online API for high-resolution AAC symbols
-      const araRes = await fetch(
-        `https://api.arasaac.org/api/pictograms/en/search/${encodeURIComponent(q)}`
-      );
-      let list: WebResult[] = [];
-      if (araRes.ok) {
-        const json = (await araRes.json()) as { _id: number; keywords?: { keyword?: string }[] }[];
-        if (Array.isArray(json)) {
-          list = json.slice(0, 24).map((p) => ({
-            id: `ara_${p._id}`,
-            name: p.keywords?.[0]?.keyword || q,
-            url: `https://static.arasaac.org/pictograms/${p._id}/${p._id}_500.png`,
-          }));
-        }
-      }
+    setWebResults([]);
 
-      // 2. OpenSymbols API fallback or addition
-      if (list.length < 12) {
-        try {
-          const osRes = await fetch(
-            `https://www.opensymbols.org/api/v1/symbols/search?q=${encodeURIComponent(q)}`
-          );
-          if (osRes.ok) {
-            const osJson = (await osRes.json()) as { id: number; name: string; image_url: string }[];
-            if (Array.isArray(osJson)) {
-              const osList = osJson.slice(0, 16).map((item) => ({
-                id: `os_${item.id}`,
-                name: item.name,
-                url: item.image_url,
-              }));
-              list = [...list, ...osList];
-            }
-          }
-        } catch {
-          // ignore secondary failure
-        }
+    const getJson = async <T,>(url: string): Promise<T | null> => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 6000);
+      try {
+        const res = await fetch(url, { signal: ctrl.signal });
+        return res.ok ? ((await res.json()) as T) : null;
+      } catch {
+        return null;
+      } finally {
+        clearTimeout(timer);
       }
+    };
+    let found = 0;
+    const add = (items: WebResult[]) => {
+      if (id !== webSearchId.current || items.length === 0) return;
+      found += items.length;
+      setWebResults((prev) => {
+        const seen = new Set(prev.map((r) => r.url));
+        return [...prev, ...items.filter((r) => r.url && !seen.has(r.url))];
+      });
+    };
+    const term = encodeURIComponent(q);
 
-      setWebResults(list);
-      if (list.length === 0) {
-        setWebError("No online images found for this term. Try typing another search word or paste a Chrome link below.");
-      }
-    } catch {
-      setWebError("Unable to reach image search. You can still paste any web image URL below or use Gallery / App Library.");
-    } finally {
-      setWebSearching(false);
-    }
+    // AAC symbols (child-friendly drawings) first in the grid, real photos after
+    const arasaac = getJson<{ _id: number; keywords?: { keyword?: string }[] }[]>(`https://api.arasaac.org/api/pictograms/en/search/${term}`).then((json) =>
+      add((Array.isArray(json) ? json : []).slice(0, 24).map((p) => ({
+        id: `ara_${p._id}`,
+        name: p.keywords?.[0]?.keyword || q,
+        url: `https://static.arasaac.org/pictograms/${p._id}/${p._id}_500.png`,
+      }))),
+    );
+    const openSymbols = getJson<{ id: number; name: string; image_url: string }[]>(`https://www.opensymbols.org/api/v1/symbols/search?q=${term}`).then((json) =>
+      add((Array.isArray(json) ? json : []).slice(0, 16).map((item) => ({ id: `os_${item.id}`, name: item.name, url: item.image_url }))),
+    );
+    // Wikipedia: real photos/logos for anything (cars, brands, places) from matching articles, no key needed
+    const wikipedia = getJson<{ query?: { pages?: Record<string, { pageid: number; title: string; thumbnail?: { source?: string } }> } }>(
+      `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${term}&gsrlimit=20&prop=pageimages&piprop=thumbnail&pithumbsize=300&format=json&origin=*`,
+    ).then((json) =>
+      add(Object.values(json?.query?.pages ?? {})
+        .filter((pg) => pg.thumbnail?.source)
+        .map((pg) => ({ id: `wp_${pg.pageid}`, name: pg.title, url: pg.thumbnail!.source! }))),
+    );
+
+    await Promise.allSettled([arasaac, openSymbols, wikipedia]);
+    if (id !== webSearchId.current) return;
+    setWebSearching(false);
+    if (found === 0) setWebError("No online images found for this term. Try another word or paste a Chrome link below.");
   }
 
   function handleUseWebUrl() {
     const trimmed = webUrlInput.trim();
     if (!trimmed) return;
     setPreviewUri(trimmed);
-    onSelectImage(trimmed);
+    choosePicture(trimmed);
     onClose();
   }
 
@@ -363,7 +381,7 @@ export default function UniversalImagePickerModal({
                   <TextInput
                     value={libraryQuery}
                     onChangeText={setLibraryQuery}
-                    placeholder="Search in-app symbols (e.g. apple, school, play)..."
+                    placeholder="Search 15,000 pictures (e.g. apple, car, happy)..."
                     placeholderTextColor="#999999"
                     style={styles.searchInput}
                   />
@@ -480,7 +498,7 @@ export default function UniversalImagePickerModal({
                 </View>
 
                 {/* Web Results */}
-                {webSearching ? (
+                {webSearching && webResults.length === 0 ? (
                   <View style={styles.loadingWrap}>
                     <ActivityIndicator size="large" color={colors.forest} />
                     <Text style={styles.loadingText}>Searching online images...</Text>
@@ -499,7 +517,7 @@ export default function UniversalImagePickerModal({
                           key={item.id}
                           onPress={() => {
                             setPreviewUri(item.url);
-                            onSelectImage(item.url);
+                            choosePicture(item.url, item.name);
                             onClose();
                           }}
                           style={[styles.symbolCard, isSelected && styles.symbolCardSelected]}

@@ -191,6 +191,31 @@ export function dictUrl(term: string): string | null {
   return id ? idUrl(id) : null;
 }
 
+/**
+ * Searches the ~15,000 bundled ARASAAC words (works offline): words starting with the query
+ * first, then words containing it. One result per picture.
+ */
+export function searchArasaacDict(query: string, limit = 120): { word: string; id: number; url: string }[] {
+  const q = norm(query);
+  if (!q) return [];
+  const starts: [string, number][] = [];
+  const contains: [string, number][] = [];
+  for (const [word, id] of Object.entries(dict)) {
+    if (word.startsWith(q)) starts.push([word, id]);
+    else if (contains.length < limit && word.includes(q)) contains.push([word, id]);
+  }
+  starts.sort((a, b) => a[0].length - b[0].length);
+  const seen = new Set<number>();
+  const out: { word: string; id: number; url: string }[] = [];
+  for (const [word, id] of [...starts, ...contains]) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push({ word, id, url: idUrl(id) });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 // Compound nouns ARASAAC files under a different name — pin them so a variant
 // never falls through to an unrelated icon.
 const VARIANT_IDS: Record<string, number> = {

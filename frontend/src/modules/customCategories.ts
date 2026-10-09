@@ -1318,6 +1318,37 @@ async function translatePendingAsync(
  * Performs instantaneous synchronous translation with comprehensive dictionaries & cache,
  * and dynamically translates any remaining custom items in the background.
  */
+/**
+ * English source of a word for switching the board back to English. canonicalWordEn() hands an
+ * Arabic/Urdu label back unchanged when its dictionaries don't know it (e.g. words translated
+ * online), so also try: the stored seed label, every built-in word's Arabic/Urdu form, and
+ * finally the built-in word with the same emoji in this folder.
+ */
+function englishOfWord(w: CustomWord, cat: CustomCategory): string {
+  const label = (w.label || "").trim();
+  if (!/[؀-ۿ]/.test(label)) return label;
+  if (w.seedLabel) return w.seedLabel;
+  const viaDict = canonicalWordEn(label);
+  if (viaDict && !/[؀-ۿ]/.test(viaDict)) return viaDict;
+
+  const seedLists: [string, string][][] = [
+    ...STARTER.map((st) => st.words),
+    ...STARTER_SUBCATEGORIES.map((sub) => sub.words.map(([l, e]) => [l, e] as [string, string])),
+  ];
+  for (const list of seedLists) {
+    for (const [en] of list) {
+      for (const lng of ["ar-SA", "ur-PK"] as LanguageCode[]) {
+        if (wordLabel(en, lng) === label || starterLabel(en, lng) === label) return en;
+      }
+    }
+  }
+  const catEn = (canonicalWordEn(cat.seedName || cat.name) || FOLDER_EN_BY_LANG[(cat.name || "").toLowerCase()] || cat.name).toLowerCase();
+  const starter = STARTER.find((st) => st.name.toLowerCase() === catEn);
+  const byEmoji = starter?.words.filter(([, e]) => e === w.emoji) ?? [];
+  if (byEmoji.length === 1) return byEmoji[0][0];
+  return label;
+}
+
 /** True for the name of a built-in folder in any language, or a known alias of one. */
 function isBuiltInFolderName(name: string): boolean {
   const lower = (name || "").trim().toLowerCase();
@@ -1364,14 +1395,14 @@ export function retranslateSeedBoard(lang: LanguageCode) {
     cat.words.forEach((w) => {
       const rawWordLabel = w.label.trim();
       if (lang === "en-US") {
-        const en = canonicalWordEn(rawWordLabel) || w.seedLabel || rawWordLabel;
+        const en = englishOfWord(w, cat);
         if (en && en !== w.label) {
           w.label = en;
           w.phrase = en;
           changed = true;
         }
       } else {
-        const en = canonicalWordEn(rawWordLabel) || w.seedLabel || rawWordLabel;
+        const en = englishOfWord(w, cat);
         const localized = wordLabel(en, lang);
 
         if (localized && localized.toLowerCase() !== rawWordLabel.toLowerCase()) {

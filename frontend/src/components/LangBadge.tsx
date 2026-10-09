@@ -29,6 +29,15 @@ export default function LangBadge({ dark }: LangBadgeProps) {
 }
 
 const styles = StyleSheet.create({
-  badge: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, alignSelf: "flex-start" },
-  text: { color: "white", fontWeight: "700", fontSize: 12 },
+  // Centred in its row and as tall as the neighbouring header buttons
+  badge: {
+    minHeight: 42,
+    minWidth: 58,
+    paddingHorizontal: 16,
+    borderRadius: 21,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  text: { color: "white", fontWeight: "800", fontSize: 15, textAlign: "center", includeFontPadding: false },
 });

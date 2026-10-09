@@ -181,8 +181,8 @@ export function cleanVoiceSpeechName(raw: string): string {
   if (!raw) return "";
   let text = raw.trim();
 
-  // 1. Remove speech filler sounds
-  text = text.replace(/\b(uh|um|er|ah|hmm|haan|acha|please|plz|kindly|ok|okay)\b/gi, " ");
+  // 1. Remove speech filler sounds and humming
+  text = text.replace(/\b(?:uh+|um+|er+|ah+|hmm+|mmm+|mm+|mhm+|haan|acha|accha|theek|sahi|please|plz|kindly|ok|okay)\b/gi, " ");
 
   // 2. Normalize common Urdu / Hindi phrasing
   text = text.replace(/^(.*?)\s+(?:ki|ka|ke)\s+(?:categor(?:y|ies)|shelf|shelves|subcategor(?:y|ies)|subjects?|subtopics?)\s+(?:banao|banayein|karo|bana\s+do|dalo|rakho)/gi, "$1");
@@ -218,8 +218,10 @@ export function cleanVoiceSpeechName(raw: string): string {
 
   // 5. Strip trailing prepositions/filler
   text = text.replace(/\s+(?:please|banao)$/gi, "");
+  text = text.replace(/[\s,.]+(?:mmm+|mm+|hmm+|uh+|um+|er+|ah+)[\s,.]*$/gi, "");
 
-  // 6. Clean punctuation while preserving commas and newlines
+  // 6. Clean punctuation while preserving words in contractions (don't split I'd into I and d)
+  text = text.replace(/\b([a-zA-Z]+)['’]([a-zA-Z]+)\b/g, "$1$2");
   text = text.replace(/["'?!.]/g, " ").replace(/[ \t]+/g, " ").trim();
 
   return text;
@@ -274,12 +276,14 @@ export interface VoicePlan {
   wordCount: number;
 }
 
-type MarkerKind = "shelf" | "sub" | "words";
+type MarkerKind = "shelf" | "sub" | "words" | "inside";
 
 // Sub-category variants must come before plain "category" so "sub category" wins.
 const PLAN_MARKER_RE = new RegExp(
   "(^|[^a-z\\u0600-\\u06FF])(" +
     [
+      // "in it" / "us mein" (rewritten by normalizeSpokenCommand) — sub-categories after a shelf, words after a sub
+      "insideit",
       // sub-category + common speech-engine mishearings & synonyms ("subject", "subtopic", "sub group")
       "s[ua]b[\\s-]?[ck]at[aeiou]?g[a-z]*",
       "s[ua]b[\\s-]?periods?",
@@ -299,7 +303,7 @@ const PLAN_MARKER_RE = new RegExp(
       // category + mishearings ("catgires", "catagory", "catogirese", "katgori"); never plain "cat"
       "[ck]at[aeiou]?g[a-z]*", "shel(?:f|ves)", "folders?", "topics?",
       "کیٹیگریز?", "کیٹگری", "زمر[ہیا]", "فئات", "فئة",
-      "words?", "alfaaz", "lafz", "الفاظ", "لفظ", "كلمات", "كلمة", "کلمات", "tiles?", "cards?",
+      "words?", "worlds?", "wards?", "alfaaz", "lafz", "alfaas", "ورڈز?", "ورڈ", "الفاظ", "لفظ", "كلمات", "كلمة", "کلمات", "tiles?", "cards?",
     ].join("|") +
     ")(?=$|[^a-z\\u0600-\\u06FF])",
   "gi",
@@ -307,6 +311,7 @@ const PLAN_MARKER_RE = new RegExp(
 
 function markerKind(m: string): MarkerKind {
   const s = m.toLowerCase();
+  if (s === "insideit") return "inside";
   if (/^s[ua]b|subjects?|سب|ذیلی|فرعية/.test(s)) return "sub";
   if (/^(word|alfaaz|lafz|tile|card)|الفاظ|لفظ|كلم|کلم/.test(s)) return "words";
   return "shelf";
@@ -338,8 +343,27 @@ function stripEdgeFillers(item: string, all = false): string {
  * Splits space-separated items (which speech engines often produce without commas),
  * while preserving recognized compound phrases like "ice cream", "fire truck", "fast food".
  */
-function tokenizeItemList(text: string): string[] {
+/** Pure command words — never a word tile even in a word list ("is", "in", "me" are real AAC words). */
+const COMMAND_ONLY_RE = /^(?:create|make|add|build|new|with|having|then|also|please|named|called|subject|subjects|banao|banayein|bana|karo|بناؤ|بنائیں)$/i;
+
+function tokenizeItemList(text: string, keepSmallWords = false, heads: Set<string> = new Set()): string[] {
   const rawWords = text.split(/\s+/).filter(Boolean);
+  // A word repeated across the list is the head noun of each phrase: "red car blue car"
+  if (keepSmallWords && heads.size > 0 && rawWords.length > 1) {
+    const phrases: string[] = [];
+    let chunk: string[] = [];
+    for (const w of rawWords) {
+      chunk.push(w);
+      if (heads.has(w.toLowerCase())) {
+        phrases.push(chunk.join(" "));
+        chunk = [];
+      }
+    }
+    if (phrases.length > 0) {
+      for (const leftover of chunk) if (!COMMAND_ONLY_RE.test(leftover)) phrases.push(leftover);
+      return phrases;
+    }
+  }
   if (rawWords.length <= 1) {
     if (rawWords.length === 1) {
       const w = rawWords[0].toLowerCase();
@@ -363,8 +387,24 @@ function tokenizeItemList(text: string): string[] {
       continue;
     }
 
+    // Drop speech filler sounds ("mmm", "uh", "um", etc.) and noise
+    if (/^(?:uh+|um+|er+|ah+|hmm+|mmm+|mm+|avoid)$/i.test(w1)) {
+      i++;
+      continue;
+    }
+    // For categories and subcategories, drop single letters
+    if (!keepSmallWords && w1.length <= 1) {
+      i++;
+      continue;
+    }
+    // In word lists, drop stray consonant fragments from speech contractions
+    if (keepSmallWords && /^[b-df-hj-np-tv-zB-DF-HJ-NP-TV-Z]$/.test(w1)) {
+      i++;
+      continue;
+    }
+
     const corrected = SPEECH_CORRECTIONS[w1] || rawWords[i];
-    if (!EDGE_FILLER_RE.test(corrected.toLowerCase())) {
+    if (keepSmallWords ? !COMMAND_ONLY_RE.test(corrected) : !EDGE_FILLER_RE.test(corrected.toLowerCase())) {
       items.push(corrected);
     }
     i++;
@@ -372,22 +412,39 @@ function tokenizeItemList(text: string): string[] {
   return items;
 }
 
-function splitPlanItems(content: string, plural: boolean, isLead = false): string[] {
-  let text = content.replace(/["'?!.]/g, " ").replace(/\b(?:uh|um|er|ah|hmm)\b/gi, " ").trim();
+function splitPlanItems(content: string, plural: boolean, isLead = false, isWordList = false, extraHeads: string[] = []): string[] {
+  let text = content
+    .replace(/\b([a-zA-Z]+)['’]([a-zA-Z]+)\b/g, "$1$2")
+    .replace(/["'?!.]/g, " ")
+    .replace(/\b(?:uh+|um+|er+|ah+|hmm+|mmm+|mm+)\b/gi, " ")
+    .trim();
   // Strip naming phrases: "the name of book", "a new one called toys", "name apple", etc.
   const afterName = text.replace(/^.*\b(?:called|named|titled|name\s+of|the\s+name\s+of|name\s+is|name|naam)\b\s*/i, "").trim();
   if (afterName && afterName !== text) text = afterName;
+  if (!text) return [];
+  if (isWordList) text = text.replace(/^(?:(?:and|aur|plus|then|اور|و)\s+)+|(?:\s+(?:and|aur|plus|then|اور|و))+$/gi, "").trim();
   if (!text) return [];
 
   const delim = /(?:,|\n|;|\s+and\s+|\s+aur\s+|\s+اور\s+|\s+و\s+|\s+plus\s+|\s+&\s+|\s+then\s+)+/i;
   const rawParts = delim.test(text) ? text.split(delim) : [text];
 
+  // Head nouns repeated in a word list ("red car and blue car") keep their phrases together;
+  // the sub-category's own name counts too ("truck" words "big truck")
+  const heads = new Set<string>(extraHeads.map((h) => h.toLowerCase()));
+  if (isWordList) {
+    const counts = new Map<string, number>();
+    for (const w of text.toLowerCase().split(/[\s,;]+/).filter(Boolean)) counts.set(w, (counts.get(w) ?? 0) + 1);
+    for (const [w, n] of counts) if (n >= 2 && !EDGE_FILLER_RE.test(w) && !/^(?:and|aur|plus|then)$/.test(w)) heads.add(w);
+  }
   const results: string[] = [];
   for (const part of rawParts) {
-    const cleaned = stripEdgeFillers(part, isLead);
+    // In a word list only command words are trimmed: "is", "are", "inside" are real AAC words
+    const cleaned = isWordList
+      ? part.split(/\s+/).filter((tok, k, all) => !((k === 0 || k === all.length - 1) && COMMAND_ONLY_RE.test(tok))).join(" ").trim()
+      : stripEdgeFillers(part, isLead);
     if (!cleaned) continue;
     // Tokenize space-separated words (e.g. "car truck" -> ["car", "truck"])
-    const tokenized = tokenizeItemList(cleaned);
+    const tokenized = tokenizeItemList(cleaned, isWordList, heads);
     if (tokenized.length > 0) {
       results.push(...tokenized);
     } else {
@@ -396,11 +453,76 @@ function splitPlanItems(content: string, plural: boolean, isLead = false): strin
   }
 
   // Drop pieces that are only a command word ("citrus and add words ..." -> "add")
-  const commandOnly = /^(?:create|make|add|build|new|with|having|then|also|please|named|called|subject|subjects|banao|banayein|bana|karo|بناؤ|بنائیں)$/i;
   return results
-    .filter((p) => !commandOnly.test(p.trim()))
-    .map((p) => p.split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "))
+    .filter((p) => !COMMAND_ONLY_RE.test(p.trim()))
+    .map((p) => p.split(/\s+/).map((w) => (/^[A-Z]{2,5}$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())).join(" "))
     .filter((p) => p.length > 0);
+}
+
+/** Whole-word (works for Arabic/Urdu script too, where \b doesn't) case-insensitive regex. */
+const spokenWord = (alternatives: string) => new RegExp(`(^|[\\s,.!?،])(?:${alternatives})(?=$|[\\s,.!?،])`, "gi");
+
+/** Ordered rewrites that turn everyday / accented / mixed-language speech into plain commands. */
+/** Words that are never the name before "mein" ("car mein ..." = inside Car). */
+/** Small AAC words that follow "in"/"to" in a word list without naming a target ("words inside outside home"). */
+const SMALL_AAC_WORDS = new Set(["out", "outside", "inside", "in", "on", "off", "up", "down", "over", "under", "the", "a", "an", "me", "you", "it", "here", "there", "go", "stop", "more"]);
+const NOT_A_TARGET = new Set(["us", "is", "uss", "iss", "sub", "category", "categories", "insideit", "words", "word", "and", "aur", "اس", "ان", "اور"]);
+
+const SPOKEN_REWRITES: [RegExp, string | ((...m: string[]) => string)][] = [
+  // Polite and filler phrases (any language)
+  // (okay / so / well / hey are real AAC words too, so only drop them at the very start)
+  [/^\s*(?:(?:okay|ok|so|well|hey|umm+|um+|uh+|hmm+|mmm+|mm+|er+)[\s,]+)+/i, " "],
+  // Humming and noise fillers anywhere in utterance
+  [/\b(?:mmm+|mm+|hmm+|uh+|um+|er+|ah+)\b/gi, " "],
+  // "and I'd avoid", "I'd avoid", "avoid", "a void" mishearings for "and add word" / "words"
+  [spokenWord("(?:and\\s+)?(?:i['’]?d\\s+)?(?:avoid|a\\s+void|ad\\s+void)"), " words "],
+  // "world" / "worlds" / "wards" / "woods" mishearings for "word" / "words"
+  [spokenWord("(?:and\\s+)?(?:add\\s+|daal(?:o)?\\s+)?(?:world|worlds|wards?|wood|woods)"), " words "],
+  // Urdu / Hindi accents: "our word", "or word", "hour word", "aur word"
+  [spokenWord("(?:our|or|hour|are|aur)\\s+(?:words?|world|alfaaz|lafz|alfaas)"), " words "],
+  [spokenWord("(?:اور|یا)\\s+(?:الفاظ|لفظ|ورڈ|ورڈز)"), " words "],
+  // "and add word", "add word", "add a word", "add words"
+  [spokenWord("(?:and\\s+)?(?:i['’]?d\\s+)?(?:add|insert|put|daalo?)\\s+(?:a\\s+|an\\s+|the\\s+)?(?:words?|tiles?|cards?|alfaaz|lafz)"), " words "],
+  [spokenWord("(?:and|aur|plus|then)\\s+(?:the\\s+|a\\s+)?(?:words?|word)"), " words "],
+  [spokenWord("(?:words?|alfaaz|lafz)\\s+(?:of|are|is|called|named|like)"), " words "],
+  [spokenWord("can you|could you|would you|will you|i want to|i wanna|i would like to|i'd like to|let's|lets|please|pls|umm+|um+|uh+|hmm+"), " "],
+  [spokenWord("daal do|daldo|daalo|dalo|daal dein|rakh do|rakho|add kar do|add karo|add kardo|add karein|bana do|banado|kar do|kardo|karo|karein|kijiye|kariye|zara"), " "],
+  [spokenWord("ڈال دو|ڈالو|ڈالیں|شامل کرو|شامل کریں|شامل|رکھو|رکھ دو|بنا دو|کرو|کریں|براہ کرم|مہربانی"), " "],
+  [spokenWord("أضف|اضف|اضيف|أضيف|انشئ|أنشئ|اعمل|اصنع|ضع|من فضلك|لو سمحت"), " "],
+  // "category" heard in pieces: "cat a gory", "kitty gory", "catty gory"
+  [/\b(?:cat|kat|cad|catty|kitty|katty)\s*(?:a\s+|e\s+|i\s+)?(gor(?:y|i|ee|ie)|gories|goris)\b/gi, " category "],
+  // "sub category" heard as "some / sap / sup / sob / sum category"
+  [/\b(?:some|sap|sup|sob|sum|sab)\s+(categor(?:y|ies))\b/gi, " sub $1 "],
+  // "in it" -> the following items belong inside the category just named
+  [/\b(?:inside it|inside of it|inside that|inside this|in it|into it|in that|under it|within it)\b/gi, " insideit "],
+  [/\b(?:us|is|uss|iss)\s+(?:ke\s+andar|k\s+andar|mein|mai|main|me|andar)\b/gi, " insideit "],
+  [/\b(?:usmein|ismein|usme|isme|usmai|ismai|uske andar|iske andar)\b/gi, " insideit "],
+  [spokenWord("اس میں|اسمیں|اس کے اندر|اسکے اندر|ان میں|فيها|فيه|بداخلها|بداخله|داخلها"), "$1 insideit "],
+  // Naming the target: "add words to car ...", "in car add words ...", "car mein ...", "کار میں ..."
+  [/\b(?:add\s+)?(words?)\s+(?:to|in|into|for|inside)\s+([a-z\u0600-\u06FF]+)/gi,
+    (m, _w, name) => (SMALL_AAC_WORDS.has(name.toLowerCase()) ? m : ` sub category ${name} words `)],
+  [/\b(?:in|inside|into|to)\s+([a-z\u0600-\u06FF]+)\s+(?:add\s+)?words?\b/gi,
+    (m, name) => (SMALL_AAC_WORDS.has(name.toLowerCase()) ? m : ` sub category ${name} words `)],
+  [/(^|\s)([a-z\u0600-\u06FF]+)\s+(?:ke\s+andar|k\s+andar|mein|mai|main|میں|کے\s+اندر)(?=\s|$)/gi,
+    (m, lead, name) => (NOT_A_TARGET.has(name.toLowerCase()) ? m : `${lead} sub category ${name} words `)],
+];
+
+/**
+ * Normalises how people actually talk before parsing: drops polite filler, fixes
+ * command words a speech engine splits or mishears, and understands "in it" /
+ * "us mein" / "اس میں" as "the next items go inside the category I just said".
+ * e.g. "vehicles ki category banao us mein car truck bike daalo"
+ *   -> "vehicles ki category banao sub categories car truck bike"
+ */
+export function normalizeSpokenCommand(raw: string): string {
+  let text = ` ${(raw || "").replace(/\s+/g, " ")} `;
+  for (const [re, replacement] of SPOKEN_REWRITES) {
+    if (typeof replacement === "function") text = text.replace(re, replacement as (...m: string[]) => string);
+    // spokenWord() rules capture the leading separator in group 1 — keep it
+    else if (re.source.startsWith("(^|") && !replacement.startsWith("$1")) text = text.replace(re, `$1${replacement}`);
+    else text = text.replace(re, replacement);
+  }
+  return text.replace(/\s+/g, " ").trim();
 }
 
 /**
@@ -411,7 +533,7 @@ function splitPlanItems(content: string, plural: boolean, isLead = false): strin
  * current shelf, and "words" add words to the current sub-category.
  */
 export function parseVoicePlan(raw: string): VoicePlan {
-  const text = (raw || "").replace(/\s+/g, " ").trim();
+  const text = normalizeSpokenCommand(raw);
   const segments: { kind: MarkerKind | "lead"; plural: boolean; content: string }[] = [];
   const re = new RegExp(PLAN_MARKER_RE.source, "gi");
   let last = 0;
@@ -426,6 +548,37 @@ export function parseVoicePlan(raw: string): VoicePlan {
     last = markerStart + m[2].length;
   }
   segments.push({ kind: pendingKind, plural: pendingPlural, content: text.slice(last) });
+
+  // Name before the marker (Urdu/Hindi order, or "vehicles category, car sub category"):
+  // an empty shelf/sub marker takes the last name said just before it.
+  const lastItemOf = (content: string) => {
+    const parts = content.split(/(?:,|;|\s+and\s+|\s+aur\s+|\s+اور\s+|\s+و\s+)/i);
+    const tail = stripEdgeFillers(parts[parts.length - 1] ?? "", true).split(/\s+/).filter(Boolean);
+    return tail.length ? tail[tail.length - 1] : "";
+  };
+  for (let i = segments.length - 1; i >= 1; i--) {
+    const seg = segments[i];
+    if (seg.kind !== "shelf" && seg.kind !== "sub") continue;
+    if (stripEdgeFillers(seg.content, true)) continue;
+    // a marker at the very end may just be unfinished speech — only borrow once more follows
+    if (i === segments.length - 1 && !seg.content.trim()) continue;
+    const prev = segments[i - 1];
+    const name = lastItemOf(prev.content);
+    if (!name) continue;
+    const at = prev.content.toLowerCase().lastIndexOf(name.toLowerCase());
+    prev.content = prev.content.slice(0, at) + prev.content.slice(at + name.length);
+    seg.content = ` ${name} `;
+  }
+  // "truck words big truck and bike words cycle": a name right before another "words" is a sub-category
+  for (let i = segments.length - 1; i >= 1; i--) {
+    if (segments[i].kind !== "words" || segments[i - 1].kind !== "words") continue;
+    const prev = segments[i - 1];
+    const name = lastItemOf(prev.content);
+    if (!name) continue;
+    const at = prev.content.toLowerCase().lastIndexOf(name.toLowerCase());
+    prev.content = prev.content.slice(0, at) + prev.content.slice(at + name.length);
+    segments.splice(i, 0, { kind: "sub", plural: false, content: ` ${name} ` });
+  }
 
   const shelves: VoicePlanShelf[] = [];
   let curShelf: VoicePlanShelf | null = null;
@@ -451,25 +604,67 @@ export function parseVoicePlan(raw: string): VoicePlan {
       kind = next === "words" ? "sub" : "shelf";
     } else if (kind === "shelf") {
       isExplicit = true;
+    } else if (kind === "inside") {
+      // "in it": inside a sub-category -> words, inside a shelf -> sub-categories
+      kind = curSub ? "words" : "sub";
     }
-    let items = splitPlanItems(seg.content, seg.plural, seg.kind === "lead");
-    // A shelf / sub-category can't be named just "of", "the", "and" ("sub period of subcategory ...")
-    if (kind !== "words") items = items.filter((it) => !EDGE_FILLER_RE.test(it.toLowerCase()));
+    const targetName = kind === "words" ? ((curSub as VoicePlanSub | null)?.name ?? (curShelf as VoicePlanShelf | null)?.name ?? "") : "";
+    let items = splitPlanItems(seg.content, seg.plural, seg.kind === "lead", kind === "words", targetName ? targetName.split(/\s+/).slice(-1) : []);
+    // A shelf / sub-category can't be named just "of", "the", "and", and must not be single letter or noise
+    if (kind !== "words") {
+      items = items.filter((it) => it.length > 1 && !EDGE_FILLER_RE.test(it.toLowerCase()) && !/^(?:avoid|mmm+|mm+)$/i.test(it));
+    } else {
+      items = items.filter((it) => !/^(?:avoid|mmm+|mm+|uh+|um+|er+|ah+|hmm+)$/i.test(it) && !/^[b-df-hj-np-tv-zB-DF-HJ-NP-TV-Z]$/.test(it));
+    }
     if (items.length === 0) return;
     if (kind === "shelf") {
-      items.forEach((name) => {
-        const s: VoicePlanShelf = { id: `s${shelves.length}`, name, subs: [], words: [], explicitCategory: isExplicit };
+      if (!seg.plural && items.length > 1) {
+        // Singular shelf marker: first item is shelf, subsequent items without sub marker become words
+        const shelfName = items[0];
+        const s: VoicePlanShelf = { id: `s${shelves.length}`, name: shelfName, subs: [], words: [], explicitCategory: isExplicit };
         shelves.push(s);
         curShelf = s;
-      });
+        const nextKind = segments[i + 1]?.kind;
+        if (!nextKind || nextKind === "shelf") {
+          const remaining = items.slice(1);
+          s.words.push(...toWords(s.id, s.words.length, remaining));
+        }
+      } else {
+        items.forEach((name) => {
+          const s: VoicePlanShelf = { id: `s${shelves.length}`, name, subs: [], words: [], explicitCategory: isExplicit };
+          shelves.push(s);
+          curShelf = s;
+        });
+      }
       curSub = null;
     } else if (kind === "sub") {
       const s = implicitShelf();
-      items.forEach((name) => {
-        const sub: VoicePlanSub = { id: `${s.id}.b${s.subs.length}`, name, words: [] };
-        s.subs.push(sub);
+      // (only for a spoken "sub category" — after "us mein / inside it" every name is a sub-category)
+      if (seg.kind === "sub" && !seg.plural && items.length > 1) {
+        // Singular sub-category marker ("subcategory Car Suzuki ..."):
+        // First item is the sub-category name ("Car"), subsequent items are words inside it!
+        const subName = items[0];
+        let sub = s.subs.find((b) => b.name.toLowerCase() === subName.toLowerCase());
+        if (!sub) {
+          sub = { id: `${s.id}.b${s.subs.length}`, name: subName, words: [] };
+          s.subs.push(sub);
+        }
         curSub = sub;
-      });
+        const subWords = items.slice(1);
+        sub.words.push(...toWords(sub.id, sub.words.length, subWords));
+      } else {
+        items.forEach((name) => {
+          // Saying a sub-category again ("pets farm and wild … pets mein dog cat") reuses it
+          const existing = s.subs.find((b) => b.name.toLowerCase() === name.toLowerCase());
+          if (existing) {
+            curSub = existing;
+            return;
+          }
+          const sub: VoicePlanSub = { id: `${s.id}.b${s.subs.length}`, name, words: [] };
+          s.subs.push(sub);
+          curSub = sub;
+        });
+      }
     } else {
       const target: VoicePlanSub | VoicePlanShelf = curSub ?? implicitShelf();
       target.words.push(...toWords(target.id, target.words.length, items));
@@ -643,8 +838,9 @@ export function summarizeVoicePlan(shelves: VoicePlanShelf[]): VoicePlan {
  * - Bulk categories / subcategories / words (comma, "and", "aur", "اور", etc.)
  * - Hierarchical commands: "Category Fruits with subcategories Citrus, Berries, Tropical"
  */
-export function parseVoiceCategoryCommand(raw: string): ParsedVoiceResult {
-  const lower = (raw || "").toLowerCase();
+export function parseVoiceCategoryCommand(rawInput: string): ParsedVoiceResult {
+  const raw = normalizeSpokenCommand(rawInput);
+  const lower = raw.toLowerCase();
 
   // 1. Detect Intent
   let intent: "category" | "subcategory" | "words" = "category";

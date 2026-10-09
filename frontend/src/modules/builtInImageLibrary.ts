@@ -4,10 +4,14 @@
  * stored in the app / CDN for instant one-tap selection.
  */
 
+import { getPictogramUrl } from "./aacPictograms";
+import { searchArasaacDict } from "./imageLibrary";
+import { getUsedPictures } from "./usedPictures";
+
 export interface BuiltInSymbol {
   id: string;
   name: string;
-  category: "all" | "core" | "actions" | "food" | "places" | "school" | "feelings" | "people" | "animals" | "objects";
+  category: "all" | "used" | "core" | "actions" | "food" | "places" | "school" | "feelings" | "people" | "animals" | "objects";
   url: string;
   emoji: string;
 }
@@ -16,7 +20,7 @@ function ara(id: number): string {
   return `https://static.arasaac.org/pictograms/${id}/${id}_500.png`;
 }
 
-export const BUILT_IN_SYMBOLS: BuiltInSymbol[] = [
+const CURATED_SYMBOLS: BuiltInSymbol[] = [
   // --- Core & Essentials ---
   { id: "core_i", name: "I / Me", category: "core", url: ara(2392), emoji: "🧒" },
   { id: "core_want", name: "Want", category: "core", url: ara(5441), emoji: "➕" },
@@ -125,8 +129,18 @@ export const BUILT_IN_SYMBOLS: BuiltInSymbol[] = [
   { id: "ani_cow", name: "Cow", category: "animals", url: ara(2875), emoji: "🐮" },
 ];
 
+/**
+ * The curated list, with each picture taken from the same word -> pictogram map the board uses
+ * (the hand-typed ARASAAC numbers above were often wrong: "Stop" showed a woman, "No" a calendar).
+ */
+export const BUILT_IN_SYMBOLS: BuiltInSymbol[] = CURATED_SYMBOLS.map((s) => ({
+  ...s,
+  url: getPictogramUrl(s.name.split("/")[0].trim()) || s.url,
+}));
+
 export const SYMBOL_CATEGORIES = [
   { id: "all", label: "All", icon: "✨" },
+  { id: "used", label: "Used", icon: "⭐" },
   { id: "core", label: "Core", icon: "💬" },
   { id: "school", label: "School", icon: "🏫" },
   { id: "actions", label: "Actions", icon: "⚡" },
@@ -138,11 +152,40 @@ export const SYMBOL_CATEGORIES = [
   { id: "animals", label: "Animals", icon: "🐾" },
 ] as const;
 
+function usedSymbols(q: string): BuiltInSymbol[] {
+  return getUsedPictures()
+    .filter((p) => !q || p.name.toLowerCase().includes(q))
+    .map((p, i) => ({ id: `used_${i}_${p.at}`, name: p.name, category: "used" as const, url: p.url, emoji: "⭐" }));
+}
+
+/**
+ * Library tab: "Used" = pictures picked before; "All" = used ones first, the curated set, and —
+ * when searching — the ~15,000 bundled ARASAAC pictures (offline, free).
+ */
 export function searchBuiltInSymbols(query: string, category: string = "all"): BuiltInSymbol[] {
   const q = (query || "").trim().toLowerCase();
-  return BUILT_IN_SYMBOLS.filter((item) => {
+  if (category === "used") return usedSymbols(q);
+  const curated = BUILT_IN_SYMBOLS.filter((item) => {
     const matchesCategory = category === "all" || item.category === category;
-    const matchesQuery = !q || item.name.toLowerCase().includes(q) || item.category.includes(q);
+    // match the start of a word ("car" -> "Car", not "Scared")
+    const matchesQuery = !q || item.name.toLowerCase().split(/[\s/]+/).some((w) => w.startsWith(q)) || item.category.startsWith(q);
     return matchesCategory && matchesQuery;
   });
+  if (category !== "all") return curated;
+
+  const out: BuiltInSymbol[] = [];
+  const seen = new Set<string>();
+  const push = (s: BuiltInSymbol) => {
+    if (!s.url || seen.has(s.url)) return;
+    seen.add(s.url);
+    out.push(s);
+  };
+  usedSymbols(q).slice(0, q ? 24 : 12).forEach(push);
+  curated.forEach(push);
+  if (q) {
+    searchArasaacDict(q, 150).forEach((d) =>
+      push({ id: `ara_${d.id}`, name: d.word, category: "all", url: d.url, emoji: "🔹" }),
+    );
+  }
+  return out;
 }

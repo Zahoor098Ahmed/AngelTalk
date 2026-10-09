@@ -210,6 +210,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   const [path, setPath] = useState<string[]>([]); // category id stack
   const [sentence, setSentence] = useState<Chip[]>([]);
   const [typed, setTyped] = useState(""); // word the child is typing in the sentence box
+  // Suggestions fold away when a category is opened so its words have room; any new word brings them back
+  const [showSuggest, setShowSuggest] = useState(true);
+  useEffect(() => setShowSuggest(false), [path]);
+  useEffect(() => setShowSuggest(true), [sentence.length, typed]);
   const [tick, setTick] = useState(0); // re-read after edits elsewhere
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [voiceTarget, setVoiceTarget] = useState<string | null>(null);
@@ -703,6 +707,60 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
           </View>
         </View>
 
+        {/* Tala Subcategory Breadcrumb Bar */}
+        {path.length > 1 && (
+          <View style={styles.breadcrumbBar}>
+            <Pressable
+              onPress={handleBack}
+              style={styles.breadcrumbBackBtn}
+              accessibilityLabel="Back to previous category"
+            >
+              <Ionicons
+                name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
+                size={14}
+                color={colors.forest}
+              />
+              <Text style={styles.breadcrumbBackText}>
+                {wordLabel(getCategory(path[path.length - 2])?.name ?? t("back", lang), lang)}
+              </Text>
+            </Pressable>
+            <Ionicons
+              name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
+              size={12}
+              color="#94a3b8"
+            />
+            <View style={styles.breadcrumbCurrentPill}>
+              <Text style={styles.breadcrumbCurrentText} numberOfLines={1}>
+                {current?.icon ? `${current.icon} ` : ""}{wordLabel(current?.name ?? "", lang)}
+              </Text>
+              {words.length > 0 && (
+                <View style={styles.breadcrumbCountBadge}>
+                  <Text style={styles.breadcrumbCountText}>{words.length}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Main Grid: Responsive AAC cards */}
+        <ScrollView
+          style={styles.gridScroll}
+          contentContainerStyle={styles.grid}
+          showsVerticalScrollIndicator
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Suggestions sit at the top of the board and scroll together with it, so nothing gets squeezed */}
+        {(searchHits.length > 0 || phraseRows.length > 0 || suggestions.length > 0) && !showSuggest && (
+          <View style={{ width: "100%" }}>
+          <Pressable onPress={() => setShowSuggest(true)} style={styles.suggestCollapsed} accessibilityLabel="Show suggestions">
+            <Ionicons name="sparkles" size={17} color={colors.forest} />
+            <Text style={styles.suggestHeaderText}>{lang === "ar-SA" ? "اقتراحات" : lang === "ur-PK" ? "تجاویز" : "Suggestions"}</Text>
+            <Ionicons name="chevron-down" size={18} color={colors.forest} />
+          </Pressable>
+          </View>
+        )}
+        {(searchHits.length > 0 || phraseRows.length > 0 || suggestions.length > 0) && showSuggest && (
+        <View style={{ width: "100%" }}>
         {/* Search results for the word being typed */}
         {searchHits.length > 0 && (
           <View style={styles.suggestWrap}>
@@ -798,47 +856,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
           </View>
         )}
 
-        {/* Tala Subcategory Breadcrumb Bar */}
-        {path.length > 1 && (
-          <View style={styles.breadcrumbBar}>
-            <Pressable
-              onPress={handleBack}
-              style={styles.breadcrumbBackBtn}
-              accessibilityLabel="Back to previous category"
-            >
-              <Ionicons
-                name={I18nManager.isRTL ? "arrow-forward" : "arrow-back"}
-                size={14}
-                color={colors.forest}
-              />
-              <Text style={styles.breadcrumbBackText}>
-                {wordLabel(getCategory(path[path.length - 2])?.name ?? t("back", lang), lang)}
-              </Text>
-            </Pressable>
-            <Ionicons
-              name={I18nManager.isRTL ? "chevron-back" : "chevron-forward"}
-              size={12}
-              color="#94a3b8"
-            />
-            <View style={styles.breadcrumbCurrentPill}>
-              <Text style={styles.breadcrumbCurrentText} numberOfLines={1}>
-                {current?.icon ? `${current.icon} ` : ""}{wordLabel(current?.name ?? "", lang)}
-              </Text>
-              {words.length > 0 && (
-                <View style={styles.breadcrumbCountBadge}>
-                  <Text style={styles.breadcrumbCountText}>{words.length}</Text>
-                </View>
-              )}
-            </View>
-          </View>
+        </View>
         )}
-
-        {/* Main Grid: Responsive AAC cards */}
-        <ScrollView
-          style={styles.gridScroll}
-          contentContainerStyle={styles.grid}
-          showsVerticalScrollIndicator={false}
-        >
           {!ready ? null : (
             <>
               {folders.map((f) => {
@@ -1176,6 +1195,20 @@ const styles = StyleSheet.create({
     height: 140,
   },
 
+  suggestCollapsed: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    marginHorizontal: 10,
+    marginBottom: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: "#ffffff",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+  },
   // Type / search box in the sentence strip
   typeRow: {
     flexDirection: "row",

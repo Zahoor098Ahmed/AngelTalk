@@ -37,11 +37,13 @@ import {
   setSeedLanguage, verbFolderLetter } from "../modules/customCategories";
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { searchImages } from "../modules/imageSearch";
+import { fillMissingPictures, findPictureForWord } from "../modules/wordPictures";
 import { generateAllVerbForms, isLikelyVerb, detectVerbForm } from "../modules/verbForms";
 import WordEditor from "../components/WordEditor";
 import UniversalImagePickerModal from "../components/UniversalImagePickerModal";
 import LangBadge from "../components/LangBadge";
 import { startListening, stopListening, isListening } from "../modules/voice";
+import VoiceMicStatus from "../components/VoiceMicStatus";
 import { parseVoiceCategoryCommand, parseVoicePlan, summarizeVoicePlan, mergeVoicePlan, cleanVoiceSpeechName, getCategoryIconForName, getCategoryColorForName, type ParsedVoiceResult, type VoicePlan, type VoicePlanShelf } from "../modules/voiceCategories";
 
 const PASTEL_PALETTE = [
@@ -144,6 +146,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   const [voicePlanAutoImages, setVoicePlanAutoImages] = useState<Record<string, string>>({});
   const voiceAutoImageTried = useRef<Set<string>>(new Set());
   const voicePlanAtMicStart = useRef<VoicePlan | null>(null);
+  // Live transcript shows instantly; the (heavier) parse waits for a short gap in the words
+  const voiceParseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [voiceShelfId, setVoiceShelfId] = useState<string | null>(null);
   const [voiceSubCatId, setVoiceSubCatId] = useState<string | null>(null);
   const [bulkVoiceActive, setBulkVoiceActive] = useState<"words" | "shelves" | "subcats" | null>(null);
@@ -376,9 +380,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     const timer = setTimeout(() => {
       missing.forEach((n) => {
         voiceAutoImageTried.current.add(n);
-        searchImages(n, "arasaac")
-          .then(({ hits }) => {
-            const uri = hits[0]?.full || hits[0]?.thumb;
+        findPictureForWord(n)
+          .then((uri) => {
             if (uri) setVoicePlanAutoImages((prev) => ({ ...prev, [n]: uri }));
           })
           .catch(() => {});
@@ -386,6 +389,15 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     }, 700);
     return () => clearTimeout(timer);
   }, [voicePlanRows]);
+
+  // Words without a picture in the open category get one found online (once per word)
+  useEffect(() => {
+    const id = selectedSubCatId || currentShelf?.id;
+    if (!id) return;
+    void fillMissingPictures([id]).then((n) => {
+      if (n > 0) refresh();
+    });
+  }, [selectedSubCatId, currentShelf?.id]);
 
   // Active category being viewed/edited (either a selected sub-category or the main shelf)
   const activeCategory = useMemo(() => {
@@ -1047,15 +1059,23 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       accumulate: true,
       onPartial: (text) => {
         setVoiceRawTranscript(text);
-        applyVoiceText(text);
+        scheduleVoiceParse(text, 200);
       },
       onFinal: (text) => {
         setVoiceRawTranscript(text);
-        applyVoiceText(text);
+        scheduleVoiceParse(text, 0);
       },
       onError: () => setVoiceListening(false),
       onEnd: () => setVoiceListening(false),
     });
+  }
+
+  function scheduleVoiceParse(text: string, delayMs: number) {
+    if (voiceParseTimer.current) clearTimeout(voiceParseTimer.current);
+    voiceParseTimer.current = setTimeout(() => {
+      voiceParseTimer.current = null;
+      applyVoiceText(text);
+    }, delayMs);
   }
 
   function applyVoiceText(text: string, forceReplace: boolean = false) {
@@ -1282,6 +1302,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
     let firstShelf: CustomCategory | null = null;
     let firstSub: CustomCategory | null = null;
+    const touchedCats: string[] = [];
 
     /** Spoken/edited words -> tiles, each with its own picked picture (or the auto one). */
     const insertsFor = (words: { id: string; name: string }[]) => {
@@ -1310,10 +1331,29 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
       for (const subNode of node.subs) {
         if (!subNode.name.trim()) continue;
-        const sub = findOrCreateSub(shelf, capWord(subNode.name.trim()), voicePlanImages[subNode.id]);
+        const subName = capWord(subNode.name.trim());
+        // No shelf was said ("fruits mein apple banana"): use an existing sub-category of that name
+        // on any shelf, or — if the name is a shelf ("food mein ...") — put the words in that shelf.
+        if (!node.name && !childCategories(shelf.id).some((c) => sameName(c.name, subName))) {
+          const elsewhere = topLevelCategories()
+            .flatMap((sh) => childCategories(sh.id))
+            .find((c) => sameName(c.name, subName));
+          const shelfNamed = elsewhere ? undefined : topLevelCategories().find((c) => sameName(c.name, subName));
+          const target = elsewhere || (shelfNamed && (childCategories(shelfNamed.id)[0] || findOrCreateSub(shelfNamed, "General")));
+          if (target) {
+            if (!firstShelf || firstShelf.id === shelf.id) firstShelf = getCategory(target.parentCategoryId ?? "") ?? firstShelf;
+            if (!firstSub) firstSub = target;
+            const inserts = insertsFor(subNode.words);
+            if (inserts.length > 0) addWordsBulk(target.id, inserts);
+            touchedCats.push(target.id);
+            continue;
+          }
+        }
+        const sub = findOrCreateSub(shelf, subName, voicePlanImages[subNode.id]);
         if (!firstSub) firstSub = sub;
         const inserts = insertsFor(subNode.words);
         if (inserts.length > 0) addWordsBulk(sub.id, inserts);
+        touchedCats.push(sub.id);
       }
 
       // Words spoken straight after a shelf: they must live in a sub-category
@@ -1327,9 +1367,13 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         if (!firstSub) firstSub = targetSub;
         const inserts = insertsFor(node.words);
         if (inserts.length > 0) addWordsBulk(targetSub.id, inserts);
+        touchedCats.push(targetSub.id);
       }
     }
 
+    void fillMissingPictures(touchedCats).then((n) => {
+      if (n > 0) refresh();
+    });
     if (firstShelf) setSelectedShelfId(firstShelf.id);
     setSelectedSubCatId(firstSub && firstSub.parentCategoryId === firstShelf?.id ? firstSub.id : null);
     return true;
@@ -2634,8 +2678,14 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 </Pressable>
 
                 <Text style={styles.voiceMicStatusText}>
-                  {voiceListening ? "Listening... Speak now!" : "Tap microphone to speak"}
+                  {voiceListening
+                    ? "Listening… keep going step by step, pauses are fine. Tap the mic when you're done"
+                    : voicePlan
+                    ? "Tap microphone to add more — e.g. \"pets mein dog cat\""
+                    : "Tap microphone to speak"}
                 </Text>
+                {/* Live mic status: is it really on, how loud, or the real error */}
+                <VoiceMicStatus />
                 <Text style={styles.voiceExampleHint}>
                   Try: "create category of name of apple" or "fruits" or "add word pizza"
                 </Text>

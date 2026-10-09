@@ -6,8 +6,10 @@ import { transcribeAudio } from "./aiImage";
  * Universal voice input module:
  *
  * - Web (Chrome / Edge): Real-time Web Speech API with streaming partials.
- * - Native (Android / iOS / Expo): Captures high-clarity voice via expo-audio
- *   and transcribes with Whisper (via local proxy or OpenAI key).
+ * - Native app (APK / iOS build): the phone's own speech recognizer via expo-speech-recognition —
+ *   live words while speaking, and OFFLINE when the language's offline pack is on the phone.
+ * - Expo Go (no native module): records with expo-audio and transcribes with Whisper
+ *   (via local proxy or OpenAI key).
  *
  * Provides a unified startListening / stopListening interface across platforms.
  */
@@ -34,9 +36,12 @@ interface WSRecognition {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
+  maxAlternatives?: number;
   onresult: ((e: WSEvent) => void) | null;
   onerror: ((e: unknown) => void) | null;
   onend: (() => void) | null;
+  onaudiostart?: (() => void) | null;
+  onspeechstart?: (() => void) | null;
   start(): void;
   stop(): void;
 }
@@ -48,6 +53,56 @@ function webRecognition(): (new () => WSRecognition) | null {
     webkitSpeechRecognition?: new () => WSRecognition;
   };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Live mic state for the UI: "starting" -> "listening" (mic open) -> "hearing" (speech detected),
+// plus a 0..1 input level and the last error. A small component subscribes, so the big
+// screens don't re-render on every level tick.
+
+export type MicStatus = "idle" | "starting" | "listening" | "hearing" | "reconnecting" | "error";
+export interface MicState {
+  status: MicStatus;
+  level: number;
+  /** true once a real input level is reported (phone recognizer); the web has no level. */
+  levelAvailable: boolean;
+  error: string | null;
+}
+let micState: MicState = { status: "idle", level: 0, levelAvailable: false, error: null };
+const micListeners = new Set<(s: MicState) => void>();
+
+export function getMicState(): MicState {
+  return micState;
+}
+export function subscribeMicState(fn: (s: MicState) => void): () => void {
+  micListeners.add(fn);
+  return () => {
+    micListeners.delete(fn);
+  };
+}
+function setMic(patch: Partial<MicState>) {
+  micState = { ...micState, ...patch };
+  micListeners.forEach((fn) => fn(micState));
+}
+
+/** Friendly text for Web Speech API errors (null = harmless, keep going). */
+function micErrorText(code: string): string | null {
+  switch (code) {
+    case "no-speech":
+    case "aborted":
+      return null;
+    case "network":
+      return "Speech recognition needs internet (Chrome sends the audio to Google). Check your connection and try again.";
+    case "audio-capture":
+      return "No microphone was found, or another app/tab is using it. Close it and try again.";
+    case "not-allowed":
+    case "service-not-allowed":
+      return "Microphone permission is blocked. Click the 🎤 icon in the address bar and allow it.";
+    case "language-not-supported":
+      return "This language isn't supported by the browser's speech recognition.";
+    default:
+      return code ? `Microphone problem (${code}). Tap the mic to try again.` : null;
+  }
 }
 
 /** true when voice input can run in this environment (web or native recording). */
@@ -67,6 +122,18 @@ let isExplicitlyStopped = false;
 let sessionAccumulatedText = "";
 let lastFinalSessionText = "";
 let silenceTimer: any = null;
+/**
+ * Accumulate mode keeps listening until the user taps the mic again (pauses never end it).
+ * Only a long stretch of silence releases the mic, so a forgotten mic doesn't stay on forever.
+ */
+const IDLE_LIMIT_MS = 5 * 60 * 1000;
+let quickEnds = 0; // sessions that ended almost immediately without hearing anything
+let sessionStartedAt = 0;
+let sessionHadResult = false;
+/** Chrome's "network" error is usually a short internet drop: reconnect a few times before giving up. */
+const MAX_NETWORK_RETRIES = 8;
+let networkRetries = 0;
+let lastErrorWasNetwork = false;
 
 export function isListening() {
   return listening;
@@ -83,10 +150,30 @@ function resetSilenceTimeout() {
   clearSilenceTimeout();
   if (activeHandlers?.accumulate) {
     silenceTimer = setTimeout(() => {
-      // Auto-stop after 60 seconds of continuous silence to avoid dangling mic
       stopListening().catch(() => {});
-    }, 60000);
+    }, IDLE_LIMIT_MS);
   }
+}
+
+/** Stops a previous recognition and waits (briefly) until the browser has released the mic. */
+function releaseWebInstance(): Promise<void> {
+  const old = webInstance;
+  webInstance = null;
+  if (!old) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => resolve();
+    old.onresult = null;
+    old.onerror = null;
+    old.onend = done;
+    try {
+      const abortable = old as unknown as { abort?: () => void };
+      if (abortable.abort) abortable.abort();
+      else old.stop();
+    } catch {
+      done();
+    }
+    setTimeout(done, 400);
+  });
 }
 
 export async function startListening(h: VoiceHandlers): Promise<boolean> {
@@ -95,31 +182,21 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
   isExplicitlyStopped = false;
   sessionAccumulatedText = (h.initialText || "").trim();
   lastFinalSessionText = "";
+  quickEnds = 0;
+  networkRetries = 0;
+  lastErrorWasNetwork = false;
   clearSilenceTimeout();
 
   // 1. Web Speech Recognition (Chrome/Edge/Web)
   const Rec = webRecognition();
   if (Rec) {
-    if (webInstance) {
-      try {
-        webInstance.onend = null;
-        webInstance.onerror = null;
-        webInstance.stop();
-      } catch {
-        /* ignore */
-      }
-      webInstance = null;
-    }
+    await releaseWebInstance();
+    if (activeHandlers !== h) return false; // a newer start/stop happened meanwhile
 
     try {
-      if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
-        try {
-          const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-          s.getTracks().forEach((track) => track.stop());
-        } catch {
-          /* ignore permission probe error */
-        }
-      }
+      // No separate mic stream here: opening the mic twice (meter + recognizer) made Chrome's
+      // recognizer lag and drop out with "network" errors. Chrome asks for permission itself.
+      setMic({ status: "starting", level: 0, levelAvailable: false, error: null });
 
       function spawnWebRecognition() {
         if (isExplicitlyStopped || !activeHandlers) return;
@@ -127,9 +204,16 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
         rec.lang = lang;
         rec.continuous = true;
         rec.interimResults = true;
+        rec.maxAlternatives = 1;
+        rec.onaudiostart = () => setMic({ status: "listening", error: null });
+        rec.onspeechstart = () => setMic({ status: "hearing" });
 
         rec.onresult = (e: WSEvent) => {
-          resetSilenceTimeout();
+          if (micState.status !== "hearing") setMic({ status: "hearing", error: null });
+          sessionHadResult = true;
+          networkRetries = 0;
+          quickEnds = 0;
+          if (!isExplicitlyStopped) resetSilenceTimeout();
           if (activeHandlers?.accumulate) {
             let sessionInterim = "";
             let sessionFinal = "";
@@ -171,23 +255,46 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
 
         rec.onerror = (e: unknown) => {
           const errType = String((e as { error?: string })?.error ?? "");
-          if (errType === "no-speech" || errType === "aborted") return;
-          if (errType === "not-allowed" || errType === "service-not-allowed") {
-            isExplicitlyStopped = true;
-            listening = false;
-            clearSilenceTimeout();
-            activeHandlers?.onError?.(errType);
-            activeHandlers?.onEnd?.();
+          const message = micErrorText(errType);
+          if (!message) return; // silence / restart — keep going
+          // Short internet drop: keep what was said and reconnect (onend restarts the session)
+          if (errType === "network" && activeHandlers?.accumulate && networkRetries < MAX_NETWORK_RETRIES) {
+            networkRetries++;
+            lastErrorWasNetwork = true;
+            setMic({ status: "reconnecting" });
             return;
           }
-          // Non-fatal errors can happen when restarting; avoid breaking user's flow
+          console.warn("[voice] recognition error:", errType);
+          isExplicitlyStopped = true;
+          listening = false;
+          clearSilenceTimeout();
+          setMic({ status: "error", level: 0, error: message });
+          const handlers = activeHandlers;
+          activeHandlers = null;
+          handlers?.onError?.(message);
+          handlers?.onEnd?.();
         };
 
         rec.onend = () => {
+          if (webInstance === rec) webInstance = null;
           if (isExplicitlyStopped || !activeHandlers) {
+            finishWebSession();
+            return;
+          }
+          // Ended right away without hearing anything: Chrome refused the mic. Don't loop forever.
+          // (An internet drop isn't a mic problem — those retries are counted separately.)
+          const reconnecting = lastErrorWasNetwork;
+          lastErrorWasNetwork = false;
+          if (!reconnecting && !sessionHadResult && Date.now() - sessionStartedAt < 1500) quickEnds++;
+          if (quickEnds >= 3) {
             listening = false;
             clearSilenceTimeout();
-            activeHandlers?.onEnd?.();
+            const h = activeHandlers;
+            activeHandlers = null;
+            const message = "The microphone could not start. Close other tabs using the mic and try again.";
+            setMic({ status: "error", level: 0, error: message });
+            h?.onError?.(message);
+            h?.onEnd?.();
             return;
           }
           // If accumulate mode is enabled and user hasn't explicitly stopped,
@@ -207,7 +314,7 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
                   activeHandlers?.onEnd?.();
                 }
               }
-            }, 150);
+            }, reconnecting ? 1000 : 150);
             return;
           }
           listening = false;
@@ -216,6 +323,8 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
         };
 
         webInstance = rec;
+        sessionStartedAt = Date.now();
+        sessionHadResult = false;
         try {
           rec.start();
           listening = true;
@@ -242,7 +351,24 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
     }
   }
 
-  // 2. Native Mobile Audio Recording (Expo Audio -> Whisper STT)
+  // 2. Native app: the phone's own recognizer (live, and offline when the language pack is installed)
+  const sr = nativeSR();
+  if (sr) {
+    try {
+      if (sr.isRecognitionAvailable()) {
+        const ok = await startNativeSpeech(sr, h, lang);
+        if (ok) return true;
+        if (micState.status === "error") {
+          activeHandlers = null;
+          return false;
+        }
+      }
+    } catch (err) {
+      console.warn("[voice] native recognizer error:", err);
+    }
+  }
+
+  // 3. Expo Go (no native module): record with expo-audio -> Whisper STT
   try {
     const ok = await startRecording();
     if (ok) {
@@ -260,23 +386,239 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
   return false;
 }
 
+// ---------------------------------------------------------------------------
+// Native speech recognition (Android / iOS builds)
+
+type NativeSR = {
+  start(o: Record<string, unknown>): void;
+  stop(): void;
+  abort(): void;
+  requestPermissionsAsync(): Promise<{ granted: boolean }>;
+  getSupportedLocales(o: Record<string, unknown>): Promise<{ locales: string[]; installedLocales: string[] }>;
+  supportsOnDeviceRecognition(): boolean;
+  isRecognitionAvailable(): boolean;
+  androidTriggerOfflineModelDownload?(o: { locale: string }): Promise<unknown>;
+  addListener(event: string, fn: (e: any) => void): { remove(): void };
+};
+
+let nativeSRCache: NativeSR | null | undefined;
+function nativeSR(): NativeSR | null {
+  if (nativeSRCache !== undefined) return nativeSRCache;
+  nativeSRCache = null;
+  if (Platform.OS === "web") return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require("expo-speech-recognition").ExpoSpeechRecognitionModule as NativeSR;
+    if (mod && typeof mod.start === "function") nativeSRCache = mod;
+  } catch {
+    /* Expo Go: native module not in this build */
+  }
+  return nativeSRCache;
+}
+
+let nativeSRActive = false;
+let nativeSubs: { remove(): void }[] = [];
+
+function clearNativeSubs() {
+  nativeSubs.forEach((sub) => sub.remove());
+  nativeSubs = [];
+}
+
+/** Uses the offline model when the phone has this language installed, so it works without internet. */
+async function wantsOnDevice(sr: NativeSR, lang: string): Promise<boolean> {
+  try {
+    if (!sr.supportsOnDeviceRecognition()) return false;
+    const { installedLocales } = await sr.getSupportedLocales({});
+    const base = lang.split("-")[0].toLowerCase();
+    return installedLocales.some((l) => l.toLowerCase() === lang.toLowerCase() || l.toLowerCase().split(/[-_]/)[0] === base);
+  } catch {
+    return false;
+  }
+}
+
+async function startNativeSpeech(sr: NativeSR, h: VoiceHandlers, lang: string): Promise<boolean> {
+  setMic({ status: "starting", level: 0, error: null });
+  const perm = await sr.requestPermissionsAsync().catch(() => ({ granted: false }));
+  if (!perm.granted) {
+    const message = micErrorText("not-allowed") as string;
+    setMic({ status: "error", error: message });
+    h.onError?.(message);
+    return false;
+  }
+  if (activeHandlers !== h) return false;
+  const onDevice = await wantsOnDevice(sr, lang);
+
+  clearNativeSubs();
+  let accumulated = (h.initialText || "").trim();
+  const join = (...parts: string[]) => parts.filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+
+  nativeSubs.push(
+    sr.addListener("audiostart", () => setMic({ status: "listening", error: null })),
+    sr.addListener("speechstart", () => setMic({ status: "hearing" })),
+    sr.addListener("volumechange", (e: { value: number }) => {
+      const level = Math.max(0, Math.min(1, (e.value + 2) / 12));
+      if (!micState.levelAvailable || Math.abs(level - micState.level) > 0.03) setMic({ level, levelAvailable: true });
+    }),
+    sr.addListener("result", (e: { isFinal: boolean; results: { transcript: string }[] }) => {
+      const text = (e.results?.[0]?.transcript || "").trim();
+      if (!text || !activeHandlers) return;
+      if (micState.status !== "hearing") setMic({ status: "hearing" });
+      resetSilenceTimeout();
+      if (!activeHandlers.accumulate) {
+        if (e.isFinal) activeHandlers.onFinal?.(text);
+        else activeHandlers.onPartial?.(text);
+        return;
+      }
+      if (e.isFinal) {
+        accumulated = join(accumulated, text);
+        activeHandlers.onFinal?.(accumulated);
+      } else {
+        activeHandlers.onPartial?.(join(accumulated, text));
+      }
+    }),
+    sr.addListener("error", (e: { error: string; message?: string }) => {
+      const code = String(e?.error ?? "");
+      if (code === "no-speech" || code === "speech-timeout" || code === "aborted") return; // "end" restarts
+      // Offline pack missing and no internet: ask Android to download it for next time
+      if (code === "network" && sr.androidTriggerOfflineModelDownload) {
+        sr.androidTriggerOfflineModelDownload({ locale: lang }).catch(() => {});
+      }
+      const message =
+        code === "network"
+          ? "No internet, and this language's offline speech pack isn't on the phone yet. Android is downloading it — connect to Wi-Fi once, then the mic works offline."
+          : micErrorText(code) ?? `Microphone problem (${code}).`;
+      isExplicitlyStopped = true;
+      setMic({ status: "error", level: 0, error: message });
+      const handlers = activeHandlers;
+      activeHandlers = null;
+      nativeSRActive = false;
+      listening = false;
+      clearSilenceTimeout();
+      clearNativeSubs();
+      handlers?.onError?.(message);
+      handlers?.onEnd?.();
+    }),
+    sr.addListener("end", () => {
+      // Older Android ends after a pause even in continuous mode: keep listening until the user taps
+      if (!isExplicitlyStopped && activeHandlers?.accumulate) {
+        setTimeout(() => {
+          if (!isExplicitlyStopped && activeHandlers) {
+            try {
+              sr.start(nativeOptions);
+            } catch {
+              finishNativeSession();
+            }
+          }
+        }, 150);
+        return;
+      }
+      finishNativeSession();
+    }),
+  );
+
+  const nativeOptions = {
+    lang,
+    interimResults: true,
+    continuous: true,
+    maxAlternatives: 1,
+    requiresOnDeviceRecognition: onDevice,
+    addsPunctuation: false,
+    volumeChangeEventOptions: { enabled: true, intervalMillis: 150 },
+    // Don't cut the speaker off during short thinking pauses
+    androidIntentOptions: {
+      EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 8000,
+      EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 8000,
+    },
+  };
+  try {
+    sr.start(nativeOptions);
+  } catch (e) {
+    clearNativeSubs();
+    const message = `The microphone could not start (${String((e as Error)?.message ?? e)}).`;
+    setMic({ status: "error", error: message });
+    h.onError?.(message);
+    return false;
+  }
+  nativeSRActive = true;
+  listening = true;
+  console.log(`[voice] native recognizer started (${lang}, ${onDevice ? "offline" : "online"})`);
+  return true;
+}
+
+function finishNativeSession() {
+  if (finishTimer) {
+    clearTimeout(finishTimer);
+    finishTimer = null;
+  }
+  nativeSRActive = false;
+  listening = false;
+  clearSilenceTimeout();
+  clearNativeSubs();
+  if (micState.status !== "error") setMic({ status: "idle", level: 0 });
+  const h = activeHandlers;
+  activeHandlers = null;
+  h?.onEnd?.();
+}
+
+let finishTimer: any = null;
+
+/** Ends a web session: handlers get their last results first, then onEnd once. */
+function finishWebSession() {
+  if (finishTimer) {
+    clearTimeout(finishTimer);
+    finishTimer = null;
+  }
+  listening = false;
+  clearSilenceTimeout();
+  if (micState.status !== "error") setMic({ status: "idle", level: 0 });
+  const h = activeHandlers;
+  activeHandlers = null;
+  h?.onEnd?.();
+}
+
 export async function stopListening(): Promise<void> {
   isExplicitlyStopped = true;
   listening = false;
   clearSilenceTimeout();
+
+  // Native recognizer: stop() delivers the last words, then "end" -> finishNativeSession
+  if (nativeSRActive && activeHandlers) {
+    const sr = nativeSR();
+    if (sr) {
+      try {
+        sr.stop();
+        finishTimer = setTimeout(finishNativeSession, 1500);
+        return;
+      } catch {
+        finishNativeSession();
+        return;
+      }
+    }
+  }
+
+  // Web: stop() makes the browser send the final words, then onend fires -> finishWebSession
+  if (webInstance && activeHandlers && !nativeRecording) {
+    try {
+      webInstance.stop();
+      finishTimer = setTimeout(finishWebSession, 1500); // safety net if onend never comes
+      return;
+    } catch {
+      /* fall through */
+    }
+  }
+
+  if (micState.status !== "error") setMic({ status: "idle", level: 0 });
   const handlers = activeHandlers;
   activeHandlers = null;
-
-  // Stop web recognition
   if (webInstance) {
     try {
       webInstance.onend = null;
       webInstance.onerror = null;
       webInstance.stop();
-      webInstance = null;
     } catch {
       /* ignore */
     }
+    webInstance = null;
   }
   handlers?.onEnd?.();
 

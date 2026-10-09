@@ -70,7 +70,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#f5f0e6"
         }
-      ]
+      ],
+      "expo-speech-recognition"
     ],
     "extra": {
       "eas": {
