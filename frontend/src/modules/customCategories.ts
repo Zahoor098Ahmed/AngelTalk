@@ -22,6 +22,9 @@ export function setSeedLanguage(lang: LanguageCode) {
 const KEY = "kiddocare_custom_categories";
 const BACKUP_VERSION = 2;
 
+// Other spellings caregivers use for a built-in folder (e.g. a voice-made "Subject" folder)
+const FOLDER_ALIASES: Record<string, string> = { subject: "Subjects" };
+
 const FOLDER_COLORS = ["#2f6d62", "#4a7fe6", "#c98a3d", "#8a6bc9", "#5c9a58", "#c96b6b"];
 
 let cache: CustomCategory[] = [];
@@ -714,6 +717,11 @@ function mergeIntoExistingWord(
 }
 
 /** Returns the letter ("a".."z") if this category is a "Verbs X" sub-category, else null. */
+/** "A".."Z" for the Actions › Verbs A–Z folders, otherwise null. */
+export function verbFolderLetter(c: CustomCategory): string | null {
+  return verbSubLetter(c)?.toUpperCase() ?? null;
+}
+
 function verbSubLetter(c: CustomCategory): string | null {
   if (!c.parentCategoryId) return null;
   const candidates = [c.seedName, canonicalWordEn(c.name), FOLDER_EN_BY_LANG[(c.name || "").toLowerCase()], c.name];
@@ -1298,6 +1306,18 @@ async function translatePendingAsync(
  * Performs instantaneous synchronous translation with comprehensive dictionaries & cache,
  * and dynamically translates any remaining custom items in the background.
  */
+/** True for the name of a built-in folder in any language, or a known alias of one. */
+function isBuiltInFolderName(name: string): boolean {
+  const lower = (name || "").trim().toLowerCase();
+  if (!lower) return false;
+  return (
+    !!FOLDER_ALIASES[lower] ||
+    !!FOLDER_EN_BY_LANG[lower] ||
+    STARTER.some((s) => s.name.toLowerCase() === lower) ||
+    STARTER_SUBCATEGORIES.some((s) => s.name.toLowerCase() === lower)
+  );
+}
+
 export function retranslateSeedBoard(lang: LanguageCode) {
   seedLang = lang;
   cleanAndDeduplicateCategories();
@@ -1306,17 +1326,20 @@ export function retranslateSeedBoard(lang: LanguageCode) {
   const pendingAsyncItems: { type: "cat" | "word"; id: string; catId?: string; originalText: string }[] = [];
 
   for (const cat of cache) {
+    if (cat.isCustom && isBuiltInFolderName(cat.name)) cat.isCustom = false;
     if (cat.isCustom) continue;
     // 1. Category name translation
     const rawCatName = cat.name.trim();
     if (lang === "en-US") {
-      const enCat = canonicalWordEn(rawCatName) || FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || rawCatName;
+      const enRaw = canonicalWordEn(rawCatName) || FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || rawCatName;
+      const enCat = FOLDER_ALIASES[enRaw.toLowerCase()] ?? enRaw;
       if (enCat !== cat.name) {
         cat.name = enCat;
         changed = true;
       }
     } else {
-      const enCat = canonicalWordEn(rawCatName) || FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || rawCatName;
+      const enRaw = canonicalWordEn(rawCatName) || FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || rawCatName;
+      const enCat = FOLDER_ALIASES[enRaw.toLowerCase()] ?? enRaw;
       const localizedName = FOLDER_NAMES[lang]?.[enCat] || wordLabel(enCat, lang);
       if (localizedName && localizedName.toLowerCase() !== rawCatName.toLowerCase()) {
         cat.name = localizedName;
@@ -1375,6 +1398,7 @@ function ensureAllStandardCategories() {
       const en = (canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).trim().toLowerCase();
       return (
         en === sName ||
+        FOLDER_ALIASES[en]?.toLowerCase() === sName ||
         c.name.toLowerCase() === sName ||
         c.name.toLowerCase() === folderName(s.name).toLowerCase()
       );

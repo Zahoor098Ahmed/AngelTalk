@@ -26,8 +26,8 @@ export default function TabBar({ active, onChange, labels }: TabBarProps) {
   const { settings } = useSettings();
   const lang = settings.language;
   const insets = useSafeAreaInsets();
-  const iconSize = isSmallPhone ? 20 : isTablet ? 24 : 22;
-  const labelFontSize = isSmallPhone ? 9.5 : isTablet ? 11.5 : 10.5;
+  const iconSize = isSmallPhone ? 27 : isTablet ? 34 : 31;
+  const labelFontSize = isSmallPhone ? 12 : isTablet ? 15 : 14;
 
   return (
     <View style={[styles.bar, { paddingBottom: 8 + insets.bottom }]}>
@@ -105,9 +105,9 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     alignItems: "center",
     justifyContent: "center",
   },

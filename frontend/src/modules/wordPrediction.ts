@@ -131,11 +131,21 @@ export function predictNext(sentenceLabels: string[], max = 10): string[] {
 }
 
 /**
- * Turns predicted English words into board tiles: the child's own tile when the
- * word is on the board (keeps their picture / recorded voice), otherwise a
- * pictogram tile.
+ * Google-style completions: each is 1–2 words that would follow the sentence
+ * ("I want" -> ["to", "eat"], ["more", "please"], ["water"]…).
  */
-export function suggestionTiles(predicted: string[], lang: LanguageCode): CustomWord[] {
+export function predictPhrases(sentenceLabels: string[], max = 4): string[][] {
+  if (sentenceLabels.length === 0) return [];
+  const out: string[][] = [];
+  for (const first of predictNext(sentenceLabels, max)) {
+    const second = predictNext([...sentenceLabels, first], 3).find((w) => !FALLBACK.includes(w));
+    out.push(second ? [first, second] : [first]);
+  }
+  return out;
+}
+
+/** Every visible board word, keyed by its English form (first one wins). */
+function boardIndex(): Map<string, CustomWord> {
   const index = new Map<string, CustomWord>();
   for (const c of listCategories()) {
     if (c.hidden) continue;
@@ -145,19 +155,66 @@ export function suggestionTiles(predicted: string[], lang: LanguageCode): Custom
       if (!index.has(k)) index.set(k, w);
     }
   }
-  return predicted.map((word, i) => {
-    const own = index.get(word);
-    if (own) return own;
-    const label = wordLabel(word, lang) || word;
-    return {
-      id: `suggest-${word}`,
-      label,
-      phrase: label,
-      emoji: "🔹",
-      imageUri: getPictogramUrl(word) || undefined,
-      useTextToSpeech: true,
-      size: "md",
-      order: i,
-    };
-  });
+  return index;
+}
+
+function pictogramTile(word: string, label: string, order = 0): CustomWord {
+  return {
+    id: `suggest-${word}`,
+    label,
+    phrase: label,
+    emoji: "🔹",
+    imageUri: getPictogramUrl(word) || undefined,
+    useTextToSpeech: true,
+    size: "md",
+    order,
+  };
+}
+
+/**
+ * Turns predicted English words into board tiles: the child's own tile when the
+ * word is on the board (keeps their picture / recorded voice), otherwise a
+ * pictogram tile.
+ */
+export function suggestionTiles(predicted: string[], lang: LanguageCode): CustomWord[] {
+  const index = boardIndex();
+  return predicted.map((word, i) => index.get(word) ?? pictogramTile(word, wordLabel(word, lang) || word, i));
+}
+
+/** The tile for a word the child typed ("come" -> their Come tile, or a pictogram tile). */
+export function tileForText(text: string, lang: LanguageCode): CustomWord {
+  const typed = text.trim();
+  const key = en(typed);
+  const own = boardIndex().get(key);
+  if (own) return own;
+  const label = /[؀-ۿ]/.test(typed) ? typed : wordLabel(key, lang) || typed;
+  return pictogramTile(key, label);
+}
+
+/** Words starting with what the child is typing, board words first ("co" -> come, cookie, cold…). */
+export function searchWords(partial: string, lang: LanguageCode, max = 14): CustomWord[] {
+  const q = partial.trim().toLowerCase();
+  if (!q) return [];
+  const hits: CustomWord[] = [];
+  const seen = new Set<string>();
+  const add = (key: string, tile: CustomWord) => {
+    if (seen.has(key) || hits.length >= max) return;
+    seen.add(key);
+    hits.push(tile);
+  };
+  const index = boardIndex();
+  // exact matches first, then prefix matches
+  for (const pass of ["exact", "prefix"] as const) {
+    for (const [key, w] of index) {
+      const shown = (wordLabel(w.label, lang) || w.label).toLowerCase();
+      const ok = pass === "exact" ? key === q || shown === q : key.startsWith(q) || shown.startsWith(q);
+      if (ok) add(key, w);
+    }
+  }
+  // common words from the suggestion rules that are not on the board yet
+  const vocab = new Set([...Object.keys(RULES), ...Object.values(RULES).flat()]);
+  for (const word of vocab) {
+    if (word.startsWith(q)) add(word, pictogramTile(word, wordLabel(word, lang) || word));
+  }
+  return hits;
 }

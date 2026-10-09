@@ -34,8 +34,7 @@ import {
   setWordHidden,
   cleanAndDeduplicateCategories,
   retranslateSeedBoard,
-  setSeedLanguage,
-} from "../modules/customCategories";
+  setSeedLanguage, verbFolderLetter } from "../modules/customCategories";
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { searchImages } from "../modules/imageSearch";
 import { generateAllVerbForms, isLikelyVerb, detectVerbForm } from "../modules/verbForms";
@@ -80,6 +79,8 @@ interface Props {
 export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId }: Props) {
   const { width } = useWindowDimensions();
   const isWide = width >= 720;
+  // Wide layout on a not-so-wide window: slimmer shelf list, no "last used" column
+  const compactTable = isWide && width < 1150;
   const { settings } = useSettings();
   const lang = settings.language;
   const tt = (k: TKey) => t(k, lang);
@@ -1507,7 +1508,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
           /* WIDE DESKTOP/TABLET LAYOUT */
           <View style={[styles.mainLayoutWide, isRtl && { flexDirection: "row-reverse" }]}>
             {/* Left Column: Shelves */}
-            <View style={styles.sidebarCard}>
+            <View style={[styles.sidebarCard, compactTable && { width: 250, padding: 14 }]}>
               <View style={styles.sidebarHeader}>
                 <Text style={[styles.sidebarTitle, isRtl && { textAlign: "right" }]}>{t("shelvesHeader", lang)}</Text>
                 <Text style={[styles.sidebarSub, isRtl && { textAlign: "right" }]}>{t("shelvesSub", lang)}</Text>
@@ -1544,7 +1545,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                           {cat.imageUri ? (
                             <Image
                               source={{ uri: cat.imageUri }}
-                              style={{ width: 22, height: 22, borderRadius: 4, marginRight: 6 }}
+                              style={{ width: 30, height: 30, borderRadius: 6, marginRight: 6 }}
                               resizeMode="contain"
                             />
                           ) : (
@@ -1573,7 +1574,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             hitSlop={6}
                             accessibilityLabel={`Edit ${cat.name}`}
                           >
-                            <Ionicons name="pencil" size={15} color="#235E50" />
+                            <Ionicons name="pencil" size={19} color="#235E50" />
                           </Pressable>
 
                           {/* Eye Show/Hide Toggle */}
@@ -1585,7 +1586,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                           >
                             <Ionicons
                               name={cat.hidden ? "eye-off" : "eye-outline"}
-                              size={16}
+                              size={20}
                               color={cat.hidden ? "#B8AFA2" : "#235E50"}
                             />
                           </Pressable>
@@ -1603,7 +1604,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             hitSlop={6}
                             accessibilityLabel={`Delete ${cat.name}`}
                           >
-                            <Ionicons name="trash-outline" size={16} color="#A39D90" />
+                            <Ionicons name="trash-outline" size={20} color="#A39D90" />
                           </Pressable>
                         </View>
                       </Pressable>
@@ -1625,7 +1626,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                               >
                                 <View style={styles.sidebarSubCatLeft}>
                                   <Text style={styles.sidebarSubCatIndent}>↳</Text>
-                                  <Text style={styles.sidebarSubCatIcon}>{sc.icon || "📁"}</Text>
+                                  <Text style={[styles.sidebarSubCatIcon, verbFolderLetter(sc) ? { fontWeight: "900", color: "#235E50" } : null]}>{verbFolderLetter(sc) ?? (sc.icon || "📁")}</Text>
                                   <Text
                                     style={[
                                       styles.sidebarSubCatName,
@@ -1647,7 +1648,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                                     hitSlop={4}
                                     accessibilityLabel={`Edit ${sc.name}`}
                                   >
-                                    <Ionicons name="pencil" size={13} color="#235E50" />
+                                    <Ionicons name="pencil" size={17} color="#235E50" />
                                   </Pressable>
 
                                   <Pressable
@@ -1657,7 +1658,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                                   >
                                     <Ionicons
                                       name={sc.hidden ? "eye-off" : "eye-outline"}
-                                      size={14}
+                                      size={18}
                                       color={sc.hidden ? "#B8AFA2" : "#235E50"}
                                     />
                                   </Pressable>
@@ -1672,7 +1673,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                                     style={styles.shelfActionBtn}
                                     hitSlop={4}
                                   >
-                                    <Ionicons name="trash-outline" size={14} color="#A39D90" />
+                                    <Ionicons name="trash-outline" size={18} color="#A39D90" />
                                   </Pressable>
                                 </View>
                               </Pressable>
@@ -1686,7 +1687,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             }}
                             style={styles.sidebarAddSubCatRow}
                           >
-                            <Ionicons name="add" size={13} color="#235E50" />
+                            <Ionicons name="add" size={17} color="#235E50" />
                             <Text style={styles.sidebarAddSubCatText}>{t("addSubCategorySidebar", lang)}</Text>
                           </Pressable>
                         </View>
@@ -1711,8 +1712,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             {/* Right Column: Words Table for Selected Shelf / Sub-Category */}
             <View style={styles.contentCard}>
               <View style={[styles.tableHeaderRow, isRtl && { flexDirection: "row-reverse" }]}>
-                <View>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <View style={{ flexShrink: 1, maxWidth: "100%" }}>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
                     <Pressable onPress={() => setSelectedSubCatId(null)}>
                       <Text style={[styles.selectedShelfTitle, selectedSubCatId ? { color: "#235E50" } : null]}>
                         {currentShelf ? (currentShelf.isCustom ? currentShelf.name : (wordLabel(currentShelf.name, lang) || currentShelf.name)) : wordLabel("Core", lang)}
@@ -1762,7 +1763,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               <View style={[styles.tableHead, isRtl && { flexDirection: "row-reverse" }]}>
                 <Text style={[styles.colHead, styles.colHeadWord, isRtl && { textAlign: "right" }]}>{t("colWord", lang)}</Text>
                 <Text style={[styles.colHead, styles.colHeadCount, isRtl && { textAlign: "center" }]}>{t("colUseCount", lang)}</Text>
-                <Text style={[styles.colHead, styles.colHeadDate, isRtl && { textAlign: "center" }]}>{t("colLastUsed", lang)}</Text>
+                {!compactTable && <Text style={[styles.colHead, styles.colHeadDate, isRtl && { textAlign: "center" }]}>{t("colLastUsed", lang)}</Text>}
                 <Text style={[styles.colHead, styles.colHeadAction, isRtl && { textAlign: "center" }]}>{t("colActions", lang)}</Text>
               </View>
 
@@ -1802,7 +1803,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             {w.imageUri ? (
                               <Image
                                 source={{ uri: w.imageUri }}
-                                style={{ width: 28, height: 28, borderRadius: 6 }}
+                                style={{ width: 44, height: 44, borderRadius: 8 }}
                                 resizeMode="contain"
                               />
                             ) : (
@@ -1842,17 +1843,19 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
                         <View style={[styles.colCell, styles.colHeadCount]}>
                           <View style={styles.useCountPill}>
-                            <Text style={styles.useCountPillText}>
+                            <Text style={styles.useCountPillText} numberOfLines={1}>
                               {t("timesUsed", lang).replace("{count}", String(w.useCount || 0))}
                             </Text>
                           </View>
                         </View>
 
-                        <View style={[styles.colCell, styles.colHeadDate]}>
-                          <Text style={styles.lastUsedDateText}>
-                            {formatLastUsed(w.lastUsedAt)}
-                          </Text>
-                        </View>
+                        {!compactTable && (
+                          <View style={[styles.colCell, styles.colHeadDate]}>
+                            <Text style={styles.lastUsedDateText} numberOfLines={1}>
+                              {formatLastUsed(w.lastUsedAt)}
+                            </Text>
+                          </View>
+                        )}
 
                         <View style={[styles.colCell, styles.colHeadAction, styles.actionsCell]}>
                           {/* Edit Word Button */}
@@ -1862,7 +1865,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             hitSlop={6}
                             accessibilityLabel={`Edit ${w.label}`}
                           >
-                            <Ionicons name="pencil-outline" size={17} color="#235E50" />
+                            <Ionicons name="pencil-outline" size={22} color="#235E50" />
                           </Pressable>
 
                           {/* Eye Show/Hide Toggle */}
@@ -1874,7 +1877,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                           >
                             <Ionicons
                               name={w.hidden ? "eye-off" : "eye-outline"}
-                              size={17}
+                              size={22}
                               color={w.hidden ? "#B8AFA2" : "#235E50"}
                             />
                           </Pressable>
@@ -1892,7 +1895,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             hitSlop={6}
                             accessibilityLabel={`Delete ${w.label}`}
                           >
-                            <Ionicons name="trash-outline" size={17} color="#A39D90" />
+                            <Ionicons name="trash-outline" size={22} color="#A39D90" />
                           </Pressable>
                         </View>
                       </View>
@@ -2020,8 +2023,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             {/* Selected Shelf Words Card */}
             <View style={styles.mobileTableCard}>
               <View style={styles.mobileTableHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.selectedShelfTitle}>
+                <View>
+                  <Text style={[styles.selectedShelfTitle, isRtl && { textAlign: "right" }]}>
                     {selectedSubCatId
                       ? `${currentShelf ? (currentShelf.isCustom ? currentShelf.name : (wordLabel(currentShelf.name, lang) || currentShelf.name)) : wordLabel("Core", lang)} › ${activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || "")}`
                       : (currentShelf ? wordLabel(currentShelf.name, lang) : wordLabel("Core", lang))}
@@ -2034,13 +2037,13 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   </Text>
                 </View>
 
-                <View style={{ flexDirection: isRtl ? "row-reverse" : "row", alignItems: "center", gap: 6 }}>
+                <View style={{ flexDirection: isRtl ? "row-reverse" : "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <Pressable
                     onPress={() => activeCategory && openEditCategory(activeCategory)}
                     style={styles.mobileEditCategoryBtn}
                     accessibilityLabel="Edit category"
                   >
-                    <Ionicons name="pencil" size={12} color="#1A3830" />
+                    <Ionicons name="pencil" size={15} color="#1A3830" />
                     <Text style={styles.mobileEditCategoryBtnText}>{selectedSubCatId ? t("editSubCatPill", lang) : t("editShelfPill", lang)}</Text>
                   </Pressable>
 
@@ -2051,7 +2054,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     }}
                     style={styles.mobileAddSubBtn}
                   >
-                    <Ionicons name="add" size={13} color="#1A3830" />
+                    <Ionicons name="add" size={16} color="#1A3830" />
                     <Text style={styles.mobileAddSubBtnText}>{t("addSubCategorySidebar", lang)}</Text>
                   </Pressable>
                 </View>
@@ -2125,7 +2128,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                           sc.hidden && styles.shelfRowHidden,
                         ]}
                       >
-                        <Text style={styles.subCatTabIcon}>{sc.icon || "📁"}</Text>
+                        <Text style={[styles.subCatTabIcon, verbFolderLetter(sc) ? { fontWeight: "900" } : null]}>{verbFolderLetter(sc) ?? (sc.icon || "📁")}</Text>
                         <Text
                           style={[
                             styles.subCatTabPillText,
@@ -2214,7 +2217,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 <Text style={[styles.colHead, { flex: 1.8 }]}>WORD</Text>
                 <Text style={[styles.colHead, { flex: 1, textAlign: "center" }]}>USE</Text>
                 <Text style={[styles.colHead, { flex: 1, textAlign: "center" }]}>LAST</Text>
-                <View style={{ width: 56 }} />
+                <View style={{ width: 100 }} />
               </View>
 
               {displayWords.length === 0 ? (
@@ -2298,14 +2301,14 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         </Text>
                       </View>
 
-                      <View style={[styles.colCell, { width: 88, flexDirection: "row", justifyContent: "flex-end", gap: 8 }]}>
+                      <View style={[styles.colCell, { width: 100, flexDirection: "row", justifyContent: "flex-end", gap: 10 }]}>
                         {/* Edit Word Button */}
                         <Pressable
                           onPress={() => setEditorWord(w)}
                           hitSlop={6}
                           accessibilityLabel={`Edit ${w.label}`}
                         >
-                          <Ionicons name="pencil-outline" size={16} color="#235E50" />
+                          <Ionicons name="pencil-outline" size={21} color="#235E50" />
                         </Pressable>
 
                         {/* Eye Toggle */}
@@ -2315,7 +2318,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         >
                           <Ionicons
                             name={w.hidden ? "eye-off" : "eye-outline"}
-                            size={16}
+                            size={21}
                             color={w.hidden ? "#B8AFA2" : "#235E50"}
                           />
                         </Pressable>
@@ -2331,7 +2334,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                           }
                           hitSlop={6}
                         >
-                          <Ionicons name="trash-outline" size={16} color="#A39D90" />
+                          <Ionicons name="trash-outline" size={21} color="#A39D90" />
                         </Pressable>
                       </View>
                     </View>
@@ -4226,8 +4229,10 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "flex-start",
     justifyContent: "space-between",
+    gap: 16,
     paddingHorizontal: 28,
     paddingTop: 16,
     paddingBottom: 16,
@@ -4243,7 +4248,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 14,
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 320,
   },
   headerLeftMobile: {
     flexDirection: "row",
@@ -4253,6 +4260,8 @@ const styles = StyleSheet.create({
   },
   headerActionsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
     alignItems: "center",
     gap: 8,
   },
@@ -4326,7 +4335,7 @@ const styles = StyleSheet.create({
   },
   addWordTopBtnText: {
     color: "#FFFFFF",
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: "700",
   },
   // WIDE DESKTOP/TABLET LAYOUT
@@ -4338,7 +4347,7 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   sidebarCard: {
-    width: 280,
+    width: 330,
     backgroundColor: "#FFFFFF",
     borderRadius: 24,
     padding: 18,
@@ -4353,13 +4362,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sidebarTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "800",
     color: "#1A3830",
     fontFamily: "serif",
   },
   sidebarSub: {
-    fontSize: 12,
+    fontSize: 13,
     color: "#7A8580",
     marginTop: 4,
     lineHeight: 16,
@@ -4375,7 +4384,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 9,
+    paddingVertical: 11,
     paddingHorizontal: 12,
     borderRadius: 14,
   },
@@ -4394,15 +4403,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   shelfDot: {
-    width: 7,
-    height: 7,
+    width: 9,
+    height: 9,
     borderRadius: 4,
   },
   shelfIcon: {
-    fontSize: 15,
+    fontSize: 20,
   },
   shelfName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: "#2C3E38",
     flex: 1,
@@ -4523,7 +4532,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 8,
     borderRadius: 8,
     backgroundColor: "transparent",
@@ -4543,10 +4552,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   sidebarSubCatIcon: {
-    fontSize: 13,
+    fontSize: 17,
   },
   sidebarSubCatName: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     color: "#4A5A52",
     flex: 1,
@@ -4556,7 +4565,7 @@ const styles = StyleSheet.create({
     color: "#1A3830",
   },
   sidebarSubCatCount: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#8A9590",
   },
   sidebarAddSubCatRow: {
@@ -4570,7 +4579,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F2ECE1",
   },
   sidebarAddSubCatText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "600",
     color: "#235E50",
   },
@@ -4683,27 +4692,27 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   colHead: {
-    fontSize: 11,
+    fontSize: 12.5,
     fontWeight: "700",
     color: "#8A9590",
     letterSpacing: 0.8,
   },
   colHeadWord: {
-    flex: 2,
+    flex: 2.8,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
   colHeadCount: {
-    flex: 1.2,
+    flex: 1,
     alignItems: "center",
   },
   colHeadDate: {
-    flex: 1.2,
+    flex: 1,
     alignItems: "center",
   },
   colHeadAction: {
-    width: 96,
+    width: 124,
     alignItems: "flex-end",
   },
   tableBodyScroll: {
@@ -4726,18 +4735,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   wordBadgeIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
+    width: 48,
+    height: 48,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   wordBadgeIconText: {
-    fontSize: 13,
+    fontSize: 24,
     fontWeight: "800",
   },
   wordLabelText: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "700",
     color: "#1A3830",
   },
@@ -4755,12 +4764,12 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   useCountPillText: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: "600",
     color: "#2C3E38",
   },
   lastUsedDateText: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#7A8580",
     textAlign: "center",
   },
@@ -4873,9 +4882,9 @@ const styles = StyleSheet.create({
     borderColor: "#EBE5D8",
   },
   mobileTableHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: 10,
     marginBottom: 10,
   },
   mobileAddSubBtn: {
@@ -4884,13 +4893,13 @@ const styles = StyleSheet.create({
     gap: 4,
     borderWidth: 1,
     borderColor: "#DDD8CD",
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     backgroundColor: "#FAFAF7",
   },
   mobileAddSubBtnText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "700",
     color: "#1A3830",
   },
@@ -5112,7 +5121,7 @@ const styles = StyleSheet.create({
   },
   bulkWordTopBtnText: {
     color: "#1F594A",
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: "700",
   },
   // Verb Forms Preview Card in Add Word Modal
@@ -5453,14 +5462,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     backgroundColor: "#F6EFE6",
-    paddingHorizontal: 9,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E5DACE",
   },
   mobileEditCategoryBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
     color: "#1A3830",
   },
@@ -5577,7 +5586,7 @@ const styles = StyleSheet.create({
   },
   voiceAddTopBtnText: {
     color: "#235E50",
-    fontSize: 12.5,
+    fontSize: 14.5,
     fontWeight: "700",
   },
   voiceModalIconBubble: {

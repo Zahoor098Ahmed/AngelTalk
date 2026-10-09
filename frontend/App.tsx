@@ -13,6 +13,7 @@ import LangBadge from "./src/components/LangBadge";
 
 import LandingScreen from "./src/screens/LandingScreen";
 import FaceScanScreen from "./src/screens/FaceScanScreen";
+import FaceAIHost from "./src/components/FaceAIHost";
 import ParentSetupScreen from "./src/screens/ParentSetupScreen";
 import EnrollChildScreen from "./src/screens/EnrollChildScreen";
 import AccessibilityScreen from "./src/screens/AccessibilityScreen";
@@ -361,18 +362,18 @@ function MoreMenu({
               >
                 <View
                   style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 12,
+                    width: 52,
+                    height: 52,
+                    borderRadius: 16,
                     backgroundColor: `${t.color}15`,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Ionicons name={t.icon} size={20} color={t.color} />
+                  <Ionicons name={t.icon} size={27} color={t.color} />
                 </View>
                 <Text style={[styles.moreRowText, isRtl && { textAlign: "right" }]}>{t.label}</Text>
-                <Ionicons name={isRtl ? "chevron-back" : "chevron-forward"} size={18} color={colors.textLight} />
+                <Ionicons name={isRtl ? "chevron-back" : "chevron-forward"} size={22} color={colors.textLight} />
               </Pressable>
             ))}
           </View>
@@ -390,23 +391,23 @@ function MoreMenu({
               >
                 <View
                   style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 12,
+                    width: 52,
+                    height: 52,
+                    borderRadius: 16,
                     backgroundColor: `${r.color}15`,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Ionicons name={r.icon} size={20} color={r.color} />
+                  <Ionicons name={r.icon} size={27} color={r.color} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.moreRowText, isRtl && { textAlign: "right" }]}>{r.label}</Text>
-                  <Text style={[{ fontSize: 12, color: colors.textMid, marginTop: 2 }, isRtl && { textAlign: "right" }]}>
+                  <Text style={[{ fontSize: 14, color: colors.textMid, marginTop: 3 }, isRtl && { textAlign: "right" }]}>
                     {r.desc}
                   </Text>
                 </View>
-                <Ionicons name={isRtl ? "chevron-back" : "chevron-forward"} size={18} color={colors.textLight} />
+                <Ionicons name={isRtl ? "chevron-back" : "chevron-forward"} size={22} color={colors.textLight} />
               </Pressable>
             ))}
           </View>
@@ -422,6 +423,7 @@ export default function App() {
       <SettingsProvider>
         <StatusBar style="dark" />
         <AppInner />
+        <FaceAIHost />
       </SettingsProvider>
     </SafeAreaProvider>
   );
@@ -438,8 +440,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.04)",
   },
-  moreTitle: { fontSize: 18, fontWeight: "800", color: colors.textDark },
-  menuSectionHeader: { fontSize: 11, fontWeight: "800", color: colors.textLight, letterSpacing: 0.8 },
+  moreTitle: { fontSize: 21, fontWeight: "800", color: colors.textDark },
+  menuSectionHeader: { fontSize: 13, fontWeight: "800", color: colors.textLight, letterSpacing: 0.8 },
   moreRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -451,5 +453,5 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
-  moreRowText: { flex: 1, fontSize: 14.5, fontWeight: "700", color: colors.textDark },
+  moreRowText: { flex: 1, fontSize: 17, fontWeight: "700", color: colors.textDark },
 });
