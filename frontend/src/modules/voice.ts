@@ -23,6 +23,8 @@ export interface VoiceHandlers {
    * (every sentence spoken since the mic opened), not just the latest segment.
    */
   accumulate?: boolean;
+  /** Initial text to prepend to accumulated transcript if continuing a previous session */
+  initialText?: string;
 }
 
 // Minimal Web Speech API shape (RN tsconfig has no DOM lib).
@@ -61,14 +63,39 @@ let webInstance: WSRecognition | null = null;
 let listening = false;
 let nativeRecording = false;
 let activeHandlers: VoiceHandlers | null = null;
+let isExplicitlyStopped = false;
+let sessionAccumulatedText = "";
+let lastFinalSessionText = "";
+let silenceTimer: any = null;
 
 export function isListening() {
   return listening;
 }
 
+function clearSilenceTimeout() {
+  if (silenceTimer) {
+    clearTimeout(silenceTimer);
+    silenceTimer = null;
+  }
+}
+
+function resetSilenceTimeout() {
+  clearSilenceTimeout();
+  if (activeHandlers?.accumulate) {
+    silenceTimer = setTimeout(() => {
+      // Auto-stop after 60 seconds of continuous silence to avoid dangling mic
+      stopListening().catch(() => {});
+    }, 60000);
+  }
+}
+
 export async function startListening(h: VoiceHandlers): Promise<boolean> {
   const lang = h.lang || "en-US";
   activeHandlers = h;
+  isExplicitlyStopped = false;
+  sessionAccumulatedText = (h.initialText || "").trim();
+  lastFinalSessionText = "";
+  clearSilenceTimeout();
 
   // 1. Web Speech Recognition (Chrome/Edge/Web)
   const Rec = webRecognition();
@@ -94,47 +121,121 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
         }
       }
 
-      webInstance = new Rec();
-      webInstance.lang = lang;
-      webInstance.continuous = true;
-      webInstance.interimResults = true;
-      webInstance.onresult = (e: WSEvent) => {
-        if (h.accumulate) {
-          // Join every result of this session so earlier sentences are never dropped
-          let all = "";
-          let lastIsFinal = true;
-          for (let i = 0; i < e.results.length; i++) {
-            all += " " + e.results[i][0].transcript;
-            lastIsFinal = e.results[i].isFinal;
+      function spawnWebRecognition() {
+        if (isExplicitlyStopped || !activeHandlers) return;
+        const rec = new (Rec as NonNullable<typeof Rec>)();
+        rec.lang = lang;
+        rec.continuous = true;
+        rec.interimResults = true;
+
+        rec.onresult = (e: WSEvent) => {
+          resetSilenceTimeout();
+          if (activeHandlers?.accumulate) {
+            let sessionInterim = "";
+            let sessionFinal = "";
+            let lastIsFinal = true;
+            for (let i = 0; i < e.results.length; i++) {
+              const r = e.results[i];
+              if (r.isFinal) {
+                sessionFinal += " " + r[0].transcript;
+              } else {
+                sessionInterim += " " + r[0].transcript;
+              }
+              lastIsFinal = r.isFinal;
+            }
+            if (sessionFinal.trim()) {
+              lastFinalSessionText = sessionFinal.trim();
+            }
+            const currentTotalFinal = [sessionAccumulatedText, sessionFinal].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+            const currentTotalWithInterim = [currentTotalFinal, sessionInterim].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+
+            if (!currentTotalWithInterim) return;
+            if (lastIsFinal) {
+              activeHandlers.onFinal?.(currentTotalWithInterim);
+            } else {
+              activeHandlers.onPartial?.(currentTotalWithInterim);
+            }
+            return;
           }
-          const full = all.replace(/\s+/g, " ").trim();
-          if (!full) return;
-          if (lastIsFinal) h.onFinal?.(full);
-          else h.onPartial?.(full);
-          return;
+
+          let interim = "";
+          let final = "";
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const r = e.results[i];
+            if (r.isFinal) final += r[0].transcript;
+            else interim += r[0].transcript;
+          }
+          if (interim) activeHandlers?.onPartial?.(interim.trim());
+          if (final) activeHandlers?.onFinal?.(final.trim());
+        };
+
+        rec.onerror = (e: unknown) => {
+          const errType = String((e as { error?: string })?.error ?? "");
+          if (errType === "no-speech" || errType === "aborted") return;
+          if (errType === "not-allowed" || errType === "service-not-allowed") {
+            isExplicitlyStopped = true;
+            listening = false;
+            clearSilenceTimeout();
+            activeHandlers?.onError?.(errType);
+            activeHandlers?.onEnd?.();
+            return;
+          }
+          // Non-fatal errors can happen when restarting; avoid breaking user's flow
+        };
+
+        rec.onend = () => {
+          if (isExplicitlyStopped || !activeHandlers) {
+            listening = false;
+            clearSilenceTimeout();
+            activeHandlers?.onEnd?.();
+            return;
+          }
+          // If accumulate mode is enabled and user hasn't explicitly stopped,
+          // bridge Chrome's silence auto-cutoff by rolling this session's finals into base and restarting after 150ms
+          if (activeHandlers.accumulate) {
+            if (lastFinalSessionText) {
+              sessionAccumulatedText = [sessionAccumulatedText, lastFinalSessionText].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+              lastFinalSessionText = "";
+            }
+            setTimeout(() => {
+              if (!isExplicitlyStopped && activeHandlers) {
+                try {
+                  spawnWebRecognition();
+                } catch {
+                  listening = false;
+                  clearSilenceTimeout();
+                  activeHandlers?.onEnd?.();
+                }
+              }
+            }, 150);
+            return;
+          }
+          listening = false;
+          clearSilenceTimeout();
+          activeHandlers?.onEnd?.();
+        };
+
+        webInstance = rec;
+        try {
+          rec.start();
+          listening = true;
+        } catch {
+          // If start throws due to audio concurrency, retry in 200ms
+          setTimeout(() => {
+            if (!isExplicitlyStopped && activeHandlers) {
+              try {
+                rec.start();
+                listening = true;
+              } catch {
+                /* fallback to ending */
+              }
+            }
+          }, 200);
         }
-        let interim = "";
-        let final = "";
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const r = e.results[i];
-          if (r.isFinal) final += r[0].transcript;
-          else interim += r[0].transcript;
-        }
-        if (interim) h.onPartial?.(interim.trim());
-        if (final) h.onFinal?.(final.trim());
-      };
-      webInstance.onerror = (e: unknown) => {
-        const errType = String((e as { error?: string })?.error ?? "");
-        // Don't kill listening on transient silence / no-speech
-        if (errType === "no-speech") return;
-        h.onError?.(errType || "voice error");
-      };
-      webInstance.onend = () => {
-        listening = false;
-        h.onEnd?.();
-      };
-      webInstance.start();
-      listening = true;
+      }
+
+      spawnWebRecognition();
+      resetSilenceTimeout();
       return true;
     } catch {
       webInstance = null;
@@ -160,19 +261,24 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
 }
 
 export async function stopListening(): Promise<void> {
+  isExplicitlyStopped = true;
   listening = false;
+  clearSilenceTimeout();
   const handlers = activeHandlers;
   activeHandlers = null;
 
   // Stop web recognition
   if (webInstance) {
     try {
+      webInstance.onend = null;
+      webInstance.onerror = null;
       webInstance.stop();
       webInstance = null;
     } catch {
       /* ignore */
     }
   }
+  handlers?.onEnd?.();
 
   // Stop native recording and transcribe
   if (nativeRecording) {

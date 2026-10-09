@@ -42,7 +42,7 @@ import WordEditor from "../components/WordEditor";
 import UniversalImagePickerModal from "../components/UniversalImagePickerModal";
 import LangBadge from "../components/LangBadge";
 import { startListening, stopListening, isListening } from "../modules/voice";
-import { parseVoiceCategoryCommand, parseVoicePlan, summarizeVoicePlan, cleanVoiceSpeechName, getCategoryIconForName, getCategoryColorForName, type ParsedVoiceResult, type VoicePlan, type VoicePlanShelf } from "../modules/voiceCategories";
+import { parseVoiceCategoryCommand, parseVoicePlan, summarizeVoicePlan, mergeVoicePlan, cleanVoiceSpeechName, getCategoryIconForName, getCategoryColorForName, type ParsedVoiceResult, type VoicePlan, type VoicePlanShelf } from "../modules/voiceCategories";
 
 const PASTEL_PALETTE = [
   "#D5E8DF", // mint
@@ -143,6 +143,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   // Pictures found online (ARASAAC) for names the offline library doesn't know: lower name -> uri
   const [voicePlanAutoImages, setVoicePlanAutoImages] = useState<Record<string, string>>({});
   const voiceAutoImageTried = useRef<Set<string>>(new Set());
+  const voicePlanAtMicStart = useRef<VoicePlan | null>(null);
   const [voiceShelfId, setVoiceShelfId] = useState<string | null>(null);
   const [voiceSubCatId, setVoiceSubCatId] = useState<string | null>(null);
   const [bulkVoiceActive, setBulkVoiceActive] = useState<"words" | "shelves" | "subcats" | null>(null);
@@ -270,13 +271,18 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     const rows: { key: string; kind: "shelf" | "sub" | "word"; name: string; parent: string; level: number }[] = [];
     if (!voicePlan) return rows;
     const selectedShelfName = voiceTargetShelf?.name || currentShelf?.name || "Selected shelf";
+    const selectedSubName =
+      (voiceSubCatId && getCategory(voiceSubCatId)?.name) ||
+      (voiceTargetSubCats.length > 0 ? voiceTargetSubCats[0].name : selectedShelfName);
+
     voicePlan.shelves.forEach((shelf) => {
       const shelfName = shelf.name || selectedShelfName;
       if (shelf.name !== null) {
         rows.push({ key: shelf.id, kind: "shelf", name: shelf.name, parent: "", level: 0 });
       }
       const base = shelf.name !== null ? 1 : 0;
-      shelf.words.forEach((w) => rows.push({ key: w.id, kind: "word", name: w.name, parent: shelfName, level: base }));
+      const wordParent = shelf.name !== null ? shelfName : selectedSubName;
+      shelf.words.forEach((w) => rows.push({ key: w.id, kind: "word", name: w.name, parent: wordParent, level: base }));
       shelf.subs.forEach((sub) => {
         rows.push({ key: sub.id, kind: "sub", name: sub.name, parent: shelfName, level: base });
         sub.words.forEach((w) =>
@@ -285,7 +291,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       });
     });
     return rows;
-  }, [voicePlan, voiceTargetShelf, currentShelf]);
+  }, [voicePlan, voiceTargetShelf, currentShelf, voiceSubCatId, voiceTargetSubCats]);
 
   /** Apply a caregiver edit to the spoken tree. Editing stops the mic so voice can't overwrite the fix. */
   function editVoicePlan(mutate: (shelves: VoicePlanShelf[]) => void) {
@@ -1000,6 +1006,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     setVoiceSubItems([]);
     setVoicePlan(null);
     setVoicePlanImages({});
+    voicePlanAtMicStart.current = null;
     voiceAutoImageTried.current = new Set();
     setVoiceTargetType("category");
     const initialShelf = currentShelf || cats[0] || null;
@@ -1013,11 +1020,26 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       setVoiceSubCatId(null);
     }
     setVoiceOpen(true);
-    startVoiceCapture();
+    startVoiceCapture(false);
   }
 
-  function startVoiceCapture() {
+  function resetVoicePlan() {
+    setVoicePlan(null);
+    voicePlanAtMicStart.current = null;
+    setVoiceRawTranscript("");
+    setVoiceName("");
+    setVoiceItems([]);
+    setVoiceSubItems([]);
+    setVoicePlanImages({});
+  }
+
+  function startVoiceCapture(resumeFromExisting: boolean = true) {
     setVoiceListening(true);
+    if (!resumeFromExisting) {
+      voicePlanAtMicStart.current = null;
+    } else {
+      voicePlanAtMicStart.current = voicePlan;
+    }
     const recognitionLang = lang.startsWith("ur") ? "ur-PK" : lang.startsWith("ar") ? "ar-SA" : lang;
     startListening({
       lang: recognitionLang,
@@ -1036,8 +1058,30 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     });
   }
 
-  function applyVoiceText(text: string) {
-    const plan = parseVoicePlan(text);
+  function applyVoiceText(text: string, forceReplace: boolean = false) {
+    // Auto-detect if user named an existing target sub-category or shelf (e.g. "add word apple in fruits")
+    const parsedCmd = parseVoiceCategoryCommand(text);
+    if (parsedCmd.parentCategoryName) {
+      const targetLower = parsedCmd.parentCategoryName.trim().toLowerCase();
+      const allSubs = cats.flatMap((shelf) => childCategories(shelf.id));
+      const matchedSub = allSubs.find((c) => c.name.toLowerCase() === targetLower);
+      if (matchedSub && matchedSub.parentCategoryId) {
+        setVoiceShelfId(matchedSub.parentCategoryId);
+        setVoiceSubCatId(matchedSub.id);
+      } else {
+        const matchedShelf = cats.find((c) => c.name.toLowerCase() === targetLower);
+        if (matchedShelf) {
+          setVoiceShelfId(matchedShelf.id);
+          const subs = childCategories(matchedShelf.id);
+          if (subs.length > 0) setVoiceSubCatId(subs[0].id);
+        }
+      }
+    }
+
+    const incomingPlan = parseVoicePlan(text);
+    const plan = forceReplace || !voicePlanAtMicStart.current
+      ? incomingPlan
+      : mergeVoicePlan(voicePlanAtMicStart.current, incomingPlan);
     const hasItems = plan.shelfCount + plan.subCount + plan.wordCount > 0;
     // Every voice result goes into the editable list, so any mishearing can be fixed before saving
     setVoicePlan(hasItems ? plan : null);
@@ -2614,6 +2658,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   </Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
                     {[
+                      "create category of vehicles and create subject of car turk and bike",
+                      "category vehicles sub category car truck and bike",
+                      "add word name of apple",
                       "category fruits sub category citrus words orange, lemon sub category berries words strawberry and grapes category animals sub categories pets and farm",
                       "categories fruits, animals, vehicles",
                       "fruits with subcategories berries, citrus, melons",
@@ -2624,8 +2671,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                       <Pressable
                         key={sample}
                         onPress={() => {
+                          voicePlanAtMicStart.current = null;
                           setVoiceRawTranscript(sample);
-                          applyVoiceText(sample);
+                          applyVoiceText(sample, true);
                         }}
                         style={{
                           backgroundColor: "#FFFFFF",
@@ -2816,7 +2864,25 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     <Text style={styles.bulkPreviewTitle}>
                       {voicePlan.shelfCount} shelves · {voicePlan.subCount} sub-categories · {voicePlan.wordCount} words
                     </Text>
-                    <Text style={styles.bulkImageTip}>Tap 🖼️ to pick custom photo</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Text style={styles.bulkImageTip}>Tap 🖼️ to pick photo</Text>
+                      <Pressable
+                        onPress={resetVoicePlan}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 4,
+                          backgroundColor: "#FEE2E2",
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          borderRadius: 8,
+                        }}
+                        accessibilityLabel="Clear all items and start over"
+                      >
+                        <Ionicons name="trash-outline" size={12} color="#DC2626" />
+                        <Text style={{ fontSize: 11, fontWeight: "700", color: "#DC2626" }}>Clear All</Text>
+                      </Pressable>
+                    </View>
                   </View>
                   <Text style={[styles.fieldHint, { marginBottom: 6 }]}>
                     ✏️ Check the list: tap any name to fix it, ✕ to remove, or + to add. Nothing is created until you press the button below.

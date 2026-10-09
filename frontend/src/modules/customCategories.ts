@@ -106,11 +106,19 @@ export function unblockDeletedCategory(name: string, parentId?: string | null) {
   const norms = new Set([(name || "").trim().toLowerCase()]);
   const en = (canonicalWordEn(name) || "").trim().toLowerCase();
   if (en) norms.add(en);
+  const localized = (folderName(name, seedLang) || wordLabel(name, seedLang) || "").trim().toLowerCase();
+  if (localized) norms.add(localized);
   let changed = false;
   for (const norm of norms) {
     if (!norm) continue;
-    changed = deletedItemKeys.delete(`cat::${norm}`) || changed;
-    if (parentId) changed = deletedItemKeys.delete(`subcat::${parentId}::${norm}`) || changed;
+    if (deletedItemKeys.delete(`cat::${norm}`)) changed = true;
+    if (parentId && deletedItemKeys.delete(`subcat::${parentId}::${norm}`)) changed = true;
+    for (const key of deletedItemKeys) {
+      if (key.startsWith("subcat::") && key.endsWith(`::${norm}`)) {
+        deletedItemKeys.delete(key);
+        changed = true;
+      }
+    }
   }
   if (changed) persistDeletedKeys();
 }
@@ -172,7 +180,10 @@ async function loadCategories(): Promise<void> {
   await ensureDeletedKeysLoaded();
   if (loaded) return;
   try {
-    const raw = await AsyncStorage.getItem(KEY);
+    let raw = await AsyncStorage.getItem(KEY);
+    if (!raw && typeof window !== "undefined" && window.localStorage) {
+      raw = window.localStorage.getItem(KEY);
+    }
     cache = migrate(raw ? (JSON.parse(raw) as CustomCategory[]) : []);
   } catch {
     cache = [];
@@ -1272,18 +1283,19 @@ async function translatePendingAsync(
   try {
     for (const item of items) {
       if (targetLang !== seedLang) break; // language changed in the meantime
-      const translated = await translateDynamic(item.originalText, targetLang);
+      const en = canonicalWordEn(item.originalText) || item.originalText;
+      const translated = await translateDynamic(en, targetLang);
       if (translated && translated.toLowerCase() !== item.originalText.toLowerCase()) {
         if (item.type === "cat") {
           const targetCat = cache.find((c) => c.id === item.id);
-          if (targetCat && targetCat.name === item.originalText) {
+          if (targetCat) {
             targetCat.name = translated;
             hasUpdates = true;
           }
         } else if (item.type === "word" && item.catId) {
           const targetCat = cache.find((c) => c.id === item.catId);
           const targetWord = targetCat?.words.find((w) => w.id === item.id);
-          if (targetWord && targetWord.label === item.originalText) {
+          if (targetWord) {
             targetWord.label = translated;
             targetWord.phrase = translated;
             hasUpdates = true;
@@ -1327,8 +1339,7 @@ export function retranslateSeedBoard(lang: LanguageCode) {
 
   for (const cat of cache) {
     if (cat.isCustom && isBuiltInFolderName(cat.name)) cat.isCustom = false;
-    if (cat.isCustom) continue;
-    // 1. Category name translation
+    // 1. Category name translation (both standard & custom)
     const rawCatName = cat.name.trim();
     if (lang === "en-US") {
       const enRaw = canonicalWordEn(rawCatName) || FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || rawCatName;
@@ -1349,19 +1360,18 @@ export function retranslateSeedBoard(lang: LanguageCode) {
       }
     }
 
-    // 2. Words translation
+    // 2. Words translation (both standard & custom)
     cat.words.forEach((w) => {
-      if (w.isCustom) return;
       const rawWordLabel = w.label.trim();
       if (lang === "en-US") {
-        const en = canonicalWordEn(rawWordLabel);
+        const en = canonicalWordEn(rawWordLabel) || w.seedLabel || rawWordLabel;
         if (en && en !== w.label) {
           w.label = en;
           w.phrase = en;
           changed = true;
         }
       } else {
-        const en = canonicalWordEn(rawWordLabel);
+        const en = canonicalWordEn(rawWordLabel) || w.seedLabel || rawWordLabel;
         const localized = wordLabel(en, lang);
 
         if (localized && localized.toLowerCase() !== rawWordLabel.toLowerCase()) {
@@ -1634,16 +1644,19 @@ function ensureAllStandardCategories() {
     }
   });
 
-  // Ensure priority shelves appear first: Core, People, Feelings, Actions, Food, Places, Things, Red
-  const priorityOrder = ["core", "subjects", "people", "feelings", "actions", "food", "places", "things", "red", "say it for me"];
-  cache.forEach((c) => {
-    const enName = (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase();
-    const pIdx = priorityOrder.indexOf(enName);
-    if (pIdx !== -1) {
-      if (c.order !== pIdx) {
-        c.order = pIdx;
-        changed = true;
-      }
+  // Ensure top shelves appear alphabetically (with Core first if present)
+  const topShelves = cache.filter((c) => !c.parentCategoryId);
+  topShelves.sort((a, b) => {
+    const aIsCore = (canonicalWordEn(a.name) || a.name).toLowerCase() === "core";
+    const bIsCore = (canonicalWordEn(b.name) || b.name).toLowerCase() === "core";
+    if (aIsCore && !bIsCore) return -1;
+    if (!aIsCore && bIsCore) return 1;
+    return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+  });
+  topShelves.forEach((c, idx) => {
+    if (c.order !== idx) {
+      c.order = idx;
+      changed = true;
     }
   });
 
@@ -1685,11 +1698,19 @@ function seedStarterBoard() {
 function persist(): void {
   try {
     const raw = JSON.stringify(cache);
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        window.localStorage.setItem(KEY, raw);
+      } catch (e) {
+        console.warn("[customCategories] window.localStorage.setItem failed:", e);
+      }
+    }
     AsyncStorage.setItem(KEY, raw).catch((err) => {
       console.warn("[customCategories] AsyncStorage setItem failed:", err);
       try {
         const leanCache = cache.map((cat) => ({
           ...cat,
+          imageUri: cat.imageUri && cat.imageUri.startsWith("data:") && cat.imageUri.length > 50000 ? undefined : cat.imageUri,
           words: cat.words.map((w) => {
             if (w.imageUri && w.imageUri.startsWith("data:") && w.imageUri.length > 50000) {
               return { ...w, imageUri: getPictogramUrl(w.label) || undefined };
@@ -1697,7 +1718,11 @@ function persist(): void {
             return w;
           }),
         }));
-        AsyncStorage.setItem(KEY, JSON.stringify(leanCache)).catch(() => {});
+        const leanRaw = JSON.stringify(leanCache);
+        if (typeof window !== "undefined" && window.localStorage) {
+          try { window.localStorage.setItem(KEY, leanRaw); } catch {}
+        }
+        AsyncStorage.setItem(KEY, leanRaw).catch(() => {});
       } catch {}
     });
   } catch (e) {
@@ -1840,6 +1865,26 @@ export function updateWord(
 
     if (patch.label) {
       unblockDeletedWord(targetCatId, patch.label, wordId);
+      if (["ar-SA", "ur-PK"].includes(seedLang) && !/[\u0600-\u06FF]/.test(patch.label) && /[a-zA-Z]/.test(patch.label)) {
+        const sync = wordLabel(patch.label, seedLang);
+        if (sync && sync.toLowerCase() !== patch.label.toLowerCase()) {
+          patch.label = sync;
+          patch.phrase = sync;
+        } else {
+          const orig = patch.label;
+          translateDynamic(orig, seedLang).then((t) => {
+            if (t && t !== orig) {
+              mutate(targetCatId, (c) => {
+                const targetW = c.words.find((x) => x.id === wordId);
+                if (targetW) {
+                  targetW.label = t;
+                  targetW.phrase = t;
+                }
+              });
+            }
+          });
+        }
+      }
     }
 
     const oldBase = (w.verbForms?.base || "").trim().toLowerCase();
@@ -1850,6 +1895,7 @@ export function updateWord(
     w.isCustom = true;
 
     const newEnLabel = (canonicalWordEn(w.label) || w.label).trim().toLowerCase();
+    w.seedLabel = newEnLabel;
     const newVForms = patch.label ? (generateAllVerbForms(newEnLabel) || oldVForms) : oldVForms;
     if (newVForms) {
       w.verbForms = newVForms;
@@ -2525,13 +2571,18 @@ export function cleanAndDeduplicateCategories() {
     byParent[p].forEach((sc, i) => { sc.order = i; });
   }
 
-  // Ensure priority shelves appear first
-  const priority = ["core", "people", "feelings", "actions", "food", "places", "things", "red", "say it for me"];
-  cache.forEach((c) => {
-    const enName = (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase();
-    const pIdx = priority.indexOf(enName);
-    if (pIdx !== -1 && c.order !== pIdx) {
-      c.order = pIdx;
+  // Ensure top shelves appear alphabetically (with Core first if present)
+  const topShelves = cache.filter((c) => !c.parentCategoryId);
+  topShelves.sort((a, b) => {
+    const aIsCore = (canonicalWordEn(a.name) || a.name).toLowerCase() === "core";
+    const bIsCore = (canonicalWordEn(b.name) || b.name).toLowerCase() === "core";
+    if (aIsCore && !bIsCore) return -1;
+    if (!aIsCore && bIsCore) return 1;
+    return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+  });
+  topShelves.forEach((c, idx) => {
+    if (c.order !== idx) {
+      c.order = idx;
       changed = true;
     }
   });
@@ -2633,7 +2684,7 @@ export function addWord(
         label: cleanLabel,
         phrase: cleanPhrase,
         emoji: word.emoji || "🔹",
-        imageUri: word.imageUri || getPictogramUrl(cleanLabel) || undefined,
+        imageUri: word.imageUri || getPictogramUrl(enWord) || getPictogramUrl(cleanLabel) || undefined,
         color: word.color,
         audioUri: word.audioUri,
         useTextToSpeech: word.useTextToSpeech ?? !word.audioUri,
@@ -2643,6 +2694,7 @@ export function addWord(
         verbForms: word.verbForms,
         verbFormTag: word.verbFormTag,
         isCustom: true,
+        seedLabel: enWord,
       });
       c.words = sortWordsForCategory(c.words, c.name);
       c.words.forEach((w, i) => { w.order = i; });
@@ -2713,12 +2765,13 @@ export function addWordsBulk(
       const cleanLabel = word.label.trim();
       if (!cleanLabel) return;
       if (mergeIntoExistingWord(c, { ...word, label: cleanLabel })) return;
+      const enWord = (canonicalWordEn(word.label) || word.label).trim();
       c.words.push({
         id: uid("w"),
         label: cleanLabel,
         phrase: (word.phrase ?? cleanLabel).trim() || cleanLabel,
         emoji: word.emoji || "🔹",
-        imageUri: word.imageUri || getPictogramUrl(cleanLabel) || undefined,
+        imageUri: word.imageUri || getPictogramUrl(enWord) || getPictogramUrl(cleanLabel) || undefined,
         color: word.color,
         audioUri: word.audioUri,
         useTextToSpeech: word.useTextToSpeech ?? !word.audioUri,
@@ -2728,6 +2781,7 @@ export function addWordsBulk(
         verbForms: word.verbForms,
         verbFormTag: word.verbFormTag,
         isCustom: true,
+        seedLabel: enWord,
       });
     });
     c.words = sortWordsForCategory(c.words, c.name);
@@ -2746,7 +2800,13 @@ function byOrder(a: CustomCategory, b: CustomCategory) {
 export function topLevelCategories(): CustomCategory[] {
   return cache
     .filter((c) => !c.parentCategoryId && !!c.name && c.name.trim().length > 0)
-    .sort(byOrder);
+    .sort((a, b) => {
+      const aIsCore = (canonicalWordEn(a.name) || a.name).toLowerCase() === "core";
+      const bIsCore = (canonicalWordEn(b.name) || b.name).toLowerCase() === "core";
+      if (aIsCore && !bIsCore) return -1;
+      if (!aIsCore && bIsCore) return 1;
+      return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+    });
 }
 
 export function childCategories(parentId: string): CustomCategory[] {
@@ -2774,10 +2834,19 @@ export function createBlankCategory(input: {
   parentCategoryId?: string | null;
 }): CustomCategory {
   const now = Date.now();
+  let cleanName = input.name.trim() || "New Category";
+
+  if (["ar-SA", "ur-PK"].includes(seedLang) && !/[\u0600-\u06FF]/.test(cleanName) && /[a-zA-Z]/.test(cleanName)) {
+    const sync = folderName(cleanName, seedLang) || wordLabel(cleanName, seedLang);
+    if (sync && sync.toLowerCase() !== cleanName.toLowerCase()) {
+      cleanName = sync;
+    }
+  }
+
   const siblings = cache.filter((c) => (c.parentCategoryId ?? null) === (input.parentCategoryId ?? null));
   const cat: CustomCategory = {
     id: uid("cat"),
-    name: input.name.trim() || "New Category",
+    name: cleanName,
     createdAt: now,
     updatedAt: now,
     source: "manual",
@@ -2792,6 +2861,18 @@ export function createBlankCategory(input: {
   unblockDeletedCategory(cat.name, cat.parentCategoryId);
   cache = [...cache, cat];
   persist();
+
+  if (["ar-SA", "ur-PK"].includes(seedLang) && !/[\u0600-\u06FF]/.test(cat.name) && /[a-zA-Z]/.test(cat.name)) {
+    const orig = cat.name;
+    translateDynamic(orig, seedLang).then((t) => {
+      if (t && t !== orig) {
+        mutate(cat.id, (c) => {
+          c.name = t;
+        });
+      }
+    });
+  }
+
   return cat;
 }
 
@@ -2807,10 +2888,19 @@ export function createBlankCategoriesBulk(
 ): CustomCategory[] {
   const now = Date.now();
   const createdList: CustomCategory[] = [];
+  const pendingAsyncCats: { id: string; orig: string }[] = [];
 
   for (const input of categories) {
-    const name = input.name.trim();
+    let name = input.name.trim();
     if (!name) continue;
+
+    if (["ar-SA", "ur-PK"].includes(seedLang) && !/[\u0600-\u06FF]/.test(name) && /[a-zA-Z]/.test(name)) {
+      const sync = folderName(name, seedLang) || wordLabel(name, seedLang);
+      if (sync && sync.toLowerCase() !== name.toLowerCase()) {
+        name = sync;
+      }
+    }
+
     const parentId = input.parentCategoryId ?? null;
     const siblings = cache.filter((c) => (c.parentCategoryId ?? null) === parentId);
     const cat: CustomCategory = {
@@ -2830,12 +2920,30 @@ export function createBlankCategoriesBulk(
     unblockDeletedCategory(name, parentId);
     cache.push(cat);
     createdList.push(cat);
+
+    if (["ar-SA", "ur-PK"].includes(seedLang) && !/[\u0600-\u06FF]/.test(name) && /[a-zA-Z]/.test(name)) {
+      pendingAsyncCats.push({ id: cat.id, orig: name });
+    }
   }
 
   if (createdList.length > 0) {
     cache = [...cache];
     persist();
   }
+
+  if (pendingAsyncCats.length > 0) {
+    (async () => {
+      for (const item of pendingAsyncCats) {
+        const t = await translateDynamic(item.orig, seedLang);
+        if (t && t !== item.orig) {
+          mutate(item.id, (c) => {
+            c.name = t;
+          });
+        }
+      }
+    })();
+  }
+
   return createdList;
 }
 
@@ -3113,18 +3221,20 @@ export function groupIntoAlphaRanges(words: CustomWord[], bucketSize = 5): { lab
 
 export const BOTTOM_CATEGORIES: { key: string; icon: string; label: string; enFallback: string; color: string }[] = [
   { key: "Core", icon: "💬", label: "Core", enFallback: "Core", color: "#2f6d62" },
-  { key: "People", icon: "♡", label: "People", enFallback: "People", color: "#c96b6b" },
-  { key: "Feelings", icon: "😊", label: "Feelings", enFallback: "Feelings", color: "#e67e22" },
   { key: "Actions", icon: "⚡", label: "Actions", enFallback: "Actions", color: "#c98a3d" },
+  { key: "Color", icon: "🎨", label: "Color", enFallback: "Red", color: "#d9534f" },
+  { key: "Feelings", icon: "😊", label: "Feelings", enFallback: "Feelings", color: "#e67e22" },
   { key: "Food", icon: "🍴", label: "Food", enFallback: "Food", color: "#5c9a58" },
+  { key: "Hygiene", icon: "🛁", label: "Hygiene", enFallback: "Hygiene", color: "#8a6bc9" },
+  { key: "Music", icon: "🎸", label: "Music", enFallback: "Music", color: "#d46cae" },
+  { key: "People", icon: "♡", label: "People", enFallback: "People", color: "#c96b6b" },
   { key: "Places", icon: "🏛️", label: "Places", enFallback: "Places", color: "#4a7fe6" },
-  { key: "Things", icon: "✨", label: "Things", enFallback: "Things", color: "#8a6bc9" },
   { key: "Red", icon: "🎨", label: "Red", enFallback: "Red", color: "#d9534f" },
   { key: "Say It For Me", icon: "🗨️", label: "Say It For Me", enFallback: "Say It For Me", color: "#d9534f" },
   { key: "Schools", icon: "🏫", label: "Schools", enFallback: "Schools", color: "#2f6d62" },
   { key: "Sports", icon: "⚽", label: "Sports", enFallback: "Sports", color: "#c96b6b" },
-  { key: "Hygiene", icon: "🛁", label: "Hygiene", enFallback: "Hygiene", color: "#8a6bc9" },
-  { key: "Music", icon: "🎸", label: "Music", enFallback: "Music", color: "#d46cae" },
+  { key: "Subjects", icon: "📚", label: "Subjects", enFallback: "Subjects", color: "#2f6d62" },
+  { key: "Things", icon: "✨", label: "Things", enFallback: "Things", color: "#8a6bc9" },
 ];
 
 export function bottomTabCategories(lang?: LanguageCode): { id: string; name: string; icon: string; color: string }[] {
@@ -3132,7 +3242,7 @@ export function bottomTabCategories(lang?: LanguageCode): { id: string; name: st
   const top = visibleTopLevelCategories();
   const out: { id: string; name: string; icon: string; color: string }[] = [];
 
-  // Match known categories first (in consistent standard order) ONLY if they exist and are not deleted or hidden
+  // Match known categories first ONLY if they exist and are not deleted or hidden
   for (const tab of BOTTOM_CATEGORIES) {
     if (
       isDeletedCategory(tab.key) ||
@@ -3151,7 +3261,7 @@ export function bottomTabCategories(lang?: LanguageCode): { id: string; name: st
         c.name.toLowerCase() === folderName(tab.key, activeLang).toLowerCase()
       );
     });
-    if (hit && !hit.hidden) {
+    if (hit && !hit.hidden && !out.some((x) => x.id === hit.id)) {
       out.push({
         id: hit.id,
         name: folderName(tab.key, activeLang) || wordLabel(tab.key, activeLang) || tab.label,
@@ -3174,6 +3284,15 @@ export function bottomTabCategories(lang?: LanguageCode): { id: string; name: st
       });
     }
   }
+
+  // Sort alphabetical A-Z by display name (keeping Core first if present)
+  out.sort((a, b) => {
+    const aIsCore = (canonicalWordEn(a.name) || a.name).toLowerCase() === "core";
+    const bIsCore = (canonicalWordEn(b.name) || b.name).toLowerCase() === "core";
+    if (aIsCore && !bIsCore) return -1;
+    if (!aIsCore && bIsCore) return 1;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
 
   return out;
 }
