@@ -239,33 +239,8 @@
     - `frontend/src/modules/customCategories.ts.tmp.12260.69526ba1b3ec`
     - `frontend/src/modules/customCategories.ts.tmp.12260.766770bba924`
     - `frontend/src/modules/customCategories.ts.tmp.12260.c91f0311bcd5`
-- **16:38** 🌿 Commit `[17db848]` — **"fix delete words and edit words"**
-  - 📁 **Changed Files (7):**
-    - `BACKLOG.md`
-    - `frontend/App.tsx`
-    - `frontend/src/modules/customCategories.ts`
-    - `frontend/src/modules/i18n.ts`
-    - `frontend/src/modules/verbForms.ts`
-    - `frontend/src/screens/AACBoardScreen.tsx`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
-- **16:38** 🌿 Commit `[17db848]` — **"fix delete words and edit words"**
-  - 📁 **Changed Files (7):**
-    - `BACKLOG.md`
-    - `frontend/App.tsx`
-    - `frontend/src/modules/customCategories.ts`
-    - `frontend/src/modules/i18n.ts`
-    - `frontend/src/modules/verbForms.ts`
-    - `frontend/src/screens/AACBoardScreen.tsx`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
-- **16:38** 🌿 Commit `[17db848]` — **"fix delete words and edit words"**
-  - 📁 **Changed Files (7):**
-    - `BACKLOG.md`
-    - `frontend/App.tsx`
-    - `frontend/src/modules/customCategories.ts`
-    - `frontend/src/modules/i18n.ts`
-    - `frontend/src/modules/verbForms.ts`
-    - `frontend/src/screens/AACBoardScreen.tsx`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
+
+
 
 ## 2026-10-03
 
@@ -315,20 +290,8 @@
     - `ANGEL_TALK_OVERVIEW.md`
     - `ANGEL_TALK_OVERVIEW.md.tmp.432.a88d1721fad7`
 
-- **11:10** 🌿 Commit `[61eac10]` — **"fix create categories from voice"**
-  - 📁 **Changed Files (5):**
-    - `ANGEL_TALK_OVERVIEW.md`
-    - `BACKLOG.md`
-    - `frontend/src/modules/voice.ts`
-    - `frontend/src/modules/voiceCategories.ts`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
-- **11:10** 🌿 Commit `[61eac10]` — **"fix create categories from voice"**
-  - 📁 **Changed Files (5):**
-    - `ANGEL_TALK_OVERVIEW.md`
-    - `BACKLOG.md`
-    - `frontend/src/modules/voice.ts`
-    - `frontend/src/modules/voiceCategories.ts`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
+
+
 
 - **12:41:06 – 12:41:06** ⏱️ Active Coding Session (**1 min**)
   - 📁 **Files Worked On (1):**
@@ -1977,100 +1940,10 @@
     - `frontend/assets/faceai/face_recognition_model-shard6.bin`
     - `frontend/assets/faceai/face_recognition_model-shard7.bin`
     - `frontend/assets/faceai/tiny_face_detector_model.bin`
-- **12:46** 🌿 Commit `[205589c]` — **"Improve voice category creation: multi-turn sessions and item lists"**
-  - 📁 **Changed Files (5):**
-    - `BACKLOG.md`
-    - `frontend/src/modules/customCategories.ts`
-    - `frontend/src/modules/voice.ts`
-    - `frontend/src/modules/voiceCategories.ts`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
-- **12:46** 🌿 Commit `[205589c]` — **"Improve voice category creation: multi-turn sessions and item lists"**
-  - 📁 **Changed Files (5):**
-    - `BACKLOG.md`
-    - `frontend/src/modules/customCategories.ts`
-    - `frontend/src/modules/voice.ts`
-    - `frontend/src/modules/voiceCategories.ts`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
-- **12:46** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
+- **12:46** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-  conversion can't corrupt them"**
   - 📁 **Changed Files (1):**
     - `.gitattributes`
-- **12:46** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:46** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:46** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:46** 🌿 Commit `[205589c]` — **"Improve voice category creation: multi-turn sessions and item lists"**
-  - 📁 **Changed Files (5):**
-    - `BACKLOG.md`
-    - `frontend/src/modules/customCategories.ts`
-    - `frontend/src/modules/voice.ts`
-    - `frontend/src/modules/voiceCategories.ts`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
-- **12:46** 🌿 Commit `[205589c]` — **"Improve voice category creation: multi-turn sessions and item lists"**
-  - 📁 **Changed Files (5):**
-    - `BACKLOG.md`
-    - `frontend/src/modules/customCategories.ts`
-    - `frontend/src/modules/voice.ts`
-    - `frontend/src/modules/voiceCategories.ts`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
-- **12:46** 🌿 Commit `[205589c]` — **"Improve voice category creation: multi-turn sessions and item lists"**
-  - 📁 **Changed Files (5):**
-    - `BACKLOG.md`
-    - `frontend/src/modules/customCategories.ts`
-    - `frontend/src/modules/voice.ts`
-    - `frontend/src/modules/voiceCategories.ts`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
-- **12:46** 🌿 Commit `[205589c]` — **"Improve voice category creation: multi-turn sessions and item lists"**
-  - 📁 **Changed Files (5):**
-    - `BACKLOG.md`
-    - `frontend/src/modules/customCategories.ts`
-    - `frontend/src/modules/voice.ts`
-    - `frontend/src/modules/voiceCategories.ts`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
-- **12:46** 🌿 Commit `[205589c]` — **"Improve voice category creation: multi-turn sessions and item lists"**
-  - 📁 **Changed Files (5):**
-    - `BACKLOG.md`
-    - `frontend/src/modules/customCategories.ts`
-    - `frontend/src/modules/voice.ts`
-    - `frontend/src/modules/voiceCategories.ts`
-    - `frontend/src/screens/MyCategoriesScreen.tsx`
-- **12:46** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:46** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:46** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:47** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:47** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:47** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:47** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:47** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:47** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:47** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
-- **12:47** 🌿 Commit `[0f38af6]` — **"Mark .bin model files as binary so line-ending conversion can't corrupt them"**
-  - 📁 **Changed Files (1):**
-    - `.gitattributes`
+
 
 - **13:11:38 – 13:19:29** ⏱️ Active Coding Session (**8 min**)
   - 📁 **Files Worked On (3):**
@@ -2114,3 +1987,5 @@
     - `frontend/src/modules/usedPictures.ts`
     - `frontend/src/modules/builtInImageLibrary.ts`
     - `frontend/src/components/sedqyqNw0`
+
+-
