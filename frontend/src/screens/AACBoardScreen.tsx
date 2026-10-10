@@ -8,6 +8,7 @@ import {
   Image,
   I18nManager,
   Alert,
+  Modal,
   TextInput,
   useWindowDimensions,
 } from "react-native";
@@ -43,7 +44,7 @@ import Mascot from "../components/Mascot";
 import TabBar from "../components/TabBar";
 import AddByVoiceScreen from "./AddByVoiceScreen";
 import { colors } from "../theme";
-import { getVerbForms, detectVerbForm, isContinuousForm } from "../modules/verbForms";
+import { getVerbForms, detectVerbForm, isContinuousForm, generateAllVerbForms, sFormOf, type VerbForms } from "../modules/verbForms";
 import SmartImage from "../components/SmartImage";
 
 interface Props {
@@ -307,6 +308,74 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     }
     return list;
   }, [rawWords, folders.length, child.buttonDensity]);
+
+  // In verb folders each verb shows as ONE box; tapping it opens its forms (1st, s/es, 2nd, 3rd, 4th)
+  const verbGroups = useMemo(() => {
+    const groups = new Map<string, { forms: Omit<VerbForms, "emoji">; tiles: CustomWord[] }>();
+    if (!isActionsCategory) return groups;
+    for (const w of words) {
+      const en = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
+      const vf = w.verbForms || getVerbForms(en) || generateAllVerbForms(en);
+      if (!vf) continue;
+      const key = vf.base.toLowerCase();
+      const g = groups.get(key);
+      if (g) g.tiles.push(w);
+      else groups.set(key, { forms: vf, tiles: [w] });
+    }
+    return groups;
+  }, [words, isActionsCategory]);
+  const verbKeyOf = (w: CustomWord): string | null => {
+    for (const [key, g] of verbGroups) if (g.tiles.includes(w)) return key;
+    return null;
+  };
+  const shownWords: CustomWord[] = useMemo(() => {
+    if (verbGroups.size === 0) return words;
+    const seen = new Set<string>();
+    return words.filter((w) => {
+      const key = verbKeyOf(w);
+      if (!key) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).map((w) => {
+      const key = verbKeyOf(w);
+      if (!key) return w;
+      const g = verbGroups.get(key)!;
+      // the 1st form tile stands for the verb (its picture and label)
+      return g.tiles.find((t) => t.verbFormTag === "1st") ?? g.tiles.find((t) => detectVerbForm(canonicalWordEn(t.label) || t.label) === "1st") ?? w;
+    });
+  }, [words, verbGroups]);
+  // The verb box that was tapped: a popup shows each of its forms as its own picture box
+  const [verbOpen, setVerbOpen] = useState<string | null>(null);
+  const verbCols = width >= 760 ? 5 : 3;
+  // popup boxes are bigger than the board ones so each form is easy to see and tap
+  const verbTileW = Math.floor(Math.min(270, (Math.min(width - 32, 1440) - 40 - (verbCols - 1) * 16) / verbCols));
+  useEffect(() => setVerbOpen(null), [currentId]);
+  function formRowsFor(key: string) {
+    const g = verbGroups.get(key);
+    if (!g) return [];
+    const { forms, tiles } = g;
+    const cap = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+    const rows: { badge: "1st" | "2nd" | "3rd" | "4th" | "s"; text: string }[] = [
+      { badge: "1st", text: cap(forms.base) },
+      { badge: "s", text: cap(sFormOf(forms.base)) },
+      { badge: "2nd", text: cap(forms.past) },
+      { badge: "3rd", text: cap(forms.participle) },
+      { badge: "4th", text: cap(forms.continuous) },
+    ];
+    return rows.map((r) => ({
+      ...r,
+      // reuse the real tile for that form (keeps its own picture/recording); otherwise speak the form text
+      tile: tiles.find((t) => (canonicalWordEn(t.label) || t.label).toLowerCase() === r.text.toLowerCase()),
+    }));
+  }
+
+  function tapVerbForm(key: string, text: string, tile: CustomWord | undefined) {
+    setVerbOpen(null);
+    if (tile) return tapWord(tile);
+    const base = verbGroups.get(key)?.tiles[0];
+    if (base) tapWord({ ...base, label: text, phrase: text, audioUri: undefined, useTextToSpeech: true });
+  }
 
   // Real-time live sync: recompute whenever caregiver edits, adds, hides, or deletes any word or category
   useEffect(() => {
@@ -735,7 +804,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
               </Text>
               {words.length > 0 && (
                 <View style={styles.breadcrumbCountBadge}>
-                  <Text style={styles.breadcrumbCountText}>{words.length}</Text>
+                  <Text style={styles.breadcrumbCountText}>{shownWords.length}</Text>
                 </View>
               )}
             </View>
@@ -915,8 +984,9 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 );
               })}
 
-              {words.map((w) => {
-                let vTag = isActionsCategory ? (w.verbFormTag || detectVerbForm(w.label)) : null;
+              {shownWords.map((w) => {
+                const verbKey = verbKeyOf(w);
+                let vTag = isActionsCategory && !verbKey ? (w.verbFormTag || detectVerbForm(w.label)) : null;
                 if (vTag) {
                   const enLbl = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
                   const vf = getVerbForms(enLbl);
@@ -930,13 +1000,26 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 return (
                   <View key={w.id} style={[styles.cell, tileSize]}>
                     <Pressable
-                      onPress={() => tapWord(w)}
+                      onPress={() => {
+                        if (verbKey) {
+                          selectFeedback();
+                          setVerbOpen(verbKey);
+                        } else tapWord(w);
+                      }}
                       style={({ pressed }) => [
                         styles.tile,
                         styles.wordTile,
                         pressed && styles.tilePressed,
                       ]}
                     >
+                      {verbKey && (
+                        <View style={[styles.verbFormBadge, styles.verbFormBadge1st, styles.verbFormsPill]}>
+                          <Ionicons name="layers" size={11} color="#047857" />
+                          <Text style={[styles.verbFormBadgeText, styles.verbFormBadgeText1st]}>
+                            {lang === "ar-SA" ? "التصريفات" : lang === "ur-PK" ? "فارمز" : "Forms"}
+                          </Text>
+                        </View>
+                      )}
                       {/* Verb Form Badge (1st Form, 2nd Form, 3rd Form, 4th Form) */}
                       {vTag && (
                         <View
@@ -995,6 +1078,75 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
           )}
         </ScrollView>
       </SafeAreaView>
+
+      {/* Verb forms popup: 1st, s/es, 2nd, 3rd, 4th — each its own picture box */}
+      <Modal visible={!!verbOpen && verbGroups.has(verbOpen)} transparent animationType="fade" onRequestClose={() => setVerbOpen(null)}>
+        <Pressable style={styles.verbModalBackdrop} onPress={() => setVerbOpen(null)}>
+          <Pressable style={styles.verbModalCard} onPress={() => {}}>
+            <View style={styles.verbModalHeader}>
+              <Text style={styles.verbModalTitle} numberOfLines={1}>
+                {verbOpen ? wordLabel(formRowsFor(verbOpen)[0]?.text ?? "", lang) : ""}
+              </Text>
+              <Pressable onPress={() => setVerbOpen(null)} hitSlop={10} accessibilityLabel="Close">
+                <Ionicons name="close-circle" size={32} color="#94a3b8" />
+              </Pressable>
+            </View>
+            <View style={styles.verbModalGrid}>
+              {verbOpen &&
+                formRowsFor(verbOpen).map((r) => {
+                  const base = verbGroups.get(verbOpen)!.tiles[0];
+                  const pic = r.tile ?? base;
+                  return (
+                    <Pressable
+                      key={r.badge}
+                      onPress={() => tapVerbForm(verbOpen, r.text, r.tile)}
+                      style={({ pressed }) => [styles.tile, styles.wordTile, { width: verbTileW }, pressed && styles.tilePressed]}
+                    >
+                      <View
+                        style={[
+                          styles.verbFormBadge,
+                          styles.verbPopBadge,
+                          r.badge === "1st" && styles.verbFormBadge1st,
+                          r.badge === "2nd" && styles.verbFormBadge2nd,
+                          r.badge === "3rd" && styles.verbFormBadge3rd,
+                          r.badge === "4th" && styles.verbFormBadge4th,
+                          r.badge === "s" && styles.verbFormBadgeS,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.verbFormBadgeText,
+                            styles.verbPopBadgeText,
+                            r.badge === "1st" && styles.verbFormBadgeText1st,
+                            r.badge === "2nd" && styles.verbFormBadgeText2nd,
+                            r.badge === "3rd" && styles.verbFormBadgeText3rd,
+                            r.badge === "4th" && styles.verbFormBadgeText4th,
+                            r.badge === "s" && styles.verbFormBadgeTextS,
+                          ]}
+                        >
+                          {r.badge === "s" ? "s / es" : r.badge} {lang === "ar-SA" ? "تصريف" : lang === "ur-PK" ? "فارم" : "Form"}
+                        </Text>
+                      </View>
+                      <View style={styles.wordBody}>
+                        <CardPic
+                          label={pic.label}
+                          imageUri={pic.imageUri || base.imageUri}
+                          emoji={pic.emoji}
+                          size={Math.round(verbTileW * 0.8)}
+                        />
+                      </View>
+                      <View style={styles.wordLabelBar}>
+                        <Text style={[styles.wordLabelText, { fontSize: Math.round(Math.min(24, Math.max(15, verbTileW * 0.09))) }]} numberOfLines={1}>
+                          {wordLabel(r.text, lang)}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Category Navigation Bar (Tools, Emotion, Attributes, Sentences, Schools, Sports, Hygiene, Music) */}
       <View style={styles.bottomBar}>
@@ -1585,6 +1737,16 @@ const styles = StyleSheet.create({
   verbFormBadgeText4th: {
     color: "#b45309",
   },
+  verbFormBadgeS: { backgroundColor: "#fdf2f8", borderColor: "#fbcfe8" },
+  verbFormBadgeTextS: { color: "#be185d" },
+  verbFormsPill: { flexDirection: "row", alignItems: "center", gap: 3 },
+  verbModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)", alignItems: "center", justifyContent: "center", padding: 16 },
+  verbModalCard: { maxWidth: 1440, backgroundColor: "#f1f5f9", borderRadius: 28, padding: 20, gap: 16 },
+  verbModalHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  verbModalTitle: { flex: 1, fontSize: 32, fontWeight: "900", color: colors.textDark },
+  verbPopBadge: { top: 8, left: 8, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10 },
+  verbPopBadgeText: { fontSize: 13 },
+  verbModalGrid: { flexDirection: "row", flexWrap: "wrap", gap: 16, justifyContent: "center" },
 
   // Tala Subcategory Breadcrumb Navigation Bar
   breadcrumbBar: {

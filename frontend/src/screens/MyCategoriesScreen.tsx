@@ -38,7 +38,7 @@ import {
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { searchImages } from "../modules/imageSearch";
 import { fillMissingPictures, findPictureForWord } from "../modules/wordPictures";
-import { generateAllVerbForms, isLikelyVerb, detectVerbForm } from "../modules/verbForms";
+import { generateAllVerbForms, isLikelyVerb, detectVerbForm, sFormOf } from "../modules/verbForms";
 import WordEditor from "../components/WordEditor";
 import UniversalImagePickerModal from "../components/UniversalImagePickerModal";
 import LangBadge from "../components/LangBadge";
@@ -746,9 +746,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       const formsToAdd: {
         label: string;
         phrase: string;
-        verbFormTag: "1st" | "2nd" | "3rd" | "4th";
+        verbFormTag: "1st" | "s" | "2nd" | "3rd" | "4th";
       }[] = [
         { label: form1, phrase: form1, verbFormTag: "1st" },
+        { label: capWord(sFormOf(vForms.base)), phrase: capWord(sFormOf(vForms.base)), verbFormTag: "s" },
         { label: form2, phrase: form2, verbFormTag: "2nd" },
         { label: form3, phrase: form3, verbFormTag: "3rd" },
         { label: form4, phrase: form4, verbFormTag: "4th" },
@@ -855,7 +856,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       size: TileSize;
       useTextToSpeech: boolean;
       verbForms?: CustomWord["verbForms"];
-      verbFormTag?: "1st" | "2nd" | "3rd" | "4th";
+      verbFormTag?: "1st" | "s" | "2nd" | "3rd" | "4th";
     }[] = [];
 
     const seenLabels = new Set<string>();
@@ -869,8 +870,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         const form3 = capWord(vForms.participle);
         const form4 = capWord(vForms.continuous);
 
-        const forms: { label: string; verbFormTag: "1st" | "2nd" | "3rd" | "4th" }[] = [
+        const forms: { label: string; verbFormTag: "1st" | "s" | "2nd" | "3rd" | "4th" }[] = [
           { label: form1, verbFormTag: "1st" },
+          { label: capWord(sFormOf(vForms.base)), verbFormTag: "s" },
           { label: form2, verbFormTag: "2nd" },
           { label: form3, verbFormTag: "3rd" },
           { label: form4, verbFormTag: "4th" },
@@ -1231,7 +1233,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       size: TileSize;
       useTextToSpeech: boolean;
       verbForms?: CustomWord["verbForms"];
-      verbFormTag?: "1st" | "2nd" | "3rd" | "4th";
+      verbFormTag?: "1st" | "s" | "2nd" | "3rd" | "4th";
     }[] = [];
 
     for (const item of items) {
@@ -1243,6 +1245,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         const form1 = capWord(vForms.base);
         const forms = [
           { label: form1, tag: "1st" as const },
+          { label: capWord(sFormOf(vForms.base)), tag: "s" as const },
           { label: capWord(vForms.past), tag: "2nd" as const },
           { label: capWord(vForms.participle), tag: "3rd" as const },
           { label: capWord(vForms.continuous), tag: "4th" as const },
@@ -3369,7 +3372,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 <View style={styles.verbFormsHeader}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
                     <Ionicons name="sparkles" size={15} color="#235E50" />
-                    <Text style={styles.verbFormsTitle}>Verb Forms (1st, 2nd, 3rd, 4th)</Text>
+                    <Text style={styles.verbFormsTitle}>Verb Forms (1st, s/es, 2nd, 3rd, 4th)</Text>
                   </View>
                   <Pressable
                     onPress={() => setAutoAddVerbForms(!autoAddVerbForms)}
@@ -3391,6 +3394,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     <Text style={styles.verbTileWord}>{detectedVerbForms.base}</Text>
                   </View>
                   <View style={styles.verbTilePreview}>
+                    <Text style={styles.verbFormBadge}>s / es Form</Text>
+                    <Text style={styles.verbTileWord}>{sFormOf(detectedVerbForms.base)}</Text>
+                  </View>
+                  <View style={styles.verbTilePreview}>
                     <Text style={styles.verbFormBadge}>2nd · Past</Text>
                     <Text style={styles.verbTileWord}>{detectedVerbForms.past}</Text>
                   </View>
@@ -3405,7 +3412,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 </View>
                 <Text style={styles.verbHintText}>
                   {autoAddVerbForms
-                    ? "✨ All 4 forms will automatically be added as individual shelf tiles."
+                    ? "✨ All 5 forms will automatically be added as individual shelf tiles."
                     : "Only this single word will be added."}
                 </Text>
               </View>

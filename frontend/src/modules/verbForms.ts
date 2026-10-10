@@ -270,6 +270,13 @@ export function conjugateRegularVerb(rawBase: string): VerbForms {
  */
 function extractRoot(word: string): string {
   const w = word.trim().toLowerCase();
+  // s / es forms: is -> be, has -> have, cries -> cry
+  const irregularS: Record<string, string> = { is: "be", has: "have", does: "do", goes: "go" };
+  if (irregularS[w]) return irregularS[w];
+  if (w.endsWith("ies") && w.length > 4) {
+    const yForm = w.slice(0, -3) + "y";
+    if (LOOKUP_MAP.has(yForm) || KNOWN_REGULAR_VERBS.has(yForm)) return yForm;
+  }
   if (w.endsWith("ing") && w.length > 4) {
     const stem = w.slice(0, -3);
     // e.g. stopping -> stop, swimming -> swim, clapping -> clap
@@ -708,4 +715,20 @@ export function transformVerbToForm(label: string, form: "1st" | "2nd" | "3rd" |
     case "4th":
       return v.continuous.charAt(0).toUpperCase() + v.continuous.slice(1);
   }
+}
+
+const S_FORM_IRREGULAR: Record<string, string> = { be: "is", have: "has", do: "does", go: "goes" };
+
+/** The "s / es" form of a verb (he/she/it): agree -> agrees, watch -> watches, cry -> cries, have -> has. */
+export function sFormOf(base: string): string {
+  const clean = (base || "").trim();
+  if (!clean) return clean;
+  const [first, ...rest] = clean.split(/\s+/);
+  const w = first.toLowerCase();
+  let s: string;
+  if (S_FORM_IRREGULAR[w]) s = S_FORM_IRREGULAR[w];
+  else if (/(s|x|z|ch|sh|o)$/.test(w)) s = w + "es";
+  else if (/[^aeiou]y$/.test(w)) s = w.slice(0, -1) + "ies";
+  else s = w + "s";
+  return [s, ...rest].join(" ");
 }

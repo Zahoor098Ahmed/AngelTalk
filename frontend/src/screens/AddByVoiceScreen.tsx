@@ -21,7 +21,7 @@ import {
 } from "../modules/imageSearch";
 import { topLevelCategories, createBlankCategory, addWord, addWordsBulk, childCategories } from "../modules/customCategories";
 import { getPictogramUrl } from "../modules/aacPictograms";
-import { generateAllVerbForms } from "../modules/verbForms";
+import { generateAllVerbForms, sFormOf } from "../modules/verbForms";
 import { resolveEmoji } from "../modules/wordImage";
 import { t, type TKey, wordLabel } from "../modules/i18n";
 import { colors, radius } from "../theme";
@@ -211,6 +211,7 @@ export default function AddByVoiceScreen({ visible, onClose, onSaved, presetCate
         if (vForms) {
           toInsert.push(
             { label: vForms.base, phrase: vForms.base, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "1st", verbForms: vForms },
+            { label: sFormOf(vForms.base), phrase: sFormOf(vForms.base), emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "s", verbForms: vForms },
             { label: vForms.past, phrase: vForms.past, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "2nd", verbForms: vForms },
             { label: vForms.participle, phrase: vForms.participle, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "3rd", verbForms: vForms },
             { label: vForms.continuous, phrase: vForms.continuous, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "4th", verbForms: vForms },
@@ -233,6 +234,7 @@ export default function AddByVoiceScreen({ visible, onClose, onSaved, presetCate
       if (vForms) {
         addWordsBulk(targetId, [
           { label: vForms.base, phrase: vForms.base, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "1st", verbForms: vForms },
+          { label: sFormOf(vForms.base), phrase: sFormOf(vForms.base), emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "s", verbForms: vForms },
           { label: vForms.past, phrase: vForms.past, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "2nd", verbForms: vForms },
           { label: vForms.participle, phrase: vForms.participle, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "3rd", verbForms: vForms },
           { label: vForms.continuous, phrase: vForms.continuous, emoji: vForms.emoji, imageUri: effectiveImg, useTextToSpeech: true, size: "md", verbFormTag: "4th", verbForms: vForms },

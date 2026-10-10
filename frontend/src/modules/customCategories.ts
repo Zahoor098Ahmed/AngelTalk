@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { CustomCategory, CustomWord, TileSize, LanguageCode } from "../types";
 import { starterLabel, wordLabel, canonicalWordEn, translateDynamic } from "./i18n";
 import { getPictogramUrl } from "./aacPictograms";
-import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, isContinuousForm, type VerbForms } from "./verbForms";
+import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, isContinuousForm, sFormOf, type VerbForms } from "./verbForms";
 const SEED_WORD_EN: Record<string, string[]> = {
   Core: ["I", "am", "is", "are", "was", "I want", "More", "Help", "No", "Yes", "All done", "I need", "I feel", "I like", "Can I have", "Please", "Thank you", "Stop", "Go", "to", "the", "Look", "Where"],
   Food: ["Water", "Milk", "Juice", "Apple", "Banana", "Bread", "Cookie", "Rice", "Chicken", "Snack", "Pizza", "Sandwich", "Fruit"],
@@ -79,7 +79,7 @@ export function isDeletedCategory(name: string, parentId?: string | null): boole
   return false;
 }
 
-const VERB_FORM_TAGS = ["1st", "2nd", "3rd", "4th"] as const;
+const VERB_FORM_TAGS = ["1st", "s", "2nd", "3rd", "4th"] as const;
 
 /**
  * True when the caregiver deleted this word from this category. Verb forms are
@@ -806,9 +806,10 @@ function enforceVerbLetterBuckets(): boolean {
 // Generates alphabetical Actions subcategories where every verb appears strictly in 1st -> 2nd -> 3rd -> 4th order
 const ACTION_VERB_SUBCATEGORIES = Object.entries(VERBS_A_TO_Z).map(([letter, rawList]) => {
   const list = [...rawList].sort((a, b) => a.base.localeCompare(b.base, undefined, { sensitivity: "base" }));
-  const words: [string, string, ("1st" | "2nd" | "3rd" | "4th")?][] = [];
+  const words: [string, string, ("1st" | "s" | "2nd" | "3rd" | "4th")?][] = [];
   list.forEach((v) => {
     words.push([capWord(v.base), v.emoji, "1st"]);
+    words.push([capWord(sFormOf(v.base)), v.emoji, "s"]);
     words.push([capWord(v.past), v.emoji, "2nd"]);
     words.push([capWord(v.participle), v.emoji, "3rd"]);
     words.push([capWord(v.continuous), v.emoji, "4th"]);
@@ -825,7 +826,7 @@ export const STARTER_SUBCATEGORIES: {
   parentCategory: string;
   name: string;
   icon: string;
-  words: [string, string, ("1st" | "2nd" | "3rd" | "4th")?][];
+  words: [string, string, ("1st" | "s" | "2nd" | "3rd" | "4th")?][];
 }[] = [
   // --- Food Subcategories ---
   {
@@ -1945,8 +1946,10 @@ export function updateWord(
         activeVf.past.toLowerCase(),
         activeVf.participle.toLowerCase(),
         activeVf.continuous.toLowerCase(),
+        sFormOf(activeVf.base).toLowerCase(),
       ]);
       if (oldVForms) {
+        targetForms.add(sFormOf(oldVForms.base).toLowerCase());
         targetForms.add(oldVForms.base.toLowerCase());
         targetForms.add(oldVForms.past.toLowerCase());
         targetForms.add(oldVForms.participle.toLowerCase());
@@ -1968,7 +1971,11 @@ export function updateWord(
         if (newVForms) {
           sib.verbForms = newVForms;
           if (patch.label && w.verbFormTag === "1st" && sib.verbFormTag) {
-            if (sib.verbFormTag === "2nd") {
+            if (sib.verbFormTag === "s") {
+              const loc = capWord(wordLabel(sFormOf(newVForms.base), seedLang) || sFormOf(newVForms.base));
+              sib.label = loc;
+              sib.phrase = loc;
+            } else if (sib.verbFormTag === "2nd") {
               const loc = capWord(wordLabel(newVForms.past, seedLang) || newVForms.past);
               sib.label = loc;
               sib.phrase = loc;
@@ -2048,7 +2055,9 @@ export function sortWordsForCategory(words: CustomWord[], catName: string): Cust
     if (w.verbFormTag === "3rd") return 3;
     if (w.verbFormTag === "2nd") return 2;
     if (w.verbFormTag === "1st") return 1;
+    if (w.verbFormTag === "s") return 1.5;
     if (vf && lbl === vf.base.toLowerCase()) return 1;
+    if (vf && lbl === sFormOf(vf.base).toLowerCase()) return 1.5;
     if (isContinuousForm(lbl) || (vf && lbl === vf.continuous.toLowerCase())) return 4;
     if (!vf) return 1;
     if (lbl === vf.base.toLowerCase()) return 1;
@@ -2103,6 +2112,10 @@ export function cleanAndDeduplicateCategories() {
           primary.words.push(w);
         }
       });
+      // its sub-categories move along, they must not be left without a parent
+      cache.forEach((ch) => {
+        if (ch.parentCategoryId === dup.id) ch.parentCategoryId = primary.id;
+      });
       cache = cache.filter((c) => c.id !== dup.id);
     }
     changed = true;
@@ -2129,6 +2142,10 @@ export function cleanAndDeduplicateCategories() {
             existing.words.push(w);
           }
         });
+        // "School" merged into "Schools": its sub-categories (e.g. "Class") move along instead of being lost
+        cache.forEach((ch) => {
+          if (ch.parentCategoryId === c.id) ch.parentCategoryId = existing.id;
+        });
       }
       changed = true;
     } else {
@@ -2137,6 +2154,16 @@ export function cleanAndDeduplicateCategories() {
     }
   }
   cache = uniqueCats;
+
+  // Sub-categories whose shelf vanished in an older merge (not deleted by the caregiver) were
+  // invisible: bring them back as shelves so their words show again
+  const liveIds = new Set(cache.map((c) => c.id));
+  for (const c of cache) {
+    if (c.parentCategoryId && !liveIds.has(c.parentCategoryId) && !deletedItemKeys.has(`cat::id::${c.parentCategoryId}`)) {
+      c.parentCategoryId = null;
+      changed = true;
+    }
+  }
 
   // 3. Normalize standard shelf names to active language
   for (const c of cache) {
@@ -2200,6 +2227,7 @@ export function cleanAndDeduplicateCategories() {
         const standardVerbWords = new Set<string>();
         list.forEach((v) => {
           standardVerbWords.add(v.base.toLowerCase().trim());
+          standardVerbWords.add(sFormOf(v.base).toLowerCase().trim());
           standardVerbWords.add(v.past.toLowerCase().trim());
           standardVerbWords.add(v.participle.toLowerCase().trim());
           standardVerbWords.add(v.continuous.toLowerCase().trim());
@@ -2216,8 +2244,9 @@ export function cleanAndDeduplicateCategories() {
         let orderIndex = 0;
 
         list.forEach((v) => {
-          const forms: { word: string; tag: "1st" | "2nd" | "3rd" | "4th" }[] = [
+          const forms: { word: string; tag: "1st" | "s" | "2nd" | "3rd" | "4th" }[] = [
             { word: v.base, tag: "1st" },
+            { word: sFormOf(v.base), tag: "s" },
             { word: v.past, tag: "2nd" },
             { word: v.participle, tag: "3rd" },
             { word: v.continuous, tag: "4th" },
@@ -2276,8 +2305,9 @@ export function cleanAndDeduplicateCategories() {
             if (handledCustomBases.has(baseKey)) return;
             handledCustomBases.add(baseKey);
 
-            const forms: { word: string; tag: "1st" | "2nd" | "3rd" | "4th" }[] = [
+            const forms: { word: string; tag: "1st" | "s" | "2nd" | "3rd" | "4th" }[] = [
               { word: v.base, tag: "1st" },
+              { word: sFormOf(v.base), tag: "s" },
               { word: v.past, tag: "2nd" },
               { word: v.participle, tag: "3rd" },
               { word: v.continuous, tag: "4th" },
@@ -2382,6 +2412,30 @@ export function cleanAndDeduplicateCategories() {
     if (parentIdsWithSubCats.has(c.id) && c.words.length > 0) {
       // Find subcategories belonging to this parent
       const subCatsOfParent = cache.filter((sc) => sc.parentCategoryId === c.id);
+      let generalSub: CustomCategory | undefined;
+      const getGeneralSub = (): CustomCategory => {
+        if (generalSub) return generalSub;
+        generalSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).trim().toLowerCase() === "general");
+        if (!generalSub) {
+          const now = Date.now();
+          generalSub = {
+            id: uid("cat"),
+            name: folderName("General", seedLang) || "General",
+            createdAt: now,
+            updatedAt: now,
+            source: "manual",
+            grouping: "none",
+            color: c.color ?? FOLDER_COLORS[0],
+            icon: c.icon ?? "📁",
+            imageUri: c.imageUri,
+            parentCategoryId: c.id,
+            order: subCatsOfParent.length,
+            words: [],
+          };
+          cache.push(generalSub);
+        }
+        return generalSub;
+      };
       if (subCatsOfParent.length > 0) {
         // Move any words from parent into appropriate child subcategory or first child if not already present
         for (const w of c.words) {
@@ -2443,6 +2497,10 @@ export function cleanAndDeduplicateCategories() {
             } else if (pName.includes("action") || pName.includes("verb") || pName.includes("کام") || pName.includes("أفعال")) {
               const letter = verbLetterOf(w.label) || wLower[0] || "a";
               targetSub = subCatsOfParent.find((sc) => verbSubLetter(sc) === letter) || targetSub;
+            } else {
+              // Any other shelf: its own words go to a "General" sub-category, not into the
+              // sub-category the caregiver just made (a new "Class" must not fill up with "Recess", "Slide"...)
+              targetSub = getGeneralSub();
             }
             targetSub.words.push({ ...w, isCustom: w.isCustom ?? true, order: targetSub.words.length });
           }
@@ -2672,8 +2730,9 @@ export function addWord(
 
   return mutate(catId, (c) => {
     if (vForms) {
-      const forms: { word: string; enWord: string; tag: "1st" | "2nd" | "3rd" | "4th" }[] = [
+      const forms: { word: string; enWord: string; tag: "1st" | "s" | "2nd" | "3rd" | "4th" }[] = [
         { word: capWord(wordLabel(vForms.base, seedLang) || vForms.base), enWord: vForms.base, tag: "1st" },
+        { word: capWord(wordLabel(sFormOf(vForms.base), seedLang) || sFormOf(vForms.base)), enWord: sFormOf(vForms.base), tag: "s" },
         { word: capWord(wordLabel(vForms.past, seedLang) || vForms.past), enWord: vForms.past, tag: "2nd" },
         { word: capWord(wordLabel(vForms.participle, seedLang) || vForms.participle), enWord: vForms.participle, tag: "3rd" },
         { word: capWord(wordLabel(vForms.continuous, seedLang) || vForms.continuous), enWord: vForms.continuous, tag: "4th" },

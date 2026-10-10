@@ -283,8 +283,8 @@ export interface CustomWord {
     continuous: string;
     emoji?: string;
   };
-  /** Explicit verb form tag for display and speech (1st, 2nd, 3rd, 4th) */
-  verbFormTag?: '1st' | '2nd' | '3rd' | '4th';
+  /** Explicit verb form tag for display and speech (1st, s/es, 2nd, 3rd, 4th) */
+  verbFormTag?: '1st' | 's' | '2nd' | '3rd' | '4th';
   /** True if this word was added, edited, or customized by the caregiver or user */
   isCustom?: boolean;
   /** Original seed English word name to preserve customized labels */
