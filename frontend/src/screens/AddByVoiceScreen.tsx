@@ -25,6 +25,7 @@ import { generateAllVerbForms } from "../modules/verbForms";
 import { resolveEmoji } from "../modules/wordImage";
 import { t, type TKey, wordLabel } from "../modules/i18n";
 import { colors, radius } from "../theme";
+import SmartImage from "../components/SmartImage";
 
 interface Props {
   visible: boolean;
@@ -352,7 +353,7 @@ export default function AddByVoiceScreen({ visible, onClose, onSaved, presetCate
 
                 {aiPreview ? (
                   <View style={{ gap: 10, alignItems: "center" }}>
-                    <Image source={{ uri: aiPreview }} style={styles.aiPreviewImg} resizeMode="contain" />
+                    <SmartImage source={{ uri: aiPreview }} style={styles.aiPreviewImg} />
                     <View style={{ flexDirection: "row", gap: 10 }}>
                       <Pressable onPress={() => makeAiImage(true)} style={styles.fallbackBtn}>
                         <Ionicons name="refresh" size={16} color={colors.forestDark} />
@@ -370,7 +371,7 @@ export default function AddByVoiceScreen({ visible, onClose, onSaved, presetCate
                     <View style={styles.hitGrid}>
                       {hits.map((h) => (
                         <Pressable key={h.id} onPress={() => chooseHit(h)} style={styles.hit}>
-                          <Image source={{ uri: h.thumb }} style={styles.hitImg} resizeMode="contain" />
+                          <SmartImage source={{ uri: h.thumb }} style={styles.hitImg} />
                         </Pressable>
                       ))}
                     </View>

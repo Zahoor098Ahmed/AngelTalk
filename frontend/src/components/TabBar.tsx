@@ -16,7 +16,6 @@ interface TabBarProps {
 const TABS: { key: TabScreen; icon: keyof typeof Ionicons.glyphMap; tKey: TKey }[] = [
   { key: "home", icon: "home", tKey: "home" },
   { key: "speak", icon: "chatbubble-ellipses", tKey: "talk" },
-  { key: "schedule", icon: "calendar", tKey: "schedule" },
   { key: "games", icon: "game-controller", tKey: "games" },
   { key: "progress", icon: "stats-chart", tKey: "progress" },
 ];

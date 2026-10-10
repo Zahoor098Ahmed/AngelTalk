@@ -44,6 +44,7 @@ import TabBar from "../components/TabBar";
 import AddByVoiceScreen from "./AddByVoiceScreen";
 import { colors } from "../theme";
 import { getVerbForms, detectVerbForm, isContinuousForm } from "../modules/verbForms";
+import SmartImage from "../components/SmartImage";
 
 interface Props {
   child: ChildProfile;
@@ -160,10 +161,9 @@ function CardPic({
 
   if (uri && !imgError) {
     return (
-      <Image
+      <SmartImage
         source={{ uri }}
         style={{ width: size, height: size }}
-        resizeMode="contain"
         onError={() => setImgError(true)}
       />
     );

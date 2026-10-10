@@ -146,6 +146,11 @@ export const KNOWN_COMPOUND_PHRASES = new Set([
 ]);
 
 export const SPEECH_CORRECTIONS: Record<string, string> = {
+  // accent mishearings of common words
+  desh: "desk",
+  dask: "desk",
+  tabel: "table",
+  chare: "chair",
   turk: "truck",
   truk: "truck",
   trak: "truck",
@@ -489,6 +494,18 @@ const SPOKEN_REWRITES: [RegExp, string | ((...m: string[]) => string)][] = [
   [spokenWord("daal do|daldo|daalo|dalo|daal dein|rakh do|rakho|add kar do|add karo|add kardo|add karein|bana do|banado|kar do|kardo|karo|karein|kijiye|kariye|zara"), " "],
   [spokenWord("ڈال دو|ڈالو|ڈالیں|شامل کرو|شامل کریں|شامل|رکھو|رکھ دو|بنا دو|کرو|کریں|براہ کرم|مہربانی"), " "],
   [spokenWord("أضف|اضف|اضيف|أضيف|انشئ|أنشئ|اعمل|اصنع|ضع|من فضلك|لو سمحت"), " "],
+  // "word(s)" misheard as "while / world / ward / was" right after a category or sub-category name
+  // ("sub category car while SUV and hybrid" -> "sub category car words SUV and hybrid")
+  [/\b((?:s[ua]b\s*-?\s*)?categor(?:y|ies)\s+(?:of\s+)?[a-z؀-ۿ]+)\s+(?:while|whilst|worlds?|wards?|was|were|wear|word's)\b/gi, "$1 words "],
+  // ... or at the very start of what was said ("were desk and chair and table")
+  [/^\s*(?:were|wear|while|worlds?|wards?)\b/i, " words "],
+  // "category" misheard as "degree(s)" ("degree vehicle sub category …")
+  [/\b(?:the\s+)?degrees?\b/gi, " category "],
+  // "car" misheard as the Urdu "ka" right after "sub category" ("sub category ka SUV hybrid"),
+  // but not real Urdu like "sub category ka naam …"
+  [/\b(s[ua]b\s*-?\s*categor(?:y|ies))\s+ka\b(?!\s+naam)/gi, "$1 car"],
+  // "add words" misheard by the speech engine: "and I'd avoid Suzuki", "add a void", "ad wards"
+  [/\b(?:and\s+|add\s+|ad\s+)?i'?d\s+avoid\b|\b(?:add|ad)\s+(?:a\s+)?void\b|\b(?:add|ad)\s+wards?\b/gi, " words "],
   // "category" heard in pieces: "cat a gory", "kitty gory", "catty gory"
   [/\b(?:cat|kat|cad|catty|kitty|katty)\s*(?:a\s+|e\s+|i\s+)?(gor(?:y|i|ee|ie)|gories|goris)\b/gi, " category "],
   // "sub category" heard as "some / sap / sup / sob / sum category"
@@ -614,7 +631,12 @@ export function parseVoicePlan(raw: string): VoicePlan {
     if (kind !== "words") {
       items = items.filter((it) => it.length > 1 && !EDGE_FILLER_RE.test(it.toLowerCase()) && !/^(?:avoid|mmm+|mm+)$/i.test(it));
     } else {
-      items = items.filter((it) => !/^(?:avoid|mmm+|mm+|uh+|um+|er+|ah+|hmm+)$/i.test(it) && !/^[b-df-hj-np-tv-zB-DF-HJ-NP-TV-Z]$/.test(it));
+      // joining words and noise never become word tiles ("of", "the", "while", "is" …)
+      items = items.filter(
+        (it) =>
+          !/^(?:avoid|mmm+|mm+|uh+|um+|er+|ah+|hmm+|of|the|a|an|while|whilst|is|are|was|were|to|for|with|and|then|also|ka|ki|ke|aur|اور|و)$/i.test(it) &&
+          !/^[b-df-hj-np-tv-zB-DF-HJ-NP-TV-Z]$/.test(it),
+      );
     }
     if (items.length === 0) return;
     if (kind === "shelf") {
@@ -639,8 +661,15 @@ export function parseVoicePlan(raw: string): VoicePlan {
       curSub = null;
     } else if (kind === "sub") {
       const s = implicitShelf();
-      // (only for a spoken "sub category" — after "us mein / inside it" every name is a sub-category)
-      if (seg.kind === "sub" && !seg.plural && items.length > 1) {
+      // (only for a spoken "sub category" — after "us mein / inside it" every name is a sub-category —
+      // and only when no "words" comes later: "sub category pets, farm, wild … add words to pets …"
+      // names three sub-categories, while "subcategory Car Suzuki" (the word "words" misheard) means Car[Suzuki])
+      const wordsLater = segments.slice(i + 1).some((g) => g.kind === "words");
+      // "pets, farm, wild" / "pets and farm" is a list of sub-categories (a break right after the
+      // first name); "car SUV and hybrid" is Car + its words (first two names said together)
+      const parts = seg.content.split(/,|\band\b|\baur\b|\bplus\b|\sو\s|\sاور\s/i);
+      const saidAsList = parts.length > 1 && splitPlanItems(parts[0], false).filter((it) => it.length > 1).length <= 1;
+      if (seg.kind === "sub" && !seg.plural && items.length > 1 && !wordsLater && !saidAsList) {
         // Singular sub-category marker ("subcategory Car Suzuki ..."):
         // First item is the sub-category name ("Car"), subsequent items are words inside it!
         const subName = items[0];

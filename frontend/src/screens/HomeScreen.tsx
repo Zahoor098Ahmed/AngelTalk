@@ -1,21 +1,20 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import type { ChildProfile, TabScreen, TherapyGoal } from "../types";
+import type { ChildProfile, TabScreen } from "../types";
 import { useSettings } from "../context/SettingsContext";
-import { speak } from "../modules/tts";
+import { t, type TKey } from "../modules/i18n";
+import { getUsage } from "../modules/storage";
+import { getPictogramUrl } from "../modules/aacPictograms";
 import { tapFeedback } from "../modules/haptics";
-import { t, wordLabel, type TKey } from "../modules/i18n";
-import { getUsage, recordScheduleAdherence, updateChild } from "../modules/storage";
+import SmartImage from "../components/SmartImage";
 import { useResponsive } from "../modules/responsive";
 import LangBadge from "../components/LangBadge";
 import Mascot from "../components/Mascot";
 import SoftBackdrop from "../components/SoftBackdrop";
 import TabBar from "../components/TabBar";
-import { colors, radius, radiusLg } from "../theme";
-import MoodFace from "../components/MoodFace";
-import UrgentActionIcon from "../components/UrgentActionIcon";
+import { colors, radiusLg } from "../theme";
 
 interface Props {
   child: ChildProfile;
@@ -28,6 +27,8 @@ interface Props {
 
 type QuickItem = {
   labelKey: TKey;
+  /** ARASAAC word used as the tile's picture */
+  picture: string;
   icon: keyof typeof Ionicons.glyphMap;
   bg: string;
   iconColor: string;
@@ -37,23 +38,8 @@ type QuickItem = {
 
 const QUICK_ACCESS: QuickItem[] = [
   {
-    labelKey: "qCommunicate",
-    icon: "chatbubble-ellipses",
-    bg: colors.blue,
-    iconColor: colors.blueDeep,
-    desc: "Tap pictures to speak words & sentences",
-    go: (p) => p.onTabChange("speak"),
-  },
-  {
-    labelKey: "todaysSchedule",
-    icon: "calendar",
-    bg: colors.yellow,
-    iconColor: colors.yellowDeep,
-    desc: "Follow daily visual routine step-by-step",
-    go: (p) => p.onTabChange("schedule"),
-  },
-  {
     labelKey: "qActivities",
+    picture: "play",
     icon: "game-controller",
     bg: colors.green,
     iconColor: colors.greenDeep,
@@ -62,6 +48,7 @@ const QUICK_ACCESS: QuickItem[] = [
   },
   {
     labelKey: "pOverview",
+    picture: "graph",
     icon: "stats-chart",
     bg: colors.purple,
     iconColor: colors.purpleDeep,
@@ -70,105 +57,23 @@ const QUICK_ACCESS: QuickItem[] = [
   },
 ];
 
-type SchedulePreviewItem = {
-  iconName: keyof typeof Ionicons.glyphMap;
-  labelKey: TKey;
-  time: string;
-  state: "done" | "now" | "upcoming";
-  color: string;
-  iconColor: string;
-};
-
-const TODAY_PREVIEW: SchedulePreviewItem[] = [
-  { iconName: "cafe", labelKey: "sBreakfast", time: "08:00", state: "done", color: "#fef3c7", iconColor: "#b45309" },
-  { iconName: "extension-puzzle", labelKey: "sPlayTime", time: "09:00", state: "done", color: "#dcfce7", iconColor: "#15803d" },
-  { iconName: "chatbubbles", labelKey: "sAacSession", time: "10:30", state: "now", color: "#e0f2fe", iconColor: "#0284c7" },
-  { iconName: "restaurant", labelKey: "sLunch", time: "12:00", state: "upcoming", color: "#ffedd5", iconColor: "#c2410c" },
-];
-
 export default function HomeScreen(props: Props) {
   const { child, tab, onTabChange, onOpenMore, labels } = props;
   const { settings } = useSettings();
-  const { isSmallPhone, isTablet } = useResponsive();
+  const { isTablet } = useResponsive();
   const lang = settings.language;
   const hour = new Date().getHours();
   const greeting = hour < 12 ? t("morning", lang) : hour < 17 ? t("afternoon", lang) : t("evening", lang);
+  const tr = (en: string, ar: string, ur: string) => (lang === "ar-SA" ? ar : lang === "ur-PK" ? ur : en);
 
   const usage = useMemo(() => getUsage(child.id), [child.id]);
-  const weekWords = usage.wordsByDay.reduce((s, v) => s + v, 0);
+  const weekWords = usage.wordsByDay.reduce((sum, v) => sum + v, 0);
 
-  const [scheduleItems, setScheduleItems] = useState(TODAY_PREVIEW);
-
-  function toggleScheduleItem(idx: number) {
-    tapFeedback();
-    setScheduleItems((prev) => {
-      const next = prev.map((item, i) => {
-        if (i !== idx) return item;
-        const nextState: "done" | "now" | "upcoming" = item.state === "done" ? "upcoming" : "done";
-        speak(
-          t(item.labelKey, lang) + (nextState === "done" ? ". Finished! Great job!" : ""),
-          lang,
-          settings.soundEnabled
-        );
-        return { ...item, state: nextState };
-      });
-      const doneCount = next.filter((i) => i.state === "done").length;
-      const percent = Math.round((doneCount / next.length) * 100);
-      recordScheduleAdherence(child.id, percent);
-      if (next[idx].state === "done") {
-        updateChild({ ...child, stars: (child.stars ?? 0) + 1 });
-      }
-      return next;
-    });
-  }
-
-  function handleOpenScheduleItem(item: (typeof TODAY_PREVIEW)[number]) {
-    tapFeedback();
-    speak(t(item.labelKey, lang), lang, settings.soundEnabled);
-    if (item.labelKey === "sAacSession") {
-      onTabChange("speak");
-    } else {
-      onTabChange("schedule");
-    }
-  }
-
-  // Active Doctor Therapy Goal
-  const activeTherapyGoal: TherapyGoal = useMemo(() => {
-    if (child.therapyGoals && child.therapyGoals.length > 0) {
-      const incomplete = child.therapyGoals.find((g) => !g.completed);
-      if (incomplete) return incomplete;
-      return child.therapyGoals[0];
-    }
-    return {
-      id: "default_speech",
-      title: t("defaultSpeechGoalTitle", lang),
-      category: "speech",
-      targetCount: 3,
-      currentCount: Math.min(3, weekWords),
-      unit: t("unitWords", lang),
-      completed: weekWords >= 3,
-      prescribedBy: t("doctorsDailyGoal", lang),
-      assignedDate: new Date().toISOString(),
-    };
-  }, [child.therapyGoals, weekWords, lang]);
-
-  const therapyProgressPct = Math.min(
-    100,
-    Math.round((activeTherapyGoal.currentCount / activeTherapyGoal.targetCount) * 100)
-  );
-
-  const [selectedMood, setSelectedMood] = useState<string | null>(null);
-
-  function handleSelectMood(moodLabel: string) {
-    tapFeedback();
-    setSelectedMood(moodLabel);
-    speak(`${t("sayIAmFeeling", lang)} ${wordLabel(moodLabel, lang)}!`, lang, settings.soundEnabled);
-  }
-
-  function handleUrgentNeed(phraseKey: TKey) {
-    tapFeedback();
-    speak(t(phraseKey, lang), lang, settings.soundEnabled);
-  }
+  const STATS: { icon: keyof typeof Ionicons.glyphMap; tint: string; bg: string; value: number; label: string }[] = [
+    { icon: "star", tint: "#d97706", bg: "#fef3c7", value: child.stars ?? 0, label: tr("Stars", "نجوم", "ستارے") },
+    { icon: "chatbubbles", tint: "#2563eb", bg: "#dbeafe", value: weekWords, label: tr("Words this week", "كلمات هذا الأسبوع", "اس ہفتے کے الفاظ") },
+    { icon: "flame", tint: "#ea580c", bg: "#ffedd5", value: usage.consecutiveDays ?? 0, label: tr("Days in a row", "أيام متتالية", "لگاتار دن") },
+  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -221,317 +126,70 @@ export default function HomeScreen(props: Props) {
           contentContainerStyle={[styles.body, isTablet && styles.bodyTablet]}
           showsVerticalScrollIndicator={false}
         >
-          {/* 2. Urgent Needs Express Communication Bar */}
-          <View style={styles.urgentSection}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Ionicons name="flash" size={15} color={colors.forest} />
-              <Text style={styles.sectionHeadingSmall}>{t("quickExpressHeading", lang)}</Text>
-            </View>
-            <View style={[styles.urgentGrid, isSmallPhone && { gap: 6 }, isTablet && { gap: 12 }]}>
-              {[
-                { label: "Help", phraseKey: "needHelpPhrase" as TKey, type: "help" as const, color: "#fef2f2", borderColor: "#fecaca", textColor: "#b91c1c" },
-                { label: "Water", phraseKey: "needWaterPhrase" as TKey, type: "water" as const, color: "#f0f9ff", borderColor: "#bae6fd", textColor: "#0369a1" },
-                { label: "Bathroom", phraseKey: "needBathroomPhrase" as TKey, type: "bathroom" as const, color: "#fefce8", borderColor: "#fde68a", textColor: "#b45309" },
-                { label: "Stop", phraseKey: "pleaseStopPhrase" as TKey, type: "stop" as const, color: "#fff7ed", borderColor: "#fed7aa", textColor: "#c2410c" },
-              ].map((u) => (
-                <Pressable
-                  key={u.label}
-                  onPress={() => handleUrgentNeed(u.phraseKey)}
-                  style={({ pressed }) => [
-                    styles.urgentTile,
-                    { backgroundColor: u.color, borderColor: u.borderColor },
-                    isSmallPhone && { paddingVertical: 10, borderRadius: 14 },
-                    isTablet && { paddingVertical: 16, borderRadius: 18 },
-                    pressed && { transform: [{ scale: 0.96 }] },
-                  ]}
-                  accessibilityLabel={`Express ${u.label}`}
-                >
-                  <View style={styles.urgentIconCircle}>
-                    <UrgentActionIcon type={u.type} size={isSmallPhone ? 30 : isTablet ? 40 : 34} />
-                  </View>
-                  <Text
-                    style={[
-                      styles.urgentTileLabel,
-                      { color: u.textColor, fontSize: isSmallPhone ? 12.5 : isTablet ? 15.5 : 14 },
-                    ]}
-                  >
-                    {u.label === "Bathroom" ? t("bathroom", lang) : wordLabel(u.label, lang)}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          {/* 3. Emotional Mood Check-In Widget */}
-          <View style={styles.moodSection}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Ionicons name="heart" size={15} color="#ec4899" />
-                <Text style={styles.sectionHeadingSmall}>{t("moodQuestion", lang)}</Text>
-              </View>
-              {selectedMood && (
-                <View style={styles.selectedMoodTag}>
-                  <Ionicons name="checkmark-circle" size={13} color="#166534" />
-                  <Text style={styles.selectedMoodTagText}>
-                    {t("feelingTag", lang)} {wordLabel(selectedMood, lang)}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <View style={[styles.moodRow, isSmallPhone && { gap: 4 }, isTablet && { gap: 12 }]}>
-              {[
-                { label: "Happy", mood: "Happy" as const, bg: "#f0fdf4", border: "#bbf7d0", color: "#15803d" },
-                { label: "Calm", mood: "Calm" as const, bg: "#f0f9ff", border: "#bae6fd", color: "#0369a1" },
-                { label: "Excited", mood: "Excited" as const, bg: "#fefce8", border: "#fef08a", color: "#b45309" },
-                { label: "Sad", mood: "Sad" as const, bg: "#faf5ff", border: "#e9d5ff", color: "#6b21a8" },
-                { label: "Tired", mood: "Tired" as const, bg: "#f8fafc", border: "#e2e8f0", color: "#475569" },
-              ].map((m) => {
-                const isSel = selectedMood === m.label;
-                return (
-                  <Pressable
-                    key={m.label}
-                    onPress={() => handleSelectMood(m.label)}
-                    style={({ pressed }) => [
-                      styles.moodBtn,
-                      { backgroundColor: m.bg, borderColor: isSel ? colors.forest : m.border },
-                      isSmallPhone && { paddingVertical: 8, borderRadius: 14 },
-                      isTablet && { paddingVertical: 14, borderRadius: 18 },
-                      isSel && styles.moodBtnActive,
-                      pressed && { transform: [{ scale: 0.95 }] },
-                    ]}
-                  >
-                    <MoodFace mood={m.mood} size={isSmallPhone ? 38 : isTablet ? 52 : 46} />
-                    <Text
-                      style={[
-                        styles.moodBtnText,
-                        { color: m.color, fontSize: isSmallPhone ? 11.5 : isTablet ? 14.5 : 13 },
-                        isSel && { fontWeight: "900", color: colors.forest },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {wordLabel(m.label, lang)}
-                    </Text>
-                    {isSel && <View style={styles.moodSelectedDot} />}
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* 4. Doctor's Daily Therapy Target Card */}
+          {/* Start talking — the main thing a child comes here to do */}
           <Pressable
             onPress={() => {
-              if (activeTherapyGoal.category === "speech") onTabChange("speak");
-              else if (activeTherapyGoal.category === "occupational") onTabChange("schedule");
-              else onTabChange("games");
+              tapFeedback();
+              onTabChange("speak");
             }}
-            style={({ pressed }) => [styles.therapyBanner, pressed && { transform: [{ scale: 0.99 }] }]}
+            style={({ pressed }) => [styles.heroCard, pressed && { transform: [{ scale: 0.99 }] }]}
+            accessibilityLabel="Start talking"
           >
-            <View style={styles.therapyBannerHeader}>
-              <View style={styles.therapyBadgeWrap}>
-                <Ionicons name="ribbon-outline" size={13} color="white" />
-                <Text style={styles.therapyBadgeText}>{t("therapyTargetBadge", lang)}</Text>
-              </View>
-              <View style={styles.therapyStarReward}>
-                <Ionicons name="star" size={12} color="#b45309" />
-                <Text style={styles.therapyStarText}>+5 {t("stars", lang)}</Text>
+            <View style={styles.heroAccent} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <Text style={styles.heroKicker}>{tr("TALK BOARD", "لوحة الكلام", "بات چیت بورڈ")}</Text>
+              <Text style={[styles.heroTitle, isTablet && { fontSize: 24, lineHeight: 31 }]}>
+                {tr("What do you want to say today?", "ماذا تريد أن تقول اليوم؟", "آج آپ کیا کہنا چاہتے ہیں؟")}
+              </Text>
+              <View style={styles.heroBtn}>
+                <Ionicons name="chatbubble-ellipses" size={18} color="#ffffff" />
+                <Text style={styles.heroBtnText}>{tr("Start Talking", "ابدأ الكلام", "بات شروع کریں")}</Text>
+                <Ionicons name="arrow-forward" size={16} color="#ffffff" />
               </View>
             </View>
-
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 }}>
-              <View
-                style={[
-                  styles.therapyIconCircle,
-                  {
-                    backgroundColor:
-                      activeTherapyGoal.category === "speech"
-                        ? "#eff6ff"
-                        : activeTherapyGoal.category === "sensory"
-                        ? "#f0fdf4"
-                        : "#fefce8",
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={
-                    activeTherapyGoal.category === "speech"
-                      ? "chatbubbles"
-                      : activeTherapyGoal.category === "sensory"
-                      ? "leaf"
-                      : "calendar"
-                  }
-                  size={24}
-                  color={
-                    activeTherapyGoal.category === "speech"
-                      ? "#2563eb"
-                      : activeTherapyGoal.category === "sensory"
-                      ? "#16a34a"
-                      : "#ca8a04"
-                  }
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.therapyTitle}>{activeTherapyGoal.title}</Text>
-                <Text style={styles.therapySub}>
-                  {activeTherapyGoal.prescribedBy || t("doctorsPlan", lang)} · {t("tapToPracticeNow", lang)}
-                </Text>
-              </View>
-              {activeTherapyGoal.completed && (
-                <View style={styles.therapyCheckCircle}>
-                  <Ionicons name="checkmark" size={16} color="white" />
-                </View>
+            <View style={[styles.heroPicBox, isTablet && styles.heroPicBoxTablet]}>
+              {getPictogramUrl("talk") ? (
+                <SmartImage source={{ uri: getPictogramUrl("talk")! }} style={styles.heroPic} />
+              ) : (
+                <Ionicons name="chatbubbles" size={48} color={colors.forest} />
               )}
-            </View>
-
-            {/* Progress Bar */}
-            <View style={styles.therapyProgressTrack}>
-              <View
-                style={[
-                  styles.therapyProgressFill,
-                  {
-                    width: `${therapyProgressPct}%`,
-                    backgroundColor: activeTherapyGoal.completed ? colors.greenDeep : colors.forest,
-                  },
-                ]}
-              />
-            </View>
-            <View style={styles.therapyProgressTextRow}>
-              <Text style={styles.therapyProgressNum}>
-                {activeTherapyGoal.currentCount} / {activeTherapyGoal.targetCount} {activeTherapyGoal.unit}
-              </Text>
-              <Text style={styles.therapyActionHint}>
-                {activeTherapyGoal.completed ? t("completedToday", lang) : t("startExercise", lang)} →
-              </Text>
             </View>
           </Pressable>
 
-          {/* 5. Four Primary Navigation Tiles */}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-            <Text style={styles.sectionTitle}>{t("quickAccess", lang)}</Text>
-            <Text style={{ fontSize: 12, color: colors.textMid, fontWeight: "600" }}>Tap to open</Text>
+          {/* Little progress strip */}
+          <View style={styles.statsRow}>
+            {STATS.map((st) => (
+              <View key={st.icon} style={[styles.statCard, isTablet && styles.statCardTablet]}>
+                <View style={[styles.statIcon, { backgroundColor: st.bg }]}>
+                  <Ionicons name={st.icon} size={20} color={st.tint} />
+                </View>
+                <View style={{ flexShrink: 1 }}>
+                  <Text style={styles.statValue}>{st.value}</Text>
+                  <Text style={styles.statLabel} numberOfLines={2}>{st.label}</Text>
+                </View>
+              </View>
+            ))}
           </View>
+
+          {/* Quick Access */}
+          <Text style={styles.sectionTitle}>{t("quickAccess", lang)}</Text>
           <View style={styles.quickGrid}>
             {QUICK_ACCESS.map((q) => (
               <Pressable
                 key={q.labelKey}
                 onPress={() => q.go(props)}
-                style={({ pressed }) => [
-                  styles.quickTile,
-                  isTablet && styles.quickTileTablet,
-                  { backgroundColor: q.bg },
-                  pressed && { transform: [{ scale: 0.98 }] },
-                ]}
+                style={({ pressed }) => [styles.quickTile, pressed && { transform: [{ scale: 0.98 }] }]}
               >
-                <View style={styles.quickIconBadge}>
-                  <Ionicons name={q.icon} size={isTablet ? 34 : 30} color={q.iconColor} />
-                </View>
-                <Text style={[styles.quickLabel, isTablet && { fontSize: 16 }]}>{t(q.labelKey, lang)}</Text>
-                <Text style={styles.quickDesc} numberOfLines={2}>{q.desc}</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {/* Visual Social Stories Banner (Tala Feature) */}
-          <Pressable
-            onPress={() => {
-              tapFeedback();
-              if (props.onOpenSocialStories) props.onOpenSocialStories();
-              else onOpenMore();
-            }}
-            style={({ pressed }) => [styles.socialStoryBanner, pressed && { transform: [{ scale: 0.99 }] }]}
-          >
-            <View style={styles.socialStoryLeft}>
-              <View style={styles.socialStoryIconCircle}>
-                <Ionicons name="book" size={24} color="#0d9488" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Text style={styles.socialStoryTitle}>Visual Social Stories</Text>
-                  <View style={styles.newBadge}>
-                    <Text style={styles.newBadgeText}>TALA FEATURE</Text>
-                  </View>
-                </View>
-                <Text style={styles.socialStorySub}>
-                  Dentist visit, haircut, school routines & calming guides with read-aloud voice.
-                </Text>
-              </View>
-            </View>
-            <View style={styles.socialStoryArrow}>
-              <Ionicons name="arrow-forward" size={18} color={colors.forest} />
-            </View>
-          </Pressable>
-
-          {/* 6. Today's Routine Highlights */}
-          <View style={styles.sectionHeaderRow}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Ionicons name="calendar-outline" size={16} color={colors.forest} />
-              <Text style={styles.sectionTitle}>{t("todaySchedule", lang)}</Text>
-            </View>
-            <Pressable
-              onPress={() => {
-                tapFeedback();
-                onTabChange("schedule");
-              }}
-              style={styles.seeAllBtn}
-              hitSlop={8}
-            >
-              <Text style={styles.seeAllText}>{t("viewFullSchedule", lang)}</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.forest} />
-            </Pressable>
-          </View>
-
-          <View style={[styles.scheduleContainer, isTablet && styles.scheduleContainerTablet]}>
-            {scheduleItems.map((item, i) => (
-              <Pressable
-                key={i}
-                onPress={() => handleOpenScheduleItem(item)}
-                style={({ pressed }) => [
-                  styles.scheduleRow,
-                  isTablet && styles.scheduleRowTablet,
-                  item.state === "now"
-                    ? styles.scheduleRowNow
-                    : { backgroundColor: item.state === "done" ? colors.cardMuted : colors.card },
-                  pressed && { opacity: 0.85, transform: [{ scale: 0.99 }] },
-                ]}
-              >
-                <View style={[styles.scheduleIcon, { backgroundColor: item.color }]}>
-                  <Ionicons name={item.iconName} size={isTablet ? 22 : 18} color={item.iconColor} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={[
-                      styles.scheduleLabel,
-                      isTablet && { fontSize: 16 },
-                      item.state === "done" && { textDecorationLine: "line-through", color: colors.textLight },
-                    ]}
-                  >
-                    {t(item.labelKey, lang)}
-                  </Text>
-                  <Text style={styles.scheduleTime}>{item.time}</Text>
-                </View>
-
-                {/* Status indicator / interactive checkmark */}
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    toggleScheduleItem(i);
-                  }}
-                  hitSlop={8}
-                >
-                  {item.state === "done" ? (
-                    <View style={styles.checkBadge}>
-                      <Ionicons name="checkmark" size={14} color="white" />
-                    </View>
-                  ) : item.state === "now" ? (
-                    <View style={styles.nowBadge}>
-                      <Text style={styles.nowBadgeText}>{t("happeningNow", lang).toUpperCase()}</Text>
-                    </View>
+                <Ionicons name="chevron-forward" size={16} color="#b6bec8" style={styles.quickChevron} />
+                <View style={[styles.quickIconBadge, { backgroundColor: q.bg }]}>
+                  {getPictogramUrl(q.picture) ? (
+                    <SmartImage source={{ uri: getPictogramUrl(q.picture)! }} style={styles.quickPic} />
                   ) : (
-                    <View style={styles.upcomingBadge}>
-                      <Ionicons name="ellipse-outline" size={22} color={colors.textLight} />
-                    </View>
+                    <Ionicons name={q.icon} size={isTablet ? 34 : 30} color={q.iconColor} />
                   )}
-                </Pressable>
+                </View>
+                <Text style={[styles.quickLabel, isTablet && { fontSize: 16 }]} numberOfLines={1}>{t(q.labelKey, lang)}</Text>
+                <Text style={styles.quickDesc} numberOfLines={2}>{q.desc}</Text>
               </Pressable>
             ))}
           </View>
@@ -593,331 +251,95 @@ const styles = StyleSheet.create({
   body: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 14 },
   bodyTablet: { maxWidth: 860, alignSelf: "center", width: "100%", paddingHorizontal: 28 },
 
-  /* Urgent Needs Express Bar */
-  urgentSection: {
-    backgroundColor: "#ffffff",
-    borderRadius: radiusLg,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: "#f1f5f9",
-    gap: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  urgentGrid: { flexDirection: "row", gap: 8 },
-  urgentTile: {
+  /* Quick Access */
+  sectionTitle: { fontSize: 17, fontWeight: "900", color: colors.textDark, marginTop: 6 },
+  quickGrid: { flexDirection: "row", gap: 12 },
+  quickTile: {
     flex: 1,
-    alignItems: "center",
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    gap: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  urgentIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  urgentTileLabel: { fontWeight: "800" },
-
-  /* Emotional Mood Check-In */
-  moodSection: {
     backgroundColor: "#ffffff",
     borderRadius: radiusLg,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: "#f1f5f9",
-    gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  sectionHeadingSmall: { fontSize: 12, fontWeight: "800", color: "#64748b", letterSpacing: 0.5 },
-  selectedMoodTag: {
-    flexDirection: "row",
-    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     gap: 4,
-    backgroundColor: "#dcfce7",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  selectedMoodTagText: { fontSize: 11, fontWeight: "700", color: "#166534" },
-  moodRow: { flexDirection: "row", justifyContent: "space-between", gap: 6 },
-  moodBtn: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 10,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    gap: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  moodBtnActive: {
-    borderColor: colors.forest,
-    borderWidth: 2,
-    backgroundColor: "#ffffff",
-    shadowOpacity: 0.08,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  moodSelectedDot: {
-    position: "absolute",
-    top: 5,
-    right: 5,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.forest,
-  },
-  moodBtnText: { fontSize: 11, fontWeight: "700" },
-
-  /* Doctor Therapy Target Card */
-  therapyBanner: {
-    backgroundColor: "white",
-    borderRadius: radiusLg,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    borderWidth: 1,
+    borderColor: "#e8edf2",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
-  therapyBannerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  therapyBadgeWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: colors.forest,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  therapyBadgeText: { color: "white", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
-  therapyStarReward: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#fef3c7",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  therapyStarText: { color: "#b45309", fontSize: 11, fontWeight: "800" },
-  therapyIconCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "#eff6ff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  therapyTitle: { fontSize: 15.5, fontWeight: "800", color: "#0f172a" },
-  therapySub: { fontSize: 12, color: "#64748b", marginTop: 2 },
-  therapyCheckCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.greenDeep,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  therapyProgressTrack: {
-    height: 9,
-    backgroundColor: "#f1f5f9",
-    borderRadius: 5,
-    overflow: "hidden",
-    marginTop: 6,
-  },
-  therapyProgressFill: {
-    height: "100%",
-    borderRadius: 5,
-  },
-  therapyProgressTextRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  therapyProgressNum: { fontSize: 12, color: "#64748b", fontWeight: "700" },
-  therapyActionHint: { fontSize: 12, fontWeight: "800", color: colors.forest },
-
-  /* 4 Quick Tiles Grid */
-  sectionTitle: { fontSize: 13, fontWeight: "800", color: colors.textDark, letterSpacing: 0.5 },
-  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 4 },
-  quickTile: {
-    width: "48%",
-    borderRadius: radiusLg,
-    paddingVertical: 18,
-    paddingHorizontal: 14,
-    gap: 6,
-    borderWidth: 1.5,
-    borderColor: "rgba(0,0,0,0.04)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  quickTileTablet: {
-    width: "23.4%",
-    paddingVertical: 20,
-    paddingHorizontal: 14,
-  },
+  quickChevron: { position: "absolute", top: 12, right: 10 },
   quickIconBadge: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "rgba(255,255,255,0.75)",
+    width: 60,
+    height: 60,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
-  },
-  quickLabel: { fontSize: 14.5, fontWeight: "800", color: colors.textDark },
-  quickDesc: { fontSize: 11, color: colors.textMid, lineHeight: 15 },
-
-  /* Schedule section */
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 6,
-    marginBottom: 2,
-  },
-  seeAllBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    borderRadius: 8,
-  },
-  seeAllText: {
-    fontSize: 12.5,
-    fontWeight: "700",
-    color: colors.forest,
-  },
-  scheduleContainer: { gap: 10 },
-  scheduleContainerTablet: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  scheduleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    borderRadius: radiusLg,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  scheduleRowTablet: {
-    width: "48.8%",
-  },
-  scheduleRowNow: { backgroundColor: colors.card, borderColor: colors.forest, borderWidth: 2 },
-  scheduleIcon: { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  scheduleLabel: { fontSize: 15, fontWeight: "700", color: colors.textDark },
-  scheduleTime: { fontSize: 12.5, color: colors.textLight, marginTop: 2 },
-  checkBadge: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.greenDeep, alignItems: "center", justifyContent: "center" },
-  nowBadge: { backgroundColor: colors.forest, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  nowBadgeText: { color: "white", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
-  upcomingBadge: {
-    width: 26,
-    height: 26,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  socialStoryBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#ffffff",
-    borderRadius: radiusLg,
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    padding: 16,
-    marginTop: 6,
     marginBottom: 6,
-    shadowColor: "#000",
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
   },
-  socialStoryLeft: {
+  quickLabel: { fontSize: 15, fontWeight: "800", color: colors.textDark },
+  quickDesc: { fontSize: 12, color: colors.textMid, lineHeight: 16 },
+  quickPic: { width: 44, height: 44 },
+
+  /* Start Talking card */
+  heroCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
+    backgroundColor: "#ffffff",
+    borderRadius: 24,
+    paddingVertical: 20,
+    paddingLeft: 24,
+    paddingRight: 18,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#e8edf2",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  heroAccent: { position: "absolute", left: 0, top: 0, bottom: 0, width: 6, backgroundColor: colors.forest },
+  heroKicker: { color: colors.forest, fontSize: 12, fontWeight: "900", letterSpacing: 1.2 },
+  heroTitle: { color: colors.textDark, fontSize: 20, fontWeight: "900", lineHeight: 26 },
+  heroBtn: {
+    marginTop: 6,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: colors.forest,
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+  },
+  heroBtnText: { color: "#ffffff", fontSize: 15, fontWeight: "800" },
+  heroPicBox: {
+    width: 96,
+    height: 96,
+    borderRadius: 22,
+    backgroundColor: "#eef6f1",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroPicBoxTablet: { width: 124, height: 124, borderRadius: 26 },
+  heroPic: { width: "78%", height: "78%" },
+
+  /* stats strip */
+  statsRow: { flexDirection: "row", gap: 12 },
+  statCard: {
     flex: 1,
+    backgroundColor: "#ffffff",
+    borderRadius: 18,
+    padding: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#e8edf2",
   },
-  socialStoryIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: "#fef3c7",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  socialStoryTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: colors.textDark,
-  },
-  socialStorySub: {
-    fontSize: 12,
-    color: colors.textMid,
-    marginTop: 2,
-    lineHeight: 16,
-  },
-  socialStoryArrow: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: "#f0f7f4",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 8,
-  },
-  newBadge: {
-    backgroundColor: "#fef3c7",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  newBadgeText: {
-    fontSize: 9,
-    fontWeight: "900",
-    color: "#b45309",
-    letterSpacing: 0.5,
-  },
+  statCardTablet: { flexDirection: "row", alignItems: "center", padding: 16, gap: 12 },
+  statIcon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  statValue: { fontSize: 22, fontWeight: "900", color: colors.textDark },
+  statLabel: { fontSize: 12, fontWeight: "600", color: colors.textMid },
 });

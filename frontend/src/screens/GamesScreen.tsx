@@ -21,6 +21,7 @@ import { getPictogramUrl } from "../modules/aacPictograms";
 import LangBadge from "../components/LangBadge";
 import TabBar from "../components/TabBar";
 import { colors, radius } from "../theme";
+import SmartImage from "../components/SmartImage";
 
 /** Real AAC pictogram (same ARASAAC set used on the Talk board) with an
  * emoji fallback — used by the puzzle games instead of plain emoji glyphs. */
@@ -29,10 +30,9 @@ function GamePic({ answer, emoji, size = 40 }: { answer: string; emoji: string; 
   const uri = useMemo(() => getPictogramUrl(answer), [answer]);
   if (uri && !imgError) {
     return (
-      <Image
+      <SmartImage
         source={{ uri }}
         style={{ width: size, height: size }}
-        resizeMode="contain"
         onError={() => setImgError(true)}
       />
     );

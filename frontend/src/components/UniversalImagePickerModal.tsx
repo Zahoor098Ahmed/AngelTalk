@@ -23,6 +23,7 @@ import {
 } from "../modules/builtInImageLibrary";
 import { compressImageForTile, saveLocalTileImage } from "../modules/imageSearch";
 import { ensureUsedPicturesLoaded, rememberPicture } from "../modules/usedPictures";
+import SmartImage from "./SmartImage";
 
 interface Props {
   visible: boolean;
@@ -277,7 +278,7 @@ export default function UniversalImagePickerModal({
           {/* Current Selection Preview Bar */}
           {previewUri ? (
             <View style={styles.selectedBanner}>
-              <Image source={{ uri: previewUri }} style={styles.selectedThumb} resizeMode="contain" />
+              <SmartImage source={{ uri: previewUri }} style={styles.selectedThumb} />
               <View style={{ flex: 1, paddingHorizontal: 10 }}>
                 <Text style={styles.selectedBannerText} numberOfLines={1}>
                   Current picture selected
@@ -438,7 +439,7 @@ export default function UniversalImagePickerModal({
                           style={[styles.symbolCard, isSelected && styles.symbolCardSelected]}
                           accessibilityLabel={`symbol-${item.id}`}
                         >
-                          <Image source={{ uri: item.url }} style={styles.symbolImg} resizeMode="contain" />
+                          <SmartImage source={{ uri: item.url }} style={styles.symbolImg} />
                           <Text style={styles.symbolName} numberOfLines={1}>
                             {item.name}
                           </Text>
@@ -522,7 +523,7 @@ export default function UniversalImagePickerModal({
                           }}
                           style={[styles.symbolCard, isSelected && styles.symbolCardSelected]}
                         >
-                          <Image source={{ uri: item.url }} style={styles.symbolImg} resizeMode="contain" />
+                          <SmartImage source={{ uri: item.url }} style={styles.symbolImg} />
                           <Text style={styles.symbolName} numberOfLines={1}>
                             {item.name}
                           </Text>

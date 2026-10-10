@@ -312,7 +312,6 @@ function MoreMenu({
   const tabShortcuts: { tab: TabScreen; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
     { tab: "home", label: t("homeHub", lang), icon: "home", color: colors.forest },
     { tab: "speak", label: t("aacTalkBoard", lang), icon: "chatbubble-ellipses", color: "#0284c7" },
-    { tab: "schedule", label: t("dailyRoutineSchedule", lang), icon: "calendar", color: "#d97706" },
     { tab: "games", label: t("speechLearningGames", lang), icon: "game-controller", color: "#059669" },
     { tab: "progress", label: t("doctorProgressReports", lang), icon: "stats-chart", color: "#7c3aed" },
   ];

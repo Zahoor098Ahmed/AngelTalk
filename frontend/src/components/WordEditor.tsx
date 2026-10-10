@@ -19,6 +19,7 @@ import { colors, radius, radiusSm } from "../theme";
 import { useSettings } from "../context/SettingsContext";
 import { t, canonicalWordEn } from "../modules/i18n";
 import UniversalImagePickerModal from "./UniversalImagePickerModal";
+import SmartImage from "./SmartImage";
 
 interface Props {
   visible: boolean;
@@ -292,7 +293,7 @@ export default function WordEditor({ visible, catId, word, onClose, onSaved }: P
                 accessibilityLabel="Choose picture"
               >
                 {imageUri ? (
-                  <Image source={{ uri: imageUri }} style={styles.previewImg} resizeMode="contain" />
+                  <SmartImage source={{ uri: imageUri }} style={styles.previewImg} />
                 ) : (
                   <Text style={{ fontSize: 40 }}>{emoji}</Text>
                 )}
@@ -603,7 +604,7 @@ function ImageSearchModal({
             )}
             {hits.map((h) => (
               <Pressable key={h.id} onPress={() => onPick(h)} style={styles.hit}>
-                <Image source={{ uri: h.thumb }} style={styles.hitImg} resizeMode="contain" />
+                <SmartImage source={{ uri: h.thumb }} style={styles.hitImg} />
                 {h.repo && (
                   <View style={styles.hitBadge}>
                     <Text style={styles.hitBadgeText} numberOfLines={1}>{h.repo}</Text>

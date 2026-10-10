@@ -45,6 +45,7 @@ import LangBadge from "../components/LangBadge";
 import { startListening, stopListening, isListening } from "../modules/voice";
 import VoiceMicStatus from "../components/VoiceMicStatus";
 import { parseVoiceCategoryCommand, parseVoicePlan, summarizeVoicePlan, mergeVoicePlan, cleanVoiceSpeechName, getCategoryIconForName, getCategoryColorForName, type ParsedVoiceResult, type VoicePlan, type VoicePlanShelf } from "../modules/voiceCategories";
+import SmartImage from "../components/SmartImage";
 
 const PASTEL_PALETTE = [
   "#D5E8DF", // mint
@@ -148,6 +149,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   const voicePlanAtMicStart = useRef<VoicePlan | null>(null);
   // Live transcript shows instantly; the (heavier) parse waits for a short gap in the words
   const voiceParseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [voiceTypedText, setVoiceTypedText] = useState("");
   const [voiceShelfId, setVoiceShelfId] = useState<string | null>(null);
   const [voiceSubCatId, setVoiceSubCatId] = useState<string | null>(null);
   const [bulkVoiceActive, setBulkVoiceActive] = useState<"words" | "shelves" | "subcats" | null>(null);
@@ -1070,6 +1072,17 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     });
   }
 
+  /** Typed text is understood exactly like speech and added to what was already said. */
+  function submitTypedVoice() {
+    const typed = voiceTypedText.trim();
+    if (!typed) return;
+    if (voiceListening) stopVoiceCapture();
+    const combined = [voiceRawTranscript, typed].filter(Boolean).join(". ");
+    setVoiceRawTranscript(combined);
+    applyVoiceText(combined, true);
+    setVoiceTypedText("");
+  }
+
   function scheduleVoiceParse(text: string, delayMs: number) {
     if (voiceParseTimer.current) clearTimeout(voiceParseTimer.current);
     voiceParseTimer.current = setTimeout(() => {
@@ -1631,10 +1644,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             ]}
                           />
                           {cat.imageUri ? (
-                            <Image
+                            <SmartImage
                               source={{ uri: cat.imageUri }}
                               style={{ width: 30, height: 30, borderRadius: 6, marginRight: 6 }}
-                              resizeMode="contain"
                             />
                           ) : (
                             <Text style={styles.shelfIcon}>{cat.icon || "📁"}</Text>
@@ -1889,10 +1901,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             hitSlop={4}
                           >
                             {w.imageUri ? (
-                              <Image
+                              <SmartImage
                                 source={{ uri: w.imageUri }}
                                 style={{ width: 44, height: 44, borderRadius: 8 }}
-                                resizeMode="contain"
                               />
                             ) : (
                               <Text style={[styles.wordBadgeIconText, { color: sym.color }]}>
@@ -2044,10 +2055,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         ]}
                       />
                       {cat.imageUri ? (
-                        <Image
+                        <SmartImage
                           source={{ uri: cat.imageUri }}
                           style={{ width: 20, height: 20, borderRadius: 4, marginRight: 4 }}
-                          resizeMode="contain"
                         />
                       ) : (
                         <Text style={styles.shelfIcon}>{cat.icon || "📁"}</Text>
@@ -2335,10 +2345,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                           hitSlop={4}
                         >
                           {w.imageUri ? (
-                            <Image
+                            <SmartImage
                               source={{ uri: w.imageUri }}
                               style={{ width: 28, height: 28, borderRadius: 6 }}
-                              resizeMode="contain"
                             />
                           ) : (
                             <Text style={[styles.wordBadgeIconText, { color: sym.color }]}>
@@ -2577,7 +2586,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               <View style={styles.editCatPicRow}>
                 {editCatImageUri ? (
                   <View style={styles.editCatPicPreviewWrap}>
-                    <Image source={{ uri: editCatImageUri }} style={styles.editCatPicPreview} resizeMode="contain" />
+                    <SmartImage source={{ uri: editCatImageUri }} style={styles.editCatPicPreview} />
                     <Pressable
                       onPress={() => setEditCatImageUri(undefined)}
                       style={styles.editCatPicRemoveBtn}
@@ -2699,6 +2708,22 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   <Text style={styles.voiceTranscriptText}>
                     "{voiceRawTranscript || (voiceListening ? "Listening..." : "Waiting for voice...")}"
                   </Text>
+                </View>
+
+                {/* Type it instead — same understanding as speech, for when the mic can't hear well */}
+                <View style={styles.voiceTypedRow}>
+                  <TextInput
+                    value={voiceTypedText}
+                    onChangeText={setVoiceTypedText}
+                    onSubmitEditing={submitTypedVoice}
+                    placeholder="Or type it: category vehicle sub category car words toyota, honda"
+                    placeholderTextColor="#8A9590"
+                    style={styles.voiceTypedInput}
+                    returnKeyType="done"
+                  />
+                  <Pressable onPress={submitTypedVoice} style={styles.voiceTypedBtn} accessibilityLabel="Use typed text">
+                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                  </Pressable>
                 </View>
 
                 {/* Quick Simulation / Test Voice Chips */}
@@ -2955,7 +2980,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         >
                           <Pressable onPress={openPicker} style={styles.bulkWordItemThumbWrap} accessibilityLabel={`Choose picture for ${row.name}`}>
                             {displayImg ? (
-                              <Image source={{ uri: displayImg }} style={styles.bulkWordItemThumb} resizeMode="contain" />
+                              <SmartImage source={{ uri: displayImg }} style={styles.bulkWordItemThumb} />
                             ) : (
                               <Text style={{ fontSize: 20 }}>{row.kind === "word" ? "🔹" : getCategoryIconForName(row.name)}</Text>
                             )}
@@ -3120,7 +3145,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               <View style={styles.editCatPicRow}>
                 {voiceImageUri ? (
                   <View style={styles.editCatPicPreviewWrap}>
-                    <Image source={{ uri: voiceImageUri }} style={styles.editCatPicPreview} resizeMode="contain" />
+                    <SmartImage source={{ uri: voiceImageUri }} style={styles.editCatPicPreview} />
                     <Pressable
                       onPress={() => setVoiceImageUri(undefined)}
                       style={styles.editCatPicRemoveBtn}
@@ -3391,7 +3416,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             <View style={styles.imagePickerRow}>
               {newWordImageUri ? (
                 <View style={styles.imagePreviewBox}>
-                  <Image source={{ uri: newWordImageUri }} style={styles.imagePreviewThumb} resizeMode="contain" />
+                  <SmartImage source={{ uri: newWordImageUri }} style={styles.imagePreviewThumb} />
                   <Pressable
                     onPress={() => setNewWordImageUri(undefined)}
                     style={styles.imagePreviewRemove}
@@ -3503,7 +3528,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             <View style={styles.imagePickerRow}>
               {newShelfImageUri ? (
                 <View style={styles.imagePreviewBox}>
-                  <Image source={{ uri: newShelfImageUri }} style={styles.imagePreviewThumb} resizeMode="contain" />
+                  <SmartImage source={{ uri: newShelfImageUri }} style={styles.imagePreviewThumb} />
                   <Pressable
                     onPress={() => setNewShelfImageUri(undefined)}
                     style={styles.imagePreviewRemove}
@@ -3852,7 +3877,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                                 accessibilityLabel={`Choose picture for ${pw}`}
                               >
                                 {displayImg ? (
-                                  <Image source={{ uri: displayImg }} style={styles.bulkWordItemThumb} resizeMode="contain" />
+                                  <SmartImage source={{ uri: displayImg }} style={styles.bulkWordItemThumb} />
                                 ) : (
                                   <Ionicons name="image-outline" size={20} color="#8A9590" />
                                 )}
@@ -4022,7 +4047,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                                 accessibilityLabel={`Choose picture for ${sh.name}`}
                               >
                                 {displayImg ? (
-                                  <Image source={{ uri: displayImg }} style={styles.bulkWordItemThumb} resizeMode="contain" />
+                                  <SmartImage source={{ uri: displayImg }} style={styles.bulkWordItemThumb} />
                                 ) : (
                                   <Text style={{ fontSize: 20 }}>{sh.icon}</Text>
                                 )}
@@ -4228,7 +4253,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                                 accessibilityLabel={`Choose picture for ${sc}`}
                               >
                                 {displayImg ? (
-                                  <Image source={{ uri: displayImg }} style={styles.bulkWordItemThumb} resizeMode="contain" />
+                                  <SmartImage source={{ uri: displayImg }} style={styles.bulkWordItemThumb} />
                                 ) : (
                                   <Text style={{ fontSize: 20 }}>{icon}</Text>
                                 )}
@@ -5761,6 +5786,32 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     textAlign: "center",
     marginBottom: 10,
+  },
+  voiceTypedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
+    marginTop: 10,
+  },
+  voiceTypedInput: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: "#B8D9CC",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    backgroundColor: "#FFFFFF",
+    color: "#1A3830",
+  },
+  voiceTypedBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#235E50",
+    alignItems: "center",
+    justifyContent: "center",
   },
   voiceTranscriptWrap: {
     width: "100%",

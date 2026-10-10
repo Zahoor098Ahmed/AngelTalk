@@ -121,6 +121,8 @@ let activeHandlers: VoiceHandlers | null = null;
 let isExplicitlyStopped = false;
 let sessionAccumulatedText = "";
 let lastFinalSessionText = "";
+/** Words still "in progress" when Chrome ends a session — kept instead of lost on restart. */
+let lastInterimSessionText = "";
 let silenceTimer: any = null;
 /**
  * Accumulate mode keeps listening until the user taps the mic again (pauses never end it).
@@ -201,7 +203,7 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
       function spawnWebRecognition() {
         if (isExplicitlyStopped || !activeHandlers) return;
         const rec = new (Rec as NonNullable<typeof Rec>)();
-        rec.lang = lang;
+        rec.lang = lang === "en-US" ? "en-IN" : lang;
         rec.continuous = true;
         rec.interimResults = true;
         rec.maxAlternatives = 1;
@@ -230,6 +232,7 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
             if (sessionFinal.trim()) {
               lastFinalSessionText = sessionFinal.trim();
             }
+            lastInterimSessionText = sessionInterim.trim();
             const currentTotalFinal = [sessionAccumulatedText, sessionFinal].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
             const currentTotalWithInterim = [currentTotalFinal, sessionInterim].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
 
@@ -300,9 +303,10 @@ export async function startListening(h: VoiceHandlers): Promise<boolean> {
           // If accumulate mode is enabled and user hasn't explicitly stopped,
           // bridge Chrome's silence auto-cutoff by rolling this session's finals into base and restarting after 150ms
           if (activeHandlers.accumulate) {
-            if (lastFinalSessionText) {
-              sessionAccumulatedText = [sessionAccumulatedText, lastFinalSessionText].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+            if (lastFinalSessionText || lastInterimSessionText) {
+              sessionAccumulatedText = [sessionAccumulatedText, lastFinalSessionText, lastInterimSessionText].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
               lastFinalSessionText = "";
+              lastInterimSessionText = "";
             }
             setTimeout(() => {
               if (!isExplicitlyStopped && activeHandlers) {

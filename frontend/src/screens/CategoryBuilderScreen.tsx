@@ -10,6 +10,7 @@ import { resolveEmoji, nextEmojiVariant, generateImageForWord, hasImageProvider 
 import { createCategory } from "../modules/customCategories";
 import UniversalImagePickerModal from "../components/UniversalImagePickerModal";
 import { colors, radius } from "../theme";
+import SmartImage from "../components/SmartImage";
 
 interface Props {
   onBack: () => void;
@@ -181,7 +182,7 @@ export default function CategoryBuilderScreen({ onBack, onSaved }: Props) {
             <View style={styles.catImageRow}>
               {catImageUri ? (
                 <View style={styles.catImagePreview}>
-                  <Image source={{ uri: catImageUri }} style={{ width: 44, height: 44, borderRadius: 8 }} resizeMode="contain" />
+                  <SmartImage source={{ uri: catImageUri }} style={{ width: 44, height: 44, borderRadius: 8 }} />
                   <Pressable
                     onPress={() => setCatImageUri(undefined)}
                     style={styles.catImageRemoveBtn}
@@ -234,10 +235,9 @@ export default function CategoryBuilderScreen({ onBack, onSaved }: Props) {
                     style={styles.cellArt}
                   >
                     {d.imageUri ? (
-                      <Image
+                      <SmartImage
                         source={{ uri: d.imageUri }}
                         style={{ width: 42, height: 42, borderRadius: 8 }}
-                        resizeMode="contain"
                       />
                     ) : (
                       <Text style={{ fontSize: 34 }}>{d.emoji}</Text>
