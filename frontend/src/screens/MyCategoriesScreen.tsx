@@ -34,6 +34,7 @@ import {
   setWordHidden,
   cleanAndDeduplicateCategories,
   retranslateSeedBoard,
+  setCategoryWordOrder,
   setSeedLanguage, verbFolderLetter } from "../modules/customCategories";
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { searchImages } from "../modules/imageSearch";
@@ -153,6 +154,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   const [voiceShelfId, setVoiceShelfId] = useState<string | null>(null);
   const [voiceSubCatId, setVoiceSubCatId] = useState<string | null>(null);
   const [bulkVoiceActive, setBulkVoiceActive] = useState<"words" | "shelves" | "subcats" | null>(null);
+  // Word sorting preference: 'alphabetical' (A-Z) vs 'as-spoken' (as entered/spoken)
+  const [wordSortMode, setWordSortMode] = useState<"as-spoken" | "alphabetical">("as-spoken");
+  const [voiceWordSortMode, setVoiceWordSortMode] = useState<"as-spoken" | "alphabetical">("as-spoken");
 
   // Unified Bulk Creator Modal (Words | Shelves | Sub-categories)
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
@@ -425,6 +429,21 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     return activeCategory?.id || currentShelf?.id || "";
   }, [editorWord, cats, activeCategory, currentShelf]);
 
+  // Sync category sort order preference
+  useEffect(() => {
+    if (activeCategory?.wordSortOrder) {
+      setWordSortMode(activeCategory.wordSortOrder);
+    }
+  }, [activeCategory?.id, activeCategory?.wordSortOrder]);
+
+  function handleToggleWordOrder(mode: "alphabetical" | "as-spoken") {
+    setWordSortMode(mode);
+    if (activeCategory) {
+      setCategoryWordOrder(activeCategory.id, mode);
+      refresh();
+    }
+  }
+
   // Filtered words in active category
   const displayWords = useMemo(() => {
     if (!activeCategory) return [];
@@ -447,13 +466,20 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     }
 
     const q = wordSearch.trim().toLowerCase();
-    if (!q) return sourceWords;
-    return sourceWords.filter(
-      (w) =>
-        w.label.toLowerCase().includes(q) ||
-        (w.phrase && w.phrase.toLowerCase().includes(q))
-    );
-  }, [activeCategory, selectedSubCatId, subCats, wordSearch, tick]);
+    let filtered = !q
+      ? sourceWords
+      : sourceWords.filter(
+          (w) =>
+            w.label.toLowerCase().includes(q) ||
+            (w.phrase && w.phrase.toLowerCase().includes(q))
+        );
+
+    if (wordSortMode === "alphabetical") {
+      return [...filtered].sort((a, b) => (a.label || "").localeCompare(b.label || "", undefined, { sensitivity: "base" }));
+    } else {
+      return [...filtered].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
+  }, [activeCategory, selectedSubCatId, subCats, wordSearch, wordSortMode, tick]);
 
   // Auto-detect verb forms for single word modal
   const detectedVerbForms = useMemo(() => {
@@ -829,13 +855,12 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     if (modalTargetCatId) {
       targetCat = getCategory(modalTargetCatId);
     }
-    // Prevent adding to main shelf - words must belong to a sub-category
-    if (!targetCat || !targetCat.parentCategoryId || targetCat.id === targetWordsShelf?.id) {
+    // Words belong to sub-category if present, or directly to shelf if no sub-categories exist
+    if (!targetCat || targetCat.id === targetWordsShelf?.id) {
       if (targetWordsSubCats.length > 0) {
         targetCat = targetWordsSubCats[0];
       } else {
-        Alert.alert("Sub-category Required", "Words must be added to a sub-category. Please create a sub-category first.");
-        return;
+        targetCat = targetWordsShelf || currentShelf || undefined;
       }
     }
     if (!bulkWordsText.trim() || !targetCat) return;
@@ -1024,7 +1049,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     setVoicePlanImages({});
     voicePlanAtMicStart.current = null;
     voiceAutoImageTried.current = new Set();
-    setVoiceTargetType("category");
+    setVoiceTargetType("word");
     const initialShelf = currentShelf || cats[0] || null;
     setVoiceShelfId(initialShelf?.id || null);
     const subs = initialShelf ? childCategories(initialShelf.id) : [];
@@ -1372,18 +1397,29 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         touchedCats.push(sub.id);
       }
 
-      // Words spoken straight after a shelf: they must live in a sub-category
+      // Words spoken straight after a shelf: add directly to shelf if no subcategories exist, or to target subcategory
       if (node.words.some((w) => w.name.trim())) {
+        const subsOfShelf = childCategories(shelf.id);
         const targetSub =
           (!node.name && voiceSubCatId && getCategory(voiceSubCatId)?.parentCategoryId === shelf.id
             ? getCategory(voiceSubCatId)
             : undefined) ||
-          childCategories(shelf.id)[0] ||
-          findOrCreateSub(shelf, "General");
-        if (!firstSub) firstSub = targetSub;
-        const inserts = insertsFor(node.words);
-        if (inserts.length > 0) addWordsBulk(targetSub.id, inserts);
-        touchedCats.push(targetSub.id);
+          (subsOfShelf.length > 0 ? subsOfShelf[0] : null);
+
+        // If category has no subcategories, add directly to shelf!
+        const destCat = targetSub || shelf;
+        if (!firstSub && targetSub) firstSub = targetSub;
+        let inserts = insertsFor(node.words);
+        if (voiceWordSortMode === "alphabetical") {
+          inserts = [...inserts].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+        }
+        if (inserts.length > 0) {
+          addWordsBulk(destCat.id, inserts);
+          if (voiceWordSortMode) {
+            setCategoryWordOrder(destCat.id, voiceWordSortMode);
+          }
+        }
+        touchedCats.push(destCat.id);
       }
     }
 
@@ -1492,20 +1528,35 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
       if (voiceSubCatId) {
         targetCat = getCategory(voiceSubCatId);
       }
-      if (!targetCat || !targetCat.parentCategoryId) {
+      if (!targetCat) {
         if (voiceTargetSubCats.length > 0) {
           targetCat = voiceTargetSubCats[0];
         } else {
-          Alert.alert("Sub-category Required", "Words must be added to a sub-category. Please select or create a sub-category first.");
-          return;
+          // If shelf has no sub-categories or none chosen, add directly into the shelf!
+          targetCat = voiceTargetShelf || currentShelf || undefined;
         }
       }
+      if (!targetCat) {
+        Alert.alert("Category Required", "Please select or create a category first.");
+        return;
+      }
 
-      const toInsert = buildVoiceWordInserts(finalItems, voiceIcon || "🔹");
+      let toInsert = buildVoiceWordInserts(finalItems, voiceIcon || "🔹");
+      if (voiceWordSortMode === "alphabetical") {
+        toInsert = [...toInsert].sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+      }
       if (toInsert.length > 0) {
         addWordsBulk(targetCat.id, toInsert);
-        if (voiceTargetShelf) setSelectedShelfId(voiceTargetShelf.id);
-        setSelectedSubCatId(targetCat.id);
+        if (voiceWordSortMode) {
+          setCategoryWordOrder(targetCat.id, voiceWordSortMode);
+        }
+        if (targetCat.parentCategoryId) {
+          setSelectedShelfId(targetCat.parentCategoryId);
+          setSelectedSubCatId(targetCat.id);
+        } else {
+          setSelectedShelfId(targetCat.id);
+          setSelectedSubCatId(null);
+        }
       }
     }
 
@@ -1851,15 +1902,38 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   </Text>
                 </View>
 
-                <View style={styles.searchBarWrap}>
-                  <Ionicons name="search" size={16} color="#8A9590" />
-                  <TextInput
-                    value={wordSearch}
-                    onChangeText={setWordSearch}
-                    placeholder={t("findAWordPlaceholder", lang)}
-                    placeholderTextColor="#8A9590"
-                    style={styles.searchInput}
-                  />
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <View style={styles.sortToggleRow}>
+                    <Pressable
+                      onPress={() => handleToggleWordOrder("alphabetical")}
+                      style={[styles.sortBtn, wordSortMode === "alphabetical" && styles.sortBtnActive]}
+                    >
+                      <Ionicons name="text" size={12} color={wordSortMode === "alphabetical" ? "#FFFFFF" : "#235E50"} />
+                      <Text style={[styles.sortBtnText, wordSortMode === "alphabetical" && styles.sortBtnTextActive]}>
+                        A-Z (Alphabetical)
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleToggleWordOrder("as-spoken")}
+                      style={[styles.sortBtn, wordSortMode === "as-spoken" && styles.sortBtnActive]}
+                    >
+                      <Ionicons name="mic-outline" size={12} color={wordSortMode === "as-spoken" ? "#FFFFFF" : "#235E50"} />
+                      <Text style={[styles.sortBtnText, wordSortMode === "as-spoken" && styles.sortBtnTextActive]}>
+                        As Spoken / Added
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.searchBarWrap}>
+                    <Ionicons name="search" size={16} color="#8A9590" />
+                    <TextInput
+                      value={wordSearch}
+                      onChangeText={setWordSearch}
+                      placeholder={t("findAWordPlaceholder", lang)}
+                      placeholderTextColor="#8A9590"
+                      style={styles.searchInput}
+                    />
+                  </View>
                 </View>
               </View>
 
@@ -2159,6 +2233,28 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     <Text style={styles.mobileAddSubBtnText}>{t("addSubCategorySidebar", lang)}</Text>
                   </Pressable>
                 </View>
+              </View>
+
+              {/* Order Toggle for Mobile */}
+              <View style={[styles.sortToggleRowMobile, isRtl && { flexDirection: "row-reverse" }]}>
+                <Pressable
+                  onPress={() => handleToggleWordOrder("alphabetical")}
+                  style={[styles.sortBtnMobile, wordSortMode === "alphabetical" && styles.sortBtnActiveMobile]}
+                >
+                  <Ionicons name="text" size={12} color={wordSortMode === "alphabetical" ? "#FFFFFF" : "#235E50"} />
+                  <Text style={[styles.sortBtnTextMobile, wordSortMode === "alphabetical" && styles.sortBtnTextActiveMobile]}>
+                    A-Z (Alphabetical)
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => handleToggleWordOrder("as-spoken")}
+                  style={[styles.sortBtnMobile, wordSortMode === "as-spoken" && styles.sortBtnActiveMobile]}
+                >
+                  <Ionicons name="mic-outline" size={12} color={wordSortMode === "as-spoken" ? "#FFFFFF" : "#235E50"} />
+                  <Text style={[styles.sortBtnTextMobile, wordSortMode === "as-spoken" && styles.sortBtnTextActiveMobile]}>
+                    As Spoken / Added
+                  </Text>
+                </Pressable>
               </View>
 
               {/* Search Bar */}
@@ -2897,6 +2993,14 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   </View>
                   {voiceTargetSubCats.length > 0 ? (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.modalTargetRow}>
+                      <Pressable
+                        onPress={() => setVoiceSubCatId(null)}
+                        style={[styles.modalTargetPill, !voiceSubCatId && styles.modalTargetPillActive]}
+                      >
+                        <Text style={[styles.modalTargetPillText, !voiceSubCatId && styles.modalTargetPillTextActive]}>
+                          ★ Directly in "{voiceTargetShelf?.name || "Shelf"}"
+                        </Text>
+                      </Pressable>
                       {voiceTargetSubCats.map((sc) => (
                         <Pressable
                           key={sc.id}
@@ -2910,10 +3014,10 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                       ))}
                     </ScrollView>
                   ) : (
-                    <View style={styles.noSubCatsBox}>
-                      <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
-                      <Text style={styles.noSubCatsText}>
-                        "{voiceTargetShelf?.name}" has no sub-categories yet. Words can only be added to sub-categories.
+                    <View style={[styles.noSubCatsBox, { backgroundColor: "#E7F3EE", borderColor: "#A5D6A7" }]}>
+                      <Ionicons name="checkmark-circle-outline" size={16} color="#235E50" />
+                      <Text style={[styles.noSubCatsText, { color: "#235E50" }]}>
+                        "{voiceTargetShelf?.name}" has no sub-categories. Words will be created directly inside "{voiceTargetShelf?.name}".
                       </Text>
                     </View>
                   )}
@@ -2934,6 +3038,29 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 </View>
               </View>
               )}
+
+              {/* Voice Word Sort Mode Toggle */}
+              <View style={styles.voiceSortToggleRow}>
+                <Text style={styles.voiceSortToggleLabel}>Save Word Order:</Text>
+                <Pressable
+                  onPress={() => setVoiceWordSortMode("alphabetical")}
+                  style={[styles.voiceSortBtn, voiceWordSortMode === "alphabetical" && styles.voiceSortBtnActive]}
+                >
+                  <Ionicons name="text" size={12} color={voiceWordSortMode === "alphabetical" ? "#FFFFFF" : "#235E50"} />
+                  <Text style={[styles.voiceSortBtnText, voiceWordSortMode === "alphabetical" && styles.voiceSortBtnTextActive]}>
+                    A-Z (Alphabetical)
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setVoiceWordSortMode("as-spoken")}
+                  style={[styles.voiceSortBtn, voiceWordSortMode === "as-spoken" && styles.voiceSortBtnActive]}
+                >
+                  <Ionicons name="mic-outline" size={12} color={voiceWordSortMode === "as-spoken" ? "#FFFFFF" : "#235E50"} />
+                  <Text style={[styles.voiceSortBtnText, voiceWordSortMode === "as-spoken" && styles.voiceSortBtnTextActive]}>
+                    As Spoken (Original)
+                  </Text>
+                </Pressable>
+              </View>
 
               {/* Full tree spoken in one sentence: shelves -> sub-categories -> words */}
               {voicePlan && (
@@ -6039,5 +6166,108 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: "#1F594A",
+  },
+  // Sort order toggle controls
+  sortToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0EFEB",
+    borderRadius: 10,
+    padding: 3,
+    gap: 4,
+  },
+  sortBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  sortBtnActive: {
+    backgroundColor: "#235E50",
+  },
+  sortBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#4A6B62",
+  },
+  sortBtnTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  sortToggleRowMobile: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F0EFEB",
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 8,
+    gap: 4,
+  },
+  sortBtnMobile: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  sortBtnActiveMobile: {
+    backgroundColor: "#235E50",
+  },
+  sortBtnTextMobile: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#4A6B62",
+  },
+  sortBtnTextActiveMobile: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  voiceSortToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F3EC",
+    borderRadius: 12,
+    padding: 6,
+    marginTop: 10,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "#E2DDD0",
+  },
+  voiceSortToggleLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#235E50",
+    marginLeft: 4,
+    marginRight: 2,
+  },
+  voiceSortBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#DCD7CA",
+  },
+  voiceSortBtnActive: {
+    backgroundColor: "#235E50",
+    borderColor: "#235E50",
+  },
+  voiceSortBtnText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#235E50",
+  },
+  voiceSortBtnTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
 });

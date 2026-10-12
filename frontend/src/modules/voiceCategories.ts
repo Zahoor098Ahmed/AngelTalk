@@ -489,6 +489,11 @@ const SPOKEN_REWRITES: [RegExp, string | ((...m: string[]) => string)][] = [
   // "and add word", "add word", "add a word", "add words"
   [spokenWord("(?:and\\s+)?(?:i['’]?d\\s+)?(?:add|insert|put|daalo?)\\s+(?:a\\s+|an\\s+|the\\s+)?(?:words?|tiles?|cards?|alfaaz|lafz)"), " words "],
   [spokenWord("(?:and|aur|plus|then)\\s+(?:the\\s+|a\\s+)?(?:words?|word)"), " words "],
+  // "and this is word / these are words / it has words / having words / with words"
+  [spokenWord("(?:and|aur|plus|then)?\\s*(?:this\\s+is|these\\s+are|there\\s+are|it\\s+has|having|with)\\s+(?:the\\s+|a\\s+|an\\s+)?(?:words?|word|alfaaz|lafz)"), " words "],
+  // "is ke words / us ke words / is mein words / us mein words / aur ye words"
+  [spokenWord("(?:and|aur)?\\s*(?:is|us|uss|iss)\\s+(?:ke|ki|ka|mein|me|main)\\s+(?:words?|word|alfaaz|lafz)"), " words "],
+  [spokenWord("(?:aur\\s+)?(?:ye|yeh|yehi)\\s+(?:words?|word|alfaaz|lafz)"), " words "],
   [spokenWord("(?:words?|alfaaz|lafz)\\s+(?:of|are|is|called|named|like)"), " words "],
   [spokenWord("can you|could you|would you|will you|i want to|i wanna|i would like to|i'd like to|let's|lets|please|pls|umm+|um+|uh+|hmm+"), " "],
   [spokenWord("daal do|daldo|daalo|dalo|daal dein|rakh do|rakho|add kar do|add karo|add kardo|add karein|bana do|banado|kar do|kardo|karo|karein|kijiye|kariye|zara"), " "],
@@ -614,11 +619,11 @@ export function parseVoicePlan(raw: string): VoicePlan {
     let kind = seg.kind;
     let isExplicit = false;
     if (kind === "lead") {
-      // Unmarked text at the start: "fruits with subcategories ..." -> shelf, "fruits words ..." -> sub-category
-      // No keyword heard at all ("create a the name of book" — engine dropped "category"):
-      // treat it as shelf name(s), with command words stripped -> "Book"
+      // Unmarked text at the start:
+      // "fruits with subcategories ..." -> shelf, "fruits words ..." -> sub-category
+      // Standalone unmarked words ("this", "apple", "dog, cat"): these are WORDS for the active category!
       const next = segments[i + 1]?.kind;
-      kind = next === "words" ? "sub" : "shelf";
+      kind = next === "words" ? "sub" : next === "sub" ? "shelf" : "words";
     } else if (kind === "shelf") {
       isExplicit = true;
     } else if (kind === "inside") {
@@ -871,8 +876,8 @@ export function parseVoiceCategoryCommand(rawInput: string): ParsedVoiceResult {
   const raw = normalizeSpokenCommand(rawInput);
   const lower = raw.toLowerCase();
 
-  // 1. Detect Intent
-  let intent: "category" | "subcategory" | "words" = "category";
+  // 1. Detect Intent: defaults to words unless category/subcategory keywords are explicitly spoken
+  let intent: "category" | "subcategory" | "words" = "words";
   if (
     lower.includes("sub category") ||
     lower.includes("sub-category") ||
@@ -897,19 +902,6 @@ export function parseVoiceCategoryCommand(rawInput: string): ParsedVoiceResult {
   ) {
     intent = "subcategory";
   } else if (
-    lower.includes("add word") ||
-    lower.includes("new word") ||
-    lower.includes("add words") ||
-    lower.includes("words of") ||
-    lower.includes("words") ||
-    lower.includes("word") ||
-    lower.includes("alfaaz") ||
-    lower.includes("lafz") ||
-    lower.includes("tiles") ||
-    lower.includes("tile")
-  ) {
-    intent = "words";
-  } else if (
     lower.includes("category") ||
     lower.includes("categories") ||
     lower.includes("catogirese") ||
@@ -918,6 +910,8 @@ export function parseVoiceCategoryCommand(rawInput: string): ParsedVoiceResult {
     lower.includes("shelves")
   ) {
     intent = "category";
+  } else {
+    intent = "words";
   }
 
   // 2. Check for Hierarchical Command:

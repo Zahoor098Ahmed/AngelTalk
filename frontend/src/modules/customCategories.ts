@@ -2766,7 +2766,9 @@ export function addWord(
           isCustom: true,
         });
       });
-      c.words = sortWordsForCategory(c.words, c.name);
+      if (c.wordSortOrder !== "as-spoken") {
+        c.words = sortWordsForCategory(c.words, c.name);
+      }
       c.words.forEach((w, i) => { w.order = i; });
     } else if (!mergeIntoExistingWord(c, { ...word, label: cleanLabel })) {
       c.words.push({
@@ -2786,7 +2788,9 @@ export function addWord(
         isCustom: true,
         seedLabel: enWord,
       });
-      c.words = sortWordsForCategory(c.words, c.name);
+      if (c.wordSortOrder !== "as-spoken") {
+        c.words = sortWordsForCategory(c.words, c.name);
+      }
       c.words.forEach((w, i) => { w.order = i; });
     }
   });
@@ -2874,10 +2878,27 @@ export function addWordsBulk(
         seedLabel: enWord,
       });
     });
-    c.words = sortWordsForCategory(c.words, c.name);
+    if (c.wordSortOrder !== "as-spoken") {
+      c.words = sortWordsForCategory(c.words, c.name);
+    }
     c.words.forEach((w, i) => { w.order = i; });
     // Bulk-added verbs inside "Verbs X" are moved to their own letter folders
     if (verbSubLetter(c)) enforceVerbLetterBuckets();
+  });
+}
+
+/** Set word sorting preference for a category ('alphabetical' or 'as-spoken') */
+export function setCategoryWordOrder(catId: string, orderMode: "alphabetical" | "as-spoken") {
+  return mutate(catId, (c) => {
+    c.wordSortOrder = orderMode;
+    if (orderMode === "alphabetical") {
+      c.words = sortWordsForCategory(c.words, c.name);
+    } else {
+      c.words = [...c.words].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
+    c.words.forEach((w, i) => {
+      w.order = i;
+    });
   });
 }
 

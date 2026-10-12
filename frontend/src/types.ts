@@ -309,6 +309,8 @@ export interface CustomCategory {
   parentCategoryId?: string | null;
   order?: number;
   words: CustomWord[];
+  /** Word ordering preference for this category */
+  wordSortOrder?: 'alphabetical' | 'as-spoken';
   /** True if category name, icon or color was customized by user */
   isCustom?: boolean;
   /** Original seed English category name */
