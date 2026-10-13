@@ -451,7 +451,7 @@ export const KNOWN_REGULAR_VERBS = new Set([
   // T
   "talk", "tame", "tap", "taste", "tease", "telephone", "tempt", "terrify", "test", "thank",
   "thaw", "tick", "tickle", "tie", "time", "tip", "tire", "touch", "tour", "tow", "trace",
-  "trade", "train", "transport", "trap", "travel", "treat", "tremble", "trick", "trip",
+  "trade", "transport", "trap", "travel", "treat", "tremble", "trick", "trip",
   "trot", "trouble", "trust", "try", "tug", "tumble", "turn", "twist", "type",
   // U
   "undress", "unfasten", "unlock", "unpack", "untidy", "use",
@@ -582,8 +582,8 @@ export function isKnownNonVerb(word: string): boolean {
 export function isVerb(word: string): boolean {
   const clean = (word || "").trim().toLowerCase();
   if (!clean || clean.length < 2) return false;
-  // If it's a known non-verb and not directly in the verb dictionary, it is NOT a verb
-  if (isKnownNonVerb(clean) && !LOOKUP_MAP.has(clean) && !KNOWN_REGULAR_VERBS.has(clean)) return false;
+  // If it's a known non-verb and not in the explicit irregular verb lookup, it is NOT a verb
+  if (isKnownNonVerb(clean) && !LOOKUP_MAP.has(clean)) return false;
   if (LOOKUP_MAP.has(clean)) return true;
   if (KNOWN_REGULAR_VERBS.has(clean)) return true;
   // Multi-word phrase starting with a verb (e.g. "eat apple", "go home")
@@ -609,8 +609,8 @@ export function generateAllVerbForms(inputWord: string): VerbForms | null {
   const clean = (inputWord || "").trim().toLowerCase();
   if (!clean || clean.length < 2) return null;
 
-  // 1. If it's a known noun / non-verb and not directly in the verb dictionary, return null!
-  if (isKnownNonVerb(clean) && !LOOKUP_MAP.has(clean) && !KNOWN_REGULAR_VERBS.has(clean)) {
+  // 1. If it's a known noun / non-verb and not directly in the irregular verb dictionary, return null!
+  if (isKnownNonVerb(clean) && !LOOKUP_MAP.has(clean)) {
     return null;
   }
 

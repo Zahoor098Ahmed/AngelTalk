@@ -102,7 +102,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   const [addWordOpen, setAddWordOpen] = useState(false);
   const [newWordText, setNewWordText] = useState("");
   const [newWordColor, setNewWordColor] = useState(PASTEL_PALETTE[0]);
-  const [autoAddVerbForms, setAutoAddVerbForms] = useState(true);
+  const [autoAddVerbForms, setAutoAddVerbForms] = useState(false);
 
   const [bulkWordsOpen, setBulkWordsOpen] = useState(false);
   const [bulkWordsText, setBulkWordsText] = useState("");
@@ -120,6 +120,11 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   const [newShelfIcon, setNewShelfIcon] = useState("💬");
   const [newShelfImageUri, setNewShelfImageUri] = useState<string | undefined>();
   const [newWordImageUri, setNewWordImageUri] = useState<string | undefined>();
+
+  // Dedicated Voice Mic States for Shelf, Sub-category, and Word modals
+  const [shelfVoiceActive, setShelfVoiceActive] = useState(false);
+  const [subCatVoiceActive, setSubCatVoiceActive] = useState(false);
+  const [wordVoiceActive, setWordVoiceActive] = useState(false);
 
   // Category / Shelf Edit Modal (Parent editing)
   const [editCatOpen, setEditCatOpen] = useState(false);
@@ -744,105 +749,301 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     refresh();
   }
 
+  function toggleShelfVoice() {
+    if (shelfVoiceActive) {
+      stopListening();
+      setShelfVoiceActive(false);
+      return;
+    }
+    stopListening();
+    setSubCatVoiceActive(false);
+    setWordVoiceActive(false);
+    setShelfVoiceActive(true);
+
+    const recognitionLang = lang.startsWith("ur") ? "ur-PK" : lang.startsWith("ar") ? "ar-SA" : lang;
+    startListening({
+      lang: recognitionLang,
+      accumulate: true,
+      onPartial: (text) => handleShelfVoiceInput(text),
+      onFinal: (text) => handleShelfVoiceInput(text),
+      onError: () => setShelfVoiceActive(false),
+      onEnd: () => setShelfVoiceActive(false),
+    });
+  }
+
+  function handleShelfVoiceInput(rawText: string) {
+    if (!rawText.trim()) return;
+    const parsed = parseVoiceCategoryCommand(rawText);
+    const items = parsed.items.length > 0 ? parsed.items : [parsed.cleanName];
+    setNewShelfName(items.join(", "));
+    if (parsed.icon && (!newShelfIcon || newShelfIcon === "💬")) {
+      setNewShelfIcon(parsed.icon);
+    }
+    if (parsed.imageUri && !newShelfImageUri) {
+      setNewShelfImageUri(parsed.imageUri);
+    }
+  }
+
+  function toggleSubCatVoice() {
+    if (subCatVoiceActive) {
+      stopListening();
+      setSubCatVoiceActive(false);
+      return;
+    }
+    stopListening();
+    setShelfVoiceActive(false);
+    setWordVoiceActive(false);
+    setSubCatVoiceActive(true);
+
+    const recognitionLang = lang.startsWith("ur") ? "ur-PK" : lang.startsWith("ar") ? "ar-SA" : lang;
+    startListening({
+      lang: recognitionLang,
+      accumulate: true,
+      onPartial: (text) => handleSubCatVoiceInput(text),
+      onFinal: (text) => handleSubCatVoiceInput(text),
+      onError: () => setSubCatVoiceActive(false),
+      onEnd: () => setSubCatVoiceActive(false),
+    });
+  }
+
+  function handleSubCatVoiceInput(rawText: string) {
+    if (!rawText.trim()) return;
+    const parsed = parseVoiceCategoryCommand(rawText);
+    const items = parsed.items.length > 0 ? parsed.items : [parsed.cleanName];
+    setSubCatName(items.join(", "));
+  }
+
+  function toggleWordVoice() {
+    if (wordVoiceActive) {
+      stopListening();
+      setWordVoiceActive(false);
+      return;
+    }
+    stopListening();
+    setShelfVoiceActive(false);
+    setSubCatVoiceActive(false);
+    setWordVoiceActive(true);
+
+    const recognitionLang = lang.startsWith("ur") ? "ur-PK" : lang.startsWith("ar") ? "ar-SA" : lang;
+    startListening({
+      lang: recognitionLang,
+      accumulate: true,
+      onPartial: (text) => handleWordVoiceInput(text),
+      onFinal: (text) => handleWordVoiceInput(text),
+      onError: () => setWordVoiceActive(false),
+      onEnd: () => setWordVoiceActive(false),
+    });
+  }
+
+  function handleWordVoiceInput(rawText: string) {
+    if (!rawText.trim()) return;
+    const parsed = parseVoiceCategoryCommand(rawText);
+    const items = parsed.items.length > 0 ? parsed.items : [parsed.cleanName];
+    setNewWordText(items.join(", "));
+    if (items.length === 1) {
+      const pic = getPictogramUrl(items[0]);
+      if (pic && !newWordImageUri) {
+        setNewWordImageUri(pic);
+      }
+    }
+  }
+
+  function openAddWordUnified() {
+    if (selectedSubCatId) {
+      setModalTargetCatId(selectedSubCatId);
+    } else if (subCats.length > 0) {
+      setModalTargetCatId(subCats[0].id);
+      setSelectedSubCatId(subCats[0].id);
+    } else if (currentShelf) {
+      setModalTargetCatId(currentShelf.id);
+    }
+    setNewWordText("");
+    setNewWordImageUri(undefined);
+    setNewWordColor(PASTEL_PALETTE[0]);
+    setAutoAddVerbForms(false);
+    setWordVoiceActive(false);
+    setAddWordOpen(true);
+  }
+
   function handleCreateWord() {
-    const text = newWordText.trim();
+    const raw = newWordText.trim();
+    if (!raw) return;
+
     let targetCat =
-      (modalTargetCatId ? subCats.find((s) => s.id === modalTargetCatId) : null) ||
-      (selectedSubCatId ? subCats.find((s) => s.id === selectedSubCatId) : null) ||
+      (modalTargetCatId ? getCategory(modalTargetCatId) : null) ||
+      (selectedSubCatId ? getCategory(selectedSubCatId) : null) ||
       (subCats.length > 0 ? subCats[0] : null) ||
       currentShelf;
 
-    if (!text || !targetCat) {
-      if (!targetCat) {
-        Alert.alert("Category Required", "Please select or create a category first.");
-      }
+    if (!targetCat) {
+      Alert.alert("Category Required", "Please select or create a category first.");
       return;
     }
 
-    const imgUri = newWordImageUri || getPictogramUrl(text) || undefined;
+    const words = raw
+      .split(/[\n,;]+/)
+      .map((w) => w.trim())
+      .filter((w) => w.length > 0);
 
-    const vForms = detectedVerbForms || generateAllVerbForms(text);
+    if (words.length === 0) return;
 
-    if (vForms) {
-      const form1 = capWord(vForms.base);
-      const form2 = capWord(vForms.past);
-      const form3 = capWord(vForms.participle);
-      const form4 = capWord(vForms.continuous);
+    if (words.length === 1) {
+      const text = words[0];
+      const imgUri = newWordImageUri || getPictogramUrl(text) || undefined;
+      const vForms = detectedVerbForms || generateAllVerbForms(text);
 
-      const formsToAdd: {
+      if (vForms && autoAddVerbForms) {
+        const form1 = capWord(vForms.base);
+        const form2 = capWord(vForms.past);
+        const form3 = capWord(vForms.participle);
+        const form4 = capWord(vForms.continuous);
+
+        const formsToAdd: {
+          label: string;
+          phrase: string;
+          verbFormTag: "1st" | "s" | "2nd" | "3rd" | "4th";
+        }[] = [
+          { label: form1, phrase: form1, verbFormTag: "1st" },
+          { label: capWord(sFormOf(vForms.base)), phrase: capWord(sFormOf(vForms.base)), verbFormTag: "s" },
+          { label: form2, phrase: form2, verbFormTag: "2nd" },
+          { label: form3, phrase: form3, verbFormTag: "3rd" },
+          { label: form4, phrase: form4, verbFormTag: "4th" },
+        ];
+
+        let actualTargetCatId = targetCat.id;
+        const isActionsShelf =
+          (canonicalWordEn(targetCat.name) || targetCat.name).toLowerCase().includes("action") ||
+          (canonicalWordEn(currentShelf?.name || "") || currentShelf?.name || "").toLowerCase().includes("action");
+
+        if (isActionsShelf) {
+          const letter = (vForms.base[0] || "A").toUpperCase();
+          const subName = `Verbs ${letter}`;
+          const existingSub = subCats.find((sc) => sc.name.toLowerCase() === subName.toLowerCase());
+          if (existingSub) {
+            actualTargetCatId = existingSub.id;
+          } else {
+            const actionsShelf = (canonicalWordEn(currentShelf?.name || "") || currentShelf?.name || "").toLowerCase().includes("action") ? currentShelf : targetCat;
+            const allSubs = childCategories(actionsShelf.id);
+            const found = allSubs.find((sc) => sc.name.toLowerCase() === subName.toLowerCase());
+            if (found) {
+              actualTargetCatId = found.id;
+            } else {
+              const created = createBlankCategory({
+                name: subName,
+                parentCategoryId: actionsShelf.id,
+                icon: "⚡",
+                color: actionsShelf.color || "#c98a3d",
+              });
+              actualTargetCatId = created.id;
+            }
+          }
+        }
+
+        addWordsBulk(
+          actualTargetCatId,
+          formsToAdd.map((f) => ({
+            label: f.label,
+            phrase: f.phrase,
+            color: newWordColor,
+            emoji: vForms.emoji || "⚡",
+            imageUri: imgUri || getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
+            size: "md" as TileSize,
+            useTextToSpeech: true,
+            verbFormTag: f.verbFormTag,
+            verbForms: vForms,
+          }))
+        );
+        setSelectedSubCatId(actualTargetCatId);
+      } else {
+        const cLabel = capWord(text);
+        addWord(targetCat.id, {
+          label: cLabel,
+          phrase: cLabel,
+          color: newWordColor,
+          emoji: "🔹",
+          imageUri: imgUri,
+          size: "md" as TileSize,
+          useTextToSpeech: true,
+        });
+        if (targetCat.parentCategoryId) {
+          setSelectedSubCatId(targetCat.id);
+        }
+      }
+    } else {
+      // Bulk words addition
+      const wordsToInsert: {
         label: string;
         phrase: string;
-        verbFormTag: "1st" | "s" | "2nd" | "3rd" | "4th";
-      }[] = [
-        { label: form1, phrase: form1, verbFormTag: "1st" },
-        { label: capWord(sFormOf(vForms.base)), phrase: capWord(sFormOf(vForms.base)), verbFormTag: "s" },
-        { label: form2, phrase: form2, verbFormTag: "2nd" },
-        { label: form3, phrase: form3, verbFormTag: "3rd" },
-        { label: form4, phrase: form4, verbFormTag: "4th" },
-      ];
+        color: string;
+        emoji: string;
+        imageUri?: string;
+        size: TileSize;
+        useTextToSpeech: boolean;
+        verbForms?: CustomWord["verbForms"];
+        verbFormTag?: "1st" | "s" | "2nd" | "3rd" | "4th";
+      }[] = [];
 
-      // Route destination:
-      // If currentShelf or target is Actions, route into Verbs A-Z subcategory
-      let actualTargetCatId = targetCat.id;
-      const isActionsShelf =
-        (canonicalWordEn(targetCat.name) || targetCat.name).toLowerCase().includes("action") ||
-        (canonicalWordEn(currentShelf?.name || "") || currentShelf?.name || "").toLowerCase().includes("action");
+      const seenLabels = new Set<string>();
 
-      if (isActionsShelf) {
-        const letter = (vForms.base[0] || "A").toUpperCase();
-        const subName = `Verbs ${letter}`;
-        const existingSub = subCats.find((sc) => sc.name.toLowerCase() === subName.toLowerCase());
-        if (existingSub) {
-          actualTargetCatId = existingSub.id;
+      for (const item of words) {
+        const vForms = generateAllVerbForms(item);
+        if (vForms && autoAddVerbForms) {
+          const form1 = capWord(vForms.base);
+          const form2 = capWord(vForms.past);
+          const form3 = capWord(vForms.participle);
+          const form4 = capWord(vForms.continuous);
+          const forms: { label: string; verbFormTag: "1st" | "s" | "2nd" | "3rd" | "4th" }[] = [
+            { label: form1, verbFormTag: "1st" },
+            { label: capWord(sFormOf(vForms.base)), verbFormTag: "s" },
+            { label: form2, verbFormTag: "2nd" },
+            { label: form3, verbFormTag: "3rd" },
+            { label: form4, verbFormTag: "4th" },
+          ];
+          for (const f of forms) {
+            const key = `${f.verbFormTag}::${f.label.toLowerCase()}`;
+            if (!seenLabels.has(key)) {
+              seenLabels.add(key);
+              wordsToInsert.push({
+                label: f.label,
+                phrase: f.label,
+                color: newWordColor,
+                emoji: vForms.emoji || "⚡",
+                imageUri: getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
+                size: "md" as TileSize,
+                useTextToSpeech: true,
+                verbForms: vForms,
+                verbFormTag: f.verbFormTag,
+              });
+            }
+          }
         } else {
-          const actionsShelf = (canonicalWordEn(currentShelf?.name || "") || currentShelf?.name || "").toLowerCase().includes("action") ? currentShelf : targetCat;
-          const allSubs = childCategories(actionsShelf.id);
-          const found = allSubs.find((sc) => sc.name.toLowerCase() === subName.toLowerCase());
-          if (found) {
-            actualTargetCatId = found.id;
-          } else {
-            const created = createBlankCategory({
-              name: subName,
-              parentCategoryId: actionsShelf.id,
-              icon: "⚡",
-              color: actionsShelf.color || "#c98a3d",
+          const cLabel = capWord(item);
+          const lower = cLabel.toLowerCase();
+          if (!seenLabels.has(lower)) {
+            seenLabels.add(lower);
+            wordsToInsert.push({
+              label: cLabel,
+              phrase: cLabel,
+              color: newWordColor,
+              emoji: "🔹",
+              imageUri: getPictogramUrl(cLabel) || undefined,
+              size: "md" as TileSize,
+              useTextToSpeech: true,
             });
-            actualTargetCatId = created.id;
           }
         }
       }
 
-      addWordsBulk(
-        actualTargetCatId,
-        formsToAdd.map((f) => ({
-          label: f.label,
-          phrase: f.phrase,
-          color: newWordColor,
-          emoji: vForms.emoji || "⚡",
-          imageUri: imgUri || getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
-          size: "md" as TileSize,
-          useTextToSpeech: true,
-          verbFormTag: f.verbFormTag,
-          verbForms: vForms,
-        }))
-      );
-      setSelectedSubCatId(actualTargetCatId);
-    } else {
-      const cLabel = capWord(text);
-      addWord(targetCat.id, {
-        label: cLabel,
-        phrase: cLabel,
-        color: newWordColor,
-        emoji: "🔹",
-        imageUri: imgUri,
-        size: "md" as TileSize,
-        useTextToSpeech: true,
-      });
+      if (wordsToInsert.length > 0) {
+        addWordsBulk(targetCat.id, wordsToInsert);
+      }
       if (targetCat.parentCategoryId) {
         setSelectedSubCatId(targetCat.id);
       }
     }
 
+    stopListening();
+    setWordVoiceActive(false);
     setAddWordOpen(false);
     setNewWordText("");
     setNewWordImageUri(undefined);
@@ -1616,45 +1817,6 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
           <View style={[styles.headerActionsRow, !isWide && styles.headerActionsRowMobile, isRtl && { flexDirection: "row-reverse" }]}>
             <LangBadge />
-            <Pressable
-              onPress={openVoiceAdd}
-              style={[styles.voiceAddTopBtn, !isWide && styles.voiceAddTopBtnMobile]}
-              accessibilityLabel="Voice add category or words"
-            >
-              <Ionicons name="mic" size={16} color="#235E50" />
-              <Text style={styles.voiceAddTopBtnText}>🎙️ {t("voiceAddBtn", lang)}</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => openBulkModal("words")}
-              style={[styles.bulkWordTopBtn, !isWide && styles.bulkWordTopBtnMobile]}
-              accessibilityLabel="Bulk add words or categories"
-            >
-              <Ionicons name="flash-outline" size={16} color="#235E50" />
-              <Text style={styles.bulkWordTopBtnText}>⚡ {t("bulkAddBtn", lang)}</Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => {
-                if (subCats.length === 0) {
-                  setSubCatName("");
-                  setSubCatOpen(true);
-                  return;
-                }
-                const defaultSubId = (selectedSubCatId && subCats.some((s) => s.id === selectedSubCatId))
-                  ? selectedSubCatId
-                  : subCats[0].id;
-                setModalTargetCatId(defaultSubId);
-                setNewWordText("");
-                setNewWordColor(PASTEL_PALETTE[0]);
-                setAutoAddVerbForms(true);
-                setAddWordOpen(true);
-              }}
-              style={[styles.addWordTopBtn, !isWide && styles.addWordTopBtnMobile]}
-            >
-              <Ionicons name="add" size={18} color="#FFFFFF" />
-              <Text style={styles.addWordTopBtnText}>{t("addWordBtn", lang)}</Text>
-            </Pressable>
           </View>
         </View>
 
@@ -1933,7 +2095,22 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                       placeholderTextColor="#8A9590"
                       style={styles.searchInput}
                     />
+                    {wordSearch ? (
+                      <Pressable onPress={() => setWordSearch("")} hitSlop={6}>
+                        <Ionicons name="close-circle" size={16} color="#8A9590" />
+                      </Pressable>
+                    ) : null}
                   </View>
+
+                  <Pressable
+                    onPress={openAddWordUnified}
+                    style={styles.addWordSearchBtn}
+                    accessibilityLabel="Add words to category"
+                  >
+                    <Ionicons name="add" size={17} color="#FFFFFF" />
+                    <Ionicons name="mic" size={14} color="#FFFFFF" />
+                    <Text style={styles.addWordSearchBtnText}>Add words</Text>
+                  </Pressable>
                 </View>
               </View>
 
@@ -1953,7 +2130,15 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   <View style={styles.emptyWrap}>
                     <Text style={styles.emptyIcon}>📝</Text>
                     <Text style={styles.emptyTitle}>{t("noWordsInShelfTitle", lang)}</Text>
-                    <Text style={styles.emptySub}>{t("noWordsInShelfSub", lang).replace("{name}", currentShelf?.isCustom ? currentShelf.name : (wordLabel(currentShelf?.name || "", lang) || currentShelf?.name || ""))}</Text>
+                    <Text style={styles.emptySub}>{t("noWordsInShelfSub", lang).replace("{name}", activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || ""))}</Text>
+                    <Pressable
+                      onPress={openAddWordUnified}
+                      style={[styles.actionPillBtn, { marginTop: 14 }]}
+                    >
+                      <Ionicons name="add" size={16} color="#FFFFFF" />
+                      <Ionicons name="mic" size={14} color="#FFFFFF" />
+                      <Text style={styles.actionPillBtnText}>Add words</Text>
+                    </Pressable>
                   </View>
                 ) : (
                   displayWords.map((w) => {
@@ -2257,16 +2442,33 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 </Pressable>
               </View>
 
-              {/* Search Bar */}
-              <View style={[styles.mobileSearchWrap, isRtl && { flexDirection: "row-reverse" }]}>
-                <Ionicons name="search" size={15} color="#8A9590" />
-                <TextInput
-                  value={wordSearch}
-                  onChangeText={setWordSearch}
-                  placeholder={t("findAWordPlaceholder", lang)}
-                  placeholderTextColor="#8A9590"
-                  style={styles.searchInput}
-                />
+              {/* Search Bar & Add Words */}
+              <View style={[styles.mobileSearchRow, isRtl && { flexDirection: "row-reverse" }]}>
+                <View style={[styles.mobileSearchWrap, { flex: 1 }]}>
+                  <Ionicons name="search" size={15} color="#8A9590" />
+                  <TextInput
+                    value={wordSearch}
+                    onChangeText={setWordSearch}
+                    placeholder={t("findAWordPlaceholder", lang)}
+                    placeholderTextColor="#8A9590"
+                    style={styles.searchInput}
+                  />
+                  {wordSearch ? (
+                    <Pressable onPress={() => setWordSearch("")} hitSlop={6}>
+                      <Ionicons name="close-circle" size={15} color="#8A9590" />
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                <Pressable
+                  onPress={openAddWordUnified}
+                  style={styles.mobileAddWordBtn}
+                  accessibilityLabel="Add words"
+                >
+                  <Ionicons name="add" size={16} color="#FFFFFF" />
+                  <Ionicons name="mic" size={13} color="#FFFFFF" />
+                  <Text style={styles.mobileAddWordBtnText}>Add words</Text>
+                </Pressable>
               </View>
 
               {/* Mobile Interactive Sub-Categories Tabs */}
@@ -2421,6 +2623,14 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 <View style={styles.emptyWrap}>
                   <Text style={styles.emptyIcon}>📝</Text>
                   <Text style={styles.emptyTitle}>No words in this shelf</Text>
+                  <Pressable
+                    onPress={openAddWordUnified}
+                    style={[styles.actionPillBtn, { marginTop: 12 }]}
+                  >
+                    <Ionicons name="add" size={16} color="#FFFFFF" />
+                    <Ionicons name="mic" size={14} color="#FFFFFF" />
+                    <Text style={styles.actionPillBtnText}>Add words</Text>
+                  </Pressable>
                 </View>
               ) : (
                 displayWords.map((w) => {
@@ -3378,7 +3588,11 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         visible={subCatOpen}
         transparent
         animationType="fade"
-        onRequestClose={() => setSubCatOpen(false)}
+        onRequestClose={() => {
+          stopListening();
+          setSubCatVoiceActive(false);
+          setSubCatOpen(false);
+        }}
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
@@ -3387,7 +3601,11 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 Add to {currentShelf ? currentShelf.name : "Core"}
               </Text>
               <Pressable
-                onPress={() => setSubCatOpen(false)}
+                onPress={() => {
+                  stopListening();
+                  setSubCatVoiceActive(false);
+                  setSubCatOpen(false);
+                }}
                 hitSlop={8}
                 style={styles.modalCloseBtn}
               >
@@ -3396,20 +3614,40 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             </View>
 
             <Text style={styles.fieldLabel}>Sub–category name(s)</Text>
-            <TextInput
-              value={subCatName}
-              onChangeText={setSubCatName}
-              placeholder="e.g. Breakfast, Lunch, Dinner, Snack"
-              placeholderTextColor="#9E9E9E"
-              style={styles.inputBoxCoral}
-              autoFocus
-            />
+            <View style={[styles.inputWithMicRow, subCatVoiceActive && styles.inputWithMicRowListening]}>
+              <TextInput
+                value={subCatName}
+                onChangeText={setSubCatName}
+                placeholder={subCatVoiceActive ? "Listening... Speak sub-categories" : "e.g. Breakfast, Lunch, Dinner, Snack"}
+                placeholderTextColor={subCatVoiceActive ? "#235E50" : "#9E9E9E"}
+                style={styles.inputBoxCoralWithMic}
+                autoFocus={!subCatVoiceActive}
+              />
+              <Pressable
+                onPress={toggleSubCatVoice}
+                style={[styles.inputMicBtn, subCatVoiceActive && styles.inputMicBtnActive]}
+                accessibilityLabel="Speak sub-categories"
+              >
+                <Ionicons
+                  name={subCatVoiceActive ? "mic" : "mic-outline"}
+                  size={20}
+                  color={subCatVoiceActive ? "#FFFFFF" : "#235E50"}
+                />
+              </Pressable>
+            </View>
             <Text style={styles.fieldHint}>
-              Separate multiple sub-categories with commas or new lines.
+              Type or speak. Separate multiple sub-categories with commas or new lines.
             </Text>
 
             <View style={styles.modalFooter}>
-              <Pressable onPress={() => setSubCatOpen(false)} style={styles.cancelTextBtn}>
+              <Pressable
+                onPress={() => {
+                  stopListening();
+                  setSubCatVoiceActive(false);
+                  setSubCatOpen(false);
+                }}
+                style={styles.cancelTextBtn}
+              >
                 <Text style={styles.cancelTextBtnText}>{t("cancelBtn", lang)}</Text>
               </Pressable>
               <Pressable onPress={handleCreateSubCategory} style={styles.actionPillBtn}>
@@ -3421,19 +3659,29 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         </View>
       </Modal>
 
-      {/* MODAL 2: Add a Word (Matches Screenshot 3) */}
+      {/* MODAL 2: Add a Word (Unified Single & Bulk with Voice & Type) */}
       <Modal
         visible={addWordOpen}
         transparent
         animationType="fade"
-        onRequestClose={() => setAddWordOpen(false)}
+        onRequestClose={() => {
+          stopListening();
+          setWordVoiceActive(false);
+          setAddWordOpen(false);
+        }}
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Add a word</Text>
+              <Text style={styles.modalTitle}>
+                Add words {modalTargetCatId ? `to ${getCategory(modalTargetCatId)?.name || ""}` : selectedSubCatId ? `to ${getCategory(selectedSubCatId)?.name || ""}` : currentShelf ? `to ${currentShelf.name}` : ""}
+              </Text>
               <Pressable
-                onPress={() => setAddWordOpen(false)}
+                onPress={() => {
+                  stopListening();
+                  setWordVoiceActive(false);
+                  setAddWordOpen(false);
+                }}
                 hitSlop={8}
                 style={styles.modalCloseBtn}
               >
@@ -3444,7 +3692,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             {/* Target Category / Sub-Category Selector */}
             {subCats.length > 0 ? (
               <View style={{ marginBottom: 14 }}>
-                <Text style={styles.fieldLabel}>Save word to sub-category</Text>
+                <Text style={styles.fieldLabel}>Save words to sub-category</Text>
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -3473,119 +3721,164 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               </View>
             ) : (
               <View style={{ marginBottom: 14 }}>
-                <Text style={styles.fieldLabel}>Save word to sub-category</Text>
-                <View style={styles.noSubCatsBox}>
-                  <Ionicons name="alert-circle-outline" size={16} color="#D97706" />
-                  <Text style={styles.noSubCatsText}>
-                    Please create a sub-category in "{currentShelf?.name}" first. Words cannot be added to main shelf.
-                  </Text>
-                </View>
+                <Text style={styles.fieldLabel}>Saving words to: {currentShelf?.name || "Shelf"}</Text>
               </View>
             )}
 
-            <Text style={styles.fieldLabel}>Word or phrase</Text>
-            <TextInput
-              value={newWordText}
-              onChangeText={setNewWordText}
-              placeholder="e.g. Cook, Eat, Walk, Happy"
-              placeholderTextColor="#9E9E9E"
-              style={styles.inputBoxCoral}
-              autoFocus
-            />
-
-            {/* Live 4-Form Auto-Generated Verb Card */}
-            {detectedVerbForms && (
-              <View style={styles.verbFormsCard}>
-                <View style={styles.verbFormsHeader}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
-                    <Ionicons name="sparkles" size={15} color="#235E50" />
-                    <Text style={styles.verbFormsTitle}>Verb Forms (1st, s/es, 2nd, 3rd, 4th)</Text>
-                  </View>
-                  <Pressable
-                    onPress={() => setAutoAddVerbForms(!autoAddVerbForms)}
-                    style={styles.verbCheckboxRow}
-                    accessibilityLabel="Toggle auto-add all 4 verb forms"
-                  >
-                    <Ionicons
-                      name={autoAddVerbForms ? "checkbox" : "square-outline"}
-                      size={18}
-                      color="#235E50"
-                    />
-                    <Text style={styles.verbCheckboxLabel}>Auto-add 4 forms</Text>
-                  </Pressable>
-                </View>
-
-                <View style={styles.verbGrid}>
-                  <View style={styles.verbTilePreview}>
-                    <Text style={styles.verbFormBadge}>1st · Base</Text>
-                    <Text style={styles.verbTileWord}>{detectedVerbForms.base}</Text>
-                  </View>
-                  <View style={styles.verbTilePreview}>
-                    <Text style={styles.verbFormBadge}>s / es Form</Text>
-                    <Text style={styles.verbTileWord}>{sFormOf(detectedVerbForms.base)}</Text>
-                  </View>
-                  <View style={styles.verbTilePreview}>
-                    <Text style={styles.verbFormBadge}>2nd · Past</Text>
-                    <Text style={styles.verbTileWord}>{detectedVerbForms.past}</Text>
-                  </View>
-                  <View style={styles.verbTilePreview}>
-                    <Text style={styles.verbFormBadge}>3rd · Participle</Text>
-                    <Text style={styles.verbTileWord}>{detectedVerbForms.participle}</Text>
-                  </View>
-                  <View style={styles.verbTilePreview}>
-                    <Text style={styles.verbFormBadge}>4th · Continuous</Text>
-                    <Text style={styles.verbTileWord}>{detectedVerbForms.continuous}</Text>
-                  </View>
-                </View>
-                <Text style={styles.verbHintText}>
-                  {autoAddVerbForms
-                    ? "✨ All 5 forms will automatically be added as individual shelf tiles."
-                    : "Only this single word will be added."}
-                </Text>
-              </View>
-            )}
-
-            {/* Image Selection (1. Gallery, 2. App Library, 3. Chrome Search) */}
-            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Picture (3 Options)</Text>
-            <View style={styles.imagePickerRow}>
-              {newWordImageUri ? (
-                <View style={styles.imagePreviewBox}>
-                  <SmartImage source={{ uri: newWordImageUri }} style={styles.imagePreviewThumb} />
-                  <Pressable
-                    onPress={() => setNewWordImageUri(undefined)}
-                    style={styles.imagePreviewRemove}
-                    hitSlop={6}
-                    accessibilityLabel="Remove image"
-                  >
-                    <Ionicons name="close" size={12} color="#ffffff" />
-                  </Pressable>
-                </View>
-              ) : (
-                <View style={styles.imagePlaceholderBox}>
-                  <Ionicons name="image-outline" size={24} color="#8A9590" />
-                </View>
-              )}
-              <View style={{ flex: 1, gap: 3 }}>
-                <Pressable
-                  onPress={() =>
-                    setImagePickerTarget({
-                      type: "word",
-                      label: newWordText || "Word",
-                      currentUri: newWordImageUri,
-                    })
-                  }
-                  style={styles.pickImageBtn}
-                >
-                  <Ionicons name="sparkles" size={14} color="#ffffff" />
-                  <Text style={styles.pickImageBtnText}>
-                    {newWordImageUri ? "Change Picture" : "Choose Picture"}
-                  </Text>
-                </Pressable>
-                <Text style={styles.imagePickerHint}>
-                  1. Gallery • 2. App Library • 3. Chrome Search
-                </Text>
-              </View>
+            <Text style={styles.fieldLabel}>Word(s) or phrase</Text>
+            <View style={[styles.inputWithMicRow, wordVoiceActive && styles.inputWithMicRowListening]}>
+              <TextInput
+                value={newWordText}
+                onChangeText={setNewWordText}
+                placeholder={wordVoiceActive ? "Listening... Speak words" : "e.g. Cook, Eat, Walk, Apple, Banana"}
+                placeholderTextColor={wordVoiceActive ? "#235E50" : "#9E9E9E"}
+                style={styles.inputBoxCoralWithMic}
+                autoFocus={!wordVoiceActive}
+              />
+              <Pressable
+                onPress={toggleWordVoice}
+                style={[styles.inputMicBtn, wordVoiceActive && styles.inputMicBtnActive]}
+                accessibilityLabel="Speak words"
+              >
+                <Ionicons
+                  name={wordVoiceActive ? "mic" : "mic-outline"}
+                  size={20}
+                  color={wordVoiceActive ? "#FFFFFF" : "#235E50"}
+                />
+              </Pressable>
             </View>
+            <Text style={styles.fieldHint}>
+              Type or speak words. Separate multiple words with commas or new lines for bulk add.
+            </Text>
+
+            {/* Live Bulk or Single Word Preview */}
+            {(() => {
+              const parsedWords = newWordText
+                .split(/[\n,;]+/)
+                .map((w) => w.trim())
+                .filter((w) => w.length > 0);
+
+              if (parsedWords.length > 1) {
+                return (
+                  <View style={styles.bulkWordsPreviewBox}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                      <Ionicons name="flash" size={15} color="#235E50" />
+                      <Text style={styles.bulkWordsPreviewTitle}>
+                        Bulk Mode · {parsedWords.length} words to add:
+                      </Text>
+                    </View>
+                    <View style={styles.bulkWordsChipsRow}>
+                      {parsedWords.map((w, idx) => (
+                        <View key={idx} style={styles.bulkWordChip}>
+                          <Text style={styles.bulkWordChipText}>{w}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                );
+              }
+
+              if (parsedWords.length === 1 && detectedVerbForms) {
+                return (
+                  <View style={styles.verbFormsCard}>
+                    <View style={styles.verbFormsHeader}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+                        <Ionicons name="sparkles" size={15} color="#235E50" />
+                        <Text style={styles.verbFormsTitle}>Verb Forms (1st, s/es, 2nd, 3rd, 4th)</Text>
+                      </View>
+                      <Pressable
+                        onPress={() => setAutoAddVerbForms(!autoAddVerbForms)}
+                        style={styles.verbCheckboxRow}
+                        accessibilityLabel="Toggle auto-add all 4 verb forms"
+                      >
+                        <Ionicons
+                          name={autoAddVerbForms ? "checkbox" : "square-outline"}
+                          size={18}
+                          color="#235E50"
+                        />
+                        <Text style={styles.verbCheckboxLabel}>Auto-add 4 forms</Text>
+                      </Pressable>
+                    </View>
+
+                    <View style={styles.verbGrid}>
+                      <View style={styles.verbTilePreview}>
+                        <Text style={styles.verbFormBadge}>1st · Base</Text>
+                        <Text style={styles.verbTileWord}>{detectedVerbForms.base}</Text>
+                      </View>
+                      <View style={styles.verbTilePreview}>
+                        <Text style={styles.verbFormBadge}>s / es Form</Text>
+                        <Text style={styles.verbTileWord}>{sFormOf(detectedVerbForms.base)}</Text>
+                      </View>
+                      <View style={styles.verbTilePreview}>
+                        <Text style={styles.verbFormBadge}>2nd · Past</Text>
+                        <Text style={styles.verbTileWord}>{detectedVerbForms.past}</Text>
+                      </View>
+                      <View style={styles.verbTilePreview}>
+                        <Text style={styles.verbFormBadge}>3rd · Participle</Text>
+                        <Text style={styles.verbTileWord}>{detectedVerbForms.participle}</Text>
+                      </View>
+                      <View style={styles.verbTilePreview}>
+                        <Text style={styles.verbFormBadge}>4th · Continuous</Text>
+                        <Text style={styles.verbTileWord}>{detectedVerbForms.continuous}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.verbHintText}>
+                      {autoAddVerbForms
+                        ? "✨ All 5 forms will automatically be added as individual shelf tiles."
+                        : "Only this single word will be added."}
+                    </Text>
+                  </View>
+                );
+              }
+
+              return null;
+            })()}
+
+            {/* Image Selection (Shown for single word mode) */}
+            {newWordText.split(/[\n,;]+/).filter((w) => w.trim()).length <= 1 && (
+              <>
+                <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Picture (3 Options)</Text>
+                <View style={styles.imagePickerRow}>
+                  {newWordImageUri ? (
+                    <View style={styles.imagePreviewBox}>
+                      <SmartImage source={{ uri: newWordImageUri }} style={styles.imagePreviewThumb} />
+                      <Pressable
+                        onPress={() => setNewWordImageUri(undefined)}
+                        style={styles.imagePreviewRemove}
+                        hitSlop={6}
+                        accessibilityLabel="Remove image"
+                      >
+                        <Ionicons name="close" size={12} color="#ffffff" />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View style={styles.imagePlaceholderBox}>
+                      <Ionicons name="image-outline" size={24} color="#8A9590" />
+                    </View>
+                  )}
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <Pressable
+                      onPress={() =>
+                        setImagePickerTarget({
+                          type: "word",
+                          label: newWordText || "Word",
+                          currentUri: newWordImageUri,
+                        })
+                      }
+                      style={styles.pickImageBtn}
+                    >
+                      <Ionicons name="sparkles" size={14} color="#ffffff" />
+                      <Text style={styles.pickImageBtnText}>
+                        {newWordImageUri ? "Change Picture" : "Choose Picture"}
+                      </Text>
+                    </Pressable>
+                    <Text style={styles.imagePickerHint}>
+                      1. Gallery • 2. App Library • 3. Chrome Search
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
 
             <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Tile color</Text>
             <View style={styles.colorSwatchesRow}>
@@ -3608,6 +3901,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             <View style={styles.modalFooter}>
               <Pressable
                 onPress={() => {
+                  stopListening();
+                  setWordVoiceActive(false);
                   setAddWordOpen(false);
                   setNewWordImageUri(undefined);
                 }}
@@ -3617,7 +3912,11 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               </Pressable>
               <Pressable onPress={handleCreateWord} style={styles.actionPillBtn}>
                 <Ionicons name="add" size={16} color="#FFFFFF" />
-                <Text style={styles.actionPillBtnText}>Add word</Text>
+                <Text style={styles.actionPillBtnText}>
+                  {newWordText.split(/[\n,;]+/).filter((w) => w.trim()).length > 1
+                    ? `Add ${newWordText.split(/[\n,;]+/).filter((w) => w.trim()).length} words`
+                    : "Add word"}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -3629,14 +3928,24 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         visible={newShelfOpen}
         transparent
         animationType="fade"
-        onRequestClose={() => setNewShelfOpen(false)}
+        onRequestClose={() => {
+          stopListening();
+          setShelfVoiceActive(false);
+          setNewShelfOpen(false);
+          setNewShelfImageUri(undefined);
+        }}
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>New shelf</Text>
               <Pressable
-                onPress={() => setNewShelfOpen(false)}
+                onPress={() => {
+                  stopListening();
+                  setShelfVoiceActive(false);
+                  setNewShelfOpen(false);
+                  setNewShelfImageUri(undefined);
+                }}
                 hitSlop={8}
                 style={styles.modalCloseBtn}
               >
@@ -3645,79 +3954,98 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             </View>
 
             <Text style={styles.fieldLabel}>Shelf name(s)</Text>
-            <TextInput
-              value={newShelfName}
-              onChangeText={setNewShelfName}
-              placeholder="e.g. Daily Routine, School, Emotions, Food"
-              placeholderTextColor="#9E9E9E"
-              style={styles.inputBoxCoral}
-              autoFocus
-            />
+            <View style={[styles.inputWithMicRow, shelfVoiceActive && styles.inputWithMicRowListening]}>
+              <TextInput
+                value={newShelfName}
+                onChangeText={setNewShelfName}
+                placeholder={shelfVoiceActive ? "Listening... Speak shelf names" : "e.g. Daily Routine, School, Emotions, Food"}
+                placeholderTextColor={shelfVoiceActive ? "#235E50" : "#9E9E9E"}
+                style={styles.inputBoxCoralWithMic}
+                autoFocus={!shelfVoiceActive}
+              />
+              <Pressable
+                onPress={toggleShelfVoice}
+                style={[styles.inputMicBtn, shelfVoiceActive && styles.inputMicBtnActive]}
+                accessibilityLabel="Speak shelf names"
+              >
+                <Ionicons
+                  name={shelfVoiceActive ? "mic" : "mic-outline"}
+                  size={20}
+                  color={shelfVoiceActive ? "#FFFFFF" : "#235E50"}
+                />
+              </Pressable>
+            </View>
             <Text style={styles.fieldHint}>
-              Separate multiple shelves with commas or new lines to create in bulk.
+              Type or speak. Separate multiple shelves with commas or new lines to create in bulk.
             </Text>
 
-            {/* Shelf Image Selection (1. Gallery, 2. App Library, 3. Chrome Search) */}
-            <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Shelf Picture (3 Options)</Text>
-            <View style={styles.imagePickerRow}>
-              {newShelfImageUri ? (
-                <View style={styles.imagePreviewBox}>
-                  <SmartImage source={{ uri: newShelfImageUri }} style={styles.imagePreviewThumb} />
-                  <Pressable
-                    onPress={() => setNewShelfImageUri(undefined)}
-                    style={styles.imagePreviewRemove}
-                    hitSlop={6}
-                    accessibilityLabel="Remove image"
-                  >
-                    <Ionicons name="close" size={12} color="#ffffff" />
-                  </Pressable>
+            {newShelfName.trim().length > 0 && (
+              <>
+                {/* Shelf Image Selection (1. Gallery, 2. App Library, 3. Chrome Search) */}
+                <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Shelf Picture (3 Options)</Text>
+                <View style={styles.imagePickerRow}>
+                  {newShelfImageUri ? (
+                    <View style={styles.imagePreviewBox}>
+                      <SmartImage source={{ uri: newShelfImageUri }} style={styles.imagePreviewThumb} />
+                      <Pressable
+                        onPress={() => setNewShelfImageUri(undefined)}
+                        style={styles.imagePreviewRemove}
+                        hitSlop={6}
+                        accessibilityLabel="Remove image"
+                      >
+                        <Ionicons name="close" size={12} color="#ffffff" />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View style={styles.imagePlaceholderBox}>
+                      <Text style={{ fontSize: 22 }}>{newShelfIcon || "📁"}</Text>
+                    </View>
+                  )}
+                  <View style={{ flex: 1, gap: 3 }}>
+                    <Pressable
+                      onPress={() =>
+                        setImagePickerTarget({
+                          type: "shelf",
+                          label: newShelfName || "Shelf",
+                          currentUri: newShelfImageUri,
+                        })
+                      }
+                      style={styles.pickImageBtn}
+                    >
+                      <Ionicons name="sparkles" size={14} color="#ffffff" />
+                      <Text style={styles.pickImageBtnText}>
+                        {newShelfImageUri ? "Change Picture" : "Choose Picture"}
+                      </Text>
+                    </Pressable>
+                    <Text style={styles.imagePickerHint}>
+                      1. Gallery • 2. App Library • 3. Chrome Search
+                    </Text>
+                  </View>
                 </View>
-              ) : (
-                <View style={styles.imagePlaceholderBox}>
-                  <Text style={{ fontSize: 22 }}>{newShelfIcon || "📁"}</Text>
-                </View>
-              )}
-              <View style={{ flex: 1, gap: 3 }}>
-                <Pressable
-                  onPress={() =>
-                    setImagePickerTarget({
-                      type: "shelf",
-                      label: newShelfName || "Shelf",
-                      currentUri: newShelfImageUri,
-                    })
-                  }
-                  style={styles.pickImageBtn}
-                >
-                  <Ionicons name="sparkles" size={14} color="#ffffff" />
-                  <Text style={styles.pickImageBtnText}>
-                    {newShelfImageUri ? "Change Picture" : "Choose Picture"}
-                  </Text>
-                </Pressable>
-                <Text style={styles.imagePickerHint}>
-                  1. Gallery • 2. App Library • 3. Chrome Search
-                </Text>
-              </View>
-            </View>
 
-            <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Shelf icon</Text>
-            <View style={styles.shelfIconsRow}>
-              {SHELF_ICONS.map((ic) => (
-                <Pressable
-                  key={ic}
-                  onPress={() => setNewShelfIcon(ic)}
-                  style={[
-                    styles.shelfIconPickBtn,
-                    newShelfIcon === ic && styles.shelfIconPickBtnActive,
-                  ]}
-                >
-                  <Text style={{ fontSize: 18 }}>{ic}</Text>
-                </Pressable>
-              ))}
-            </View>
+                <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Shelf icon</Text>
+                <View style={styles.shelfIconsRow}>
+                  {SHELF_ICONS.map((ic) => (
+                    <Pressable
+                      key={ic}
+                      onPress={() => setNewShelfIcon(ic)}
+                      style={[
+                        styles.shelfIconPickBtn,
+                        newShelfIcon === ic && styles.shelfIconPickBtnActive,
+                      ]}
+                    >
+                      <Text style={{ fontSize: 18 }}>{ic}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
 
             <View style={styles.modalFooter}>
               <Pressable
                 onPress={() => {
+                  stopListening();
+                  setShelfVoiceActive(false);
                   setNewShelfOpen(false);
                   setNewShelfImageUri(undefined);
                 }}
@@ -5246,6 +5574,102 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#1A3830",
     backgroundColor: "#FFFFFF",
+  },
+  inputWithMicRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#E59688",
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    paddingRight: 6,
+  },
+  inputWithMicRowListening: {
+    borderColor: "#235E50",
+    backgroundColor: "#F2F8F5",
+  },
+  inputBoxCoralWithMic: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#1A3830",
+  },
+  inputMicBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EAF3EF",
+  },
+  inputMicBtnActive: {
+    backgroundColor: "#235E50",
+  },
+  addWordSearchBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#235E50",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+  },
+  addWordSearchBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  mobileSearchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  mobileAddWordBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#235E50",
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
+  },
+  mobileAddWordBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  bulkWordsPreviewBox: {
+    backgroundColor: "#F0F7F4",
+    borderWidth: 1,
+    borderColor: "#B7D8CD",
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 10,
+  },
+  bulkWordsPreviewTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#235E50",
+  },
+  bulkWordsChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  bulkWordChip: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#235E50",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  bulkWordChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#1A3830",
   },
   colorSwatchesRow: {
     flexDirection: "row",

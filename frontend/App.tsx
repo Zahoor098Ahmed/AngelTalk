@@ -317,14 +317,7 @@ function MoreMenu({
   ];
 
   const adminRows: { key: Screen; label: string; icon: keyof typeof Ionicons.glyphMap; color: string; desc: string }[] = [
-    { key: "social-stories", label: t("visualSocialStoriesTitle", lang), icon: "book", color: "#f59e0b", desc: t("visualSocialStoriesDesc", lang) },
-    { key: "enroll-child", label: t("addChildProfileTitle", lang), icon: "person-add", color: colors.forest, desc: t("addChildProfileDesc", lang) },
     { key: "my-categories", label: t("myCategoriesWordsTitle", lang), icon: "folder-open", color: "#10b981", desc: t("myCategoriesWordsDesc", lang) },
-    { key: "category-builder", label: t("categoryBuilderGenTitle", lang), icon: "sparkles-outline", color: "#0ea5e9", desc: t("categoryBuilderGenDesc", lang) },
-    { key: "voice-command", label: t("voiceCommandMatchTitle", lang), icon: "mic-circle", color: "#6366f1", desc: t("voiceCommandMatchDesc", lang) },
-    { key: "phrase-library", label: t("phraseLibraryTitle", lang), icon: "chatbubble-ellipses", color: "#8b5cf6", desc: t("phraseLibraryDesc", lang) },
-    { key: "review-queue", label: t("contentReviewQueueTitle", lang), icon: "checkmark-done-circle", color: "#f59e0b", desc: t("contentReviewQueueDesc", lang) },
-    { key: "parent-setup", label: t("parentPortalAddTitle", lang), icon: "people", color: "#ec4899", desc: t("parentPortalAddDesc", lang) },
     { key: "accessibility", label: t("settingsAccessibilityTitle", lang), icon: "settings", color: "#64748b", desc: t("settingsAccessibilityDesc", lang) },
     { key: "face-scan", label: t("switchChildFaceTitle", lang), icon: "scan-circle", color: colors.forest, desc: t("switchChildFaceDesc", lang) },
   ];
