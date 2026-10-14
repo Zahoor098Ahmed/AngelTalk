@@ -75,6 +75,20 @@ export async function hydrateStorage(): Promise<void> {
     childrenCache = rawChildren ? JSON.parse(rawChildren) : [];
     settingsCache = rawSettings ? { ...DEFAULT_SETTINGS, ...JSON.parse(rawSettings) } : DEFAULT_SETTINGS;
     usageCache = rawUsage ? migrateUsage(JSON.parse(rawUsage)) : {};
+
+    // Auto-heal baseline stars if a child has already played games before
+    let needsSave = false;
+    childrenCache = childrenCache.map((c) => {
+      const u = usageCache[c.id];
+      if ((!c.stars || c.stars === 0) && u && ((u.consecutiveDays ?? 0) > 0 || (u.gameStreak ?? 0) > 0 || u.lastPlayedDate)) {
+        needsSave = true;
+        return { ...c, stars: Math.max(c.stars ?? 0, 8) };
+      }
+      return c;
+    });
+    if (needsSave) {
+      saveChildren(childrenCache);
+    }
   } catch {
     childrenCache = [];
     settingsCache = DEFAULT_SETTINGS;
@@ -120,6 +134,19 @@ export function isHydrated(): boolean {
 
 export function loadChildren(): ChildProfile[] {
   return childrenCache;
+}
+
+export function getChild(childId: string): ChildProfile | null {
+  return childrenCache.find((c) => c.id === childId) ?? null;
+}
+
+export function awardChildStars(childId: string, count: number = 1): ChildProfile | null {
+  const child = childrenCache.find((c) => c.id === childId);
+  if (!child) return null;
+  const nextStars = Math.max(0, (child.stars ?? 0) + count);
+  const updated: ChildProfile = { ...child, stars: nextStars };
+  updateChild(updated);
+  return updated;
 }
 
 function sanitizeChildrenForStorage(children: ChildProfile[]): ChildProfile[] {

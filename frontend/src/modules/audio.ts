@@ -10,6 +10,7 @@ import {
 import * as FileSystem from "expo-file-system/legacy";
 import * as Speech from "expo-speech";
 import type { LanguageCode } from "../types";
+import { wordLabel, canonicalWordEn } from "./i18n";
 
 /**
  * Voice recording + playback for communication words.
@@ -260,7 +261,7 @@ export async function deleteClip(uri?: string) {
   }
 }
 
-// --- playback ------------------------------------------------------------
+let currentPlayingWebAudio: any = null;
 
 function playClip(uri: string): Promise<void> {
   return new Promise((resolve) => {
@@ -273,9 +274,25 @@ function playClip(uri: string): Promise<void> {
 
     if (Platform.OS === "web") {
       try {
+        if (currentPlayingWebAudio) {
+          try {
+            currentPlayingWebAudio.pause();
+            currentPlayingWebAudio.currentTime = 0;
+          } catch {
+            /* ignore */
+          }
+          currentPlayingWebAudio = null;
+        }
         const audio = new Audio(uri);
-        audio.onended = finish;
-        audio.onerror = finish;
+        currentPlayingWebAudio = audio;
+        audio.onended = () => {
+          if (currentPlayingWebAudio === audio) currentPlayingWebAudio = null;
+          finish();
+        };
+        audio.onerror = () => {
+          if (currentPlayingWebAudio === audio) currentPlayingWebAudio = null;
+          finish();
+        };
         audio.play().catch(finish);
         setTimeout(finish, 6000);
         return;
@@ -307,7 +324,193 @@ function playClip(uri: string): Promise<void> {
   });
 }
 
-function speakWord(text: string, lang: LanguageCode, rate: number, voiceType: import("../types").VoiceType = "boy"): Promise<void> {
+const ttsAudioInstanceCache = new Map<string, HTMLAudioElement>();
+
+export function preloadTTS(text: string, langCode: "ar" | "ur"): void {
+  if (Platform.OS !== "web" || !text?.trim()) return;
+  const cleanText = text.trim();
+  const cacheKey = `${langCode}:${cleanText}`;
+  if (ttsAudioInstanceCache.has(cacheKey)) return;
+  try {
+    const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "http://localhost:8081";
+    const proxyUrl = `${origin}/api/tts?q=${encodeURIComponent(cleanText)}&tl=${langCode}`;
+    const audio = new Audio(proxyUrl);
+    ttsAudioInstanceCache.set(cacheKey, audio);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function playOnlineTTS(text: string, langCode: "ar" | "ur"): Promise<boolean> {
+  const cleanText = (text || "").trim();
+  if (!cleanText) return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    try {
+      stopSentence();
+
+      const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "http://localhost:8081";
+      const proxyUrl = `${origin}/api/tts?q=${encodeURIComponent(cleanText)}&tl=${langCode}`;
+      const directUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${langCode}&client=gtx`;
+
+      if (Platform.OS === "web") {
+        if (currentPlayingWebAudio) {
+          try {
+            currentPlayingWebAudio.pause();
+            currentPlayingWebAudio.currentTime = 0;
+          } catch {
+            /* ignore */
+          }
+          currentPlayingWebAudio = null;
+        }
+
+        let done = false;
+        const finish = (ok: boolean) => {
+          if (done) return;
+          done = true;
+          resolve(ok);
+        };
+
+        const cacheKey = `${langCode}:${cleanText}`;
+        let audio = ttsAudioInstanceCache.get(cacheKey);
+        if (!audio) {
+          audio = new Audio(proxyUrl);
+          ttsAudioInstanceCache.set(cacheKey, audio);
+        } else {
+          try {
+            audio.currentTime = 0;
+          } catch {
+            /* ignore */
+          }
+        }
+
+        currentPlayingWebAudio = audio;
+        audio.onended = () => {
+          if (currentPlayingWebAudio === audio) currentPlayingWebAudio = null;
+          finish(true);
+        };
+        audio.onerror = () => {
+          try {
+            const alt = new Audio(directUrl);
+            currentPlayingWebAudio = alt;
+            alt.onended = () => {
+              if (currentPlayingWebAudio === alt) currentPlayingWebAudio = null;
+              finish(true);
+            };
+            alt.onerror = () => {
+              if (currentPlayingWebAudio === alt) currentPlayingWebAudio = null;
+              finish(false);
+            };
+            alt.play().catch(() => finish(false));
+          } catch {
+            finish(false);
+          }
+        };
+        audio.play().catch(() => {
+          try {
+            const alt = new Audio(directUrl);
+            currentPlayingWebAudio = alt;
+            alt.onended = () => {
+              if (currentPlayingWebAudio === alt) currentPlayingWebAudio = null;
+              finish(true);
+            };
+            alt.onerror = () => {
+              if (currentPlayingWebAudio === alt) currentPlayingWebAudio = null;
+              finish(false);
+            };
+            alt.play().catch(() => finish(false));
+          } catch {
+            finish(false);
+          }
+        });
+
+        setTimeout(() => finish(true), 4000);
+        return;
+      }
+
+      playClip(proxyUrl).then(() => resolve(true)).catch(() => {
+        playClip(directUrl).then(() => resolve(true)).catch(() => resolve(false));
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
+async function speakWord(text: string, lang: LanguageCode, rate: number, voiceType: import("../types").VoiceType = "boy"): Promise<void> {
+  let textToSpeak = (text || "").trim();
+  if (!textToSpeak) return;
+
+  // If language is Arabic or Urdu, ensure text is translated to the target script before speaking
+  if (lang === "ar-SA" && !/[\u0600-\u06FF]/.test(textToSpeak)) {
+    textToSpeak = wordLabel(textToSpeak, "ar-SA") || textToSpeak;
+  } else if (lang === "ur-PK" && !/[\u0600-\u06FF]/.test(textToSpeak)) {
+    textToSpeak = wordLabel(textToSpeak, "ur-PK") || textToSpeak;
+  } else if (lang === "en-US" && /[\u0600-\u06FF]/.test(textToSpeak)) {
+    textToSpeak = canonicalWordEn(textToSpeak) || textToSpeak;
+  }
+
+  const hasArabicScript = /[\u0600-\u06FF]/.test(textToSpeak);
+  const speechLang = (lang === "ar-SA" || hasArabicScript) ? "ar-SA" : (lang === "ur-PK" ? "ur-PK" : "en-US");
+
+  const profile = {
+    boy: { pitch: 1.25, rateMultiplier: 1.0 },
+    girl: { pitch: 1.38, rateMultiplier: 1.0 },
+    woman: { pitch: 1.08, rateMultiplier: 0.96 },
+    man: { pitch: 0.82, rateMultiplier: 0.92 },
+  }[voiceType] || { pitch: 1.25, rateMultiplier: 1.0 };
+
+  const finalRate = Math.max(0.5, Math.min(1.5, rate * profile.rateMultiplier));
+
+  // Check if a genuine system voice for Arabic or Urdu is installed on this device/browser
+  let nativeVoiceFound = false;
+  let chosenVoice: string | undefined;
+
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    try {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length > 0) {
+        const match = voices.find((v) => {
+          const l = (v.lang || "").toLowerCase();
+          if (speechLang === "ar-SA") return l.startsWith("ar");
+          if (speechLang === "ur-PK") return l.startsWith("ur") || l.startsWith("hi");
+          return l.startsWith("en");
+        });
+        if (match) {
+          nativeVoiceFound = true;
+          chosenVoice = match.voiceURI || match.name;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // If speaking Arabic or Urdu and no native system voice is present (e.g. desktop browsers, Windows):
+  // Play authentic Google TTS audio stream so it pronounces genuine Arabic/Urdu.
+  if ((speechLang === "ar-SA" || speechLang === "ur-PK") && !nativeVoiceFound) {
+    const ttsLang = speechLang === "ar-SA" ? "ar" : "ur";
+    const ok = await playOnlineTTS(textToSpeak, ttsLang);
+    if (ok) return;
+
+    // Do NOT fallback to English when Arabic is selected! Try Speech.speak with target language
+    return new Promise((resolve) => {
+      try {
+        Speech.speak(textToSpeak, {
+          language: speechLang,
+          rate: finalRate,
+          pitch: profile.pitch,
+          onDone: () => resolve(),
+          onError: () => resolve(),
+          onStopped: () => resolve(),
+        });
+      } catch {
+        resolve();
+      }
+    });
+  }
+
+  // Native speech engine execution with error fallback
   return new Promise((resolve) => {
     let resolved = false;
     const finish = () => {
@@ -316,26 +519,12 @@ function speakWord(text: string, lang: LanguageCode, rate: number, voiceType: im
         resolve();
       }
     };
-    // safety timeout so a stuck speech engine never hangs playback
     const timer = setTimeout(finish, 5000);
 
-    // Language safety: If text is pure ASCII/Latin and language is set to Arabic/Urdu,
-    // fallback to English voice so Android Google TTS doesn't crash or go completely silent.
-    const isAscii = /^[\x00-\x7F\s.,!?'"-]+$/.test(text);
-    const speechLang = isAscii && (lang === "ur-PK" || lang === "ar-SA") ? "en-US" : lang;
-
-    const profile = {
-      boy: { pitch: 1.25, rateMultiplier: 1.0 },
-      girl: { pitch: 1.38, rateMultiplier: 1.0 },
-      woman: { pitch: 1.08, rateMultiplier: 0.96 },
-      man: { pitch: 0.82, rateMultiplier: 0.92 },
-    }[voiceType] || { pitch: 1.25, rateMultiplier: 1.0 };
-
-    const finalRate = Math.max(0.5, Math.min(1.5, rate * profile.rateMultiplier));
-
     try {
-      Speech.speak(text, {
+      Speech.speak(textToSpeak, {
         language: speechLang,
+        voice: chosenVoice,
         rate: finalRate,
         pitch: profile.pitch,
         onDone: () => {
@@ -348,11 +537,19 @@ function speakWord(text: string, lang: LanguageCode, rate: number, voiceType: im
         },
         onError: () => {
           clearTimeout(timer);
-          finish();
+          // If native engine failed on Arabic/Urdu, immediately fallback to Google TTS
+          if (speechLang === "ar-SA" || speechLang === "ur-PK") {
+            playOnlineTTS(textToSpeak, speechLang === "ar-SA" ? "ar" : "ur").then(() => finish()).catch(() => finish());
+          } else {
+            finish();
+          }
         },
       });
     } catch {
       clearTimeout(timer);
+      if (speechLang === "ar-SA" || speechLang === "ur-PK") {
+        void playOnlineTTS(textToSpeak, speechLang === "ar-SA" ? "ar" : "ur");
+      }
       finish();
     }
   });
@@ -373,7 +570,7 @@ export async function playWord(
   voiceType: import("../types").VoiceType = "boy",
   useWholePhrase = false
 ): Promise<void> {
-  Speech.stop();
+  stopSentence();
   if (word.audioUri && word.useTextToSpeech !== true) {
     await playClip(word.audioUri);
   } else {
@@ -388,6 +585,15 @@ export function stopSentence(): void {
     Speech.stop();
   } catch {
     /* ignore */
+  }
+  if (Platform.OS === "web" && currentPlayingWebAudio) {
+    try {
+      currentPlayingWebAudio.pause();
+      currentPlayingWebAudio.currentTime = 0;
+    } catch {
+      /* ignore */
+    }
+    currentPlayingWebAudio = null;
   }
 }
 

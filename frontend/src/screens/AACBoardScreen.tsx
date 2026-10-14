@@ -11,6 +11,7 @@ import {
   Modal,
   TextInput,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,7 +33,7 @@ import {
   recordWordUseByWordId,
   subscribeCategories,
 } from "../modules/customCategories";
-import { playWord, playSentence, stopSentence, type SpokenWord } from "../modules/audio";
+import { playWord, playSentence, stopSentence, preloadTTS, type SpokenWord } from "../modules/audio";
 import { dictUrl } from "../modules/imageLibrary";
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { recordWordUsage, recordSentencePlayed, recordCorrectionUsed } from "../modules/storage";
@@ -170,6 +171,37 @@ function CardPic({
     );
   }
   return <Text style={{ fontSize: Math.max(18, Math.round(size * 0.72)) }}>{emoji || "🔹"}</Text>;
+}
+
+function verbFormBadgeTitle(badge: string, lang: string): string {
+  if (lang === "ar-SA") {
+    switch (badge) {
+      case "1st": return "المضارع (١)";
+      case "s": return "المفرد (s)";
+      case "2nd": return "الماضي (٢)";
+      case "3rd": return "التام (٣)";
+      case "4th": return "المستمر (٤)";
+      default: return badge;
+    }
+  }
+  if (lang === "ur-PK") {
+    switch (badge) {
+      case "1st": return "پہلی فارم (1st)";
+      case "s": return "s / es فارم";
+      case "2nd": return "دوسری فارم (2nd)";
+      case "3rd": return "تیسری فارم (3rd)";
+      case "4th": return "چوتھی فارم (ing)";
+      default: return `${badge} فارم`;
+    }
+  }
+  switch (badge) {
+    case "1st": return "1st Form";
+    case "s": return "s / es Form";
+    case "2nd": return "2nd Form";
+    case "3rd": return "3rd Form";
+    case "4th": return "4th Form";
+    default: return `${badge} Form`;
+  }
 }
 
 export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategories, labels }: Props) {
@@ -347,9 +379,13 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   }, [words, verbGroups]);
   // The verb box that was tapped: a popup shows each of its forms as its own picture box
   const [verbOpen, setVerbOpen] = useState<string | null>(null);
-  const verbCols = width >= 760 ? 5 : 3;
-  // popup boxes are bigger than the board ones so each form is easy to see and tap
-  const verbTileW = Math.floor(Math.min(270, (Math.min(width - 32, 1440) - 40 - (verbCols - 1) * 16) / verbCols));
+  const isDesktop = width >= 700;
+  const verbCols = isDesktop ? 5 : width >= 480 ? 3 : 2;
+  const modalMaxWidth = isDesktop ? Math.min(width - 40, 1320) : Math.min(width - 24, 600);
+  const colGap = isDesktop ? 12 : 10;
+  const cardPadding = isDesktop ? 36 : 24;
+  const availableW = modalMaxWidth - cardPadding - (verbCols - 1) * colGap;
+  const verbTileW = Math.floor(Math.min(210, Math.max(90, availableW / verbCols)));
   useEffect(() => setVerbOpen(null), [currentId]);
   function formRowsFor(key: string) {
     const g = verbGroups.get(key);
@@ -376,6 +412,29 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     const base = verbGroups.get(key)?.tiles[0];
     if (base) tapWord({ ...base, label: text, phrase: text, audioUri: undefined, useTextToSpeech: true });
   }
+
+  // Preload audio for visible words on the board so sound plays instantaneously without delay
+  useEffect(() => {
+    if (Platform.OS === "web" && (lang === "ar-SA" || lang === "ur-PK")) {
+      const code = lang === "ar-SA" ? "ar" : "ur";
+      const timer = setTimeout(() => {
+        shownWords.slice(0, 24).forEach((w) => {
+          preloadTTS(wordLabel(w.phrase || w.label, lang), code);
+        });
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [shownWords, lang]);
+
+  // Preload verb forms when verb popup is opened so tapping any form is instant
+  useEffect(() => {
+    if (verbOpen && Platform.OS === "web" && (lang === "ar-SA" || lang === "ur-PK")) {
+      const code = lang === "ar-SA" ? "ar" : "ur";
+      formRowsFor(verbOpen).forEach((r) => {
+        preloadTTS(wordLabel(r.text, lang), code);
+      });
+    }
+  }, [verbOpen, lang]);
 
   // Real-time live sync: recompute whenever caregiver edits, adds, hides, or deletes any word or category
   useEffect(() => {
@@ -1031,7 +1090,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                               vTag === "4th" && styles.verbFormBadgeText4th,
                             ]}
                           >
-                            {vTag} {lang === "ar-SA" ? "تصريف" : lang === "ur-PK" ? "فارم" : "Form"}
+                            {verbFormBadgeTitle(vTag, lang)}
                           </Text>
                         </View>
                       )}
@@ -1073,16 +1132,24 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       {/* Verb forms popup: 1st, s/es, 2nd, 3rd, 4th — each its own picture box */}
       <Modal visible={!!verbOpen && verbGroups.has(verbOpen)} transparent animationType="fade" onRequestClose={() => setVerbOpen(null)}>
         <Pressable style={styles.verbModalBackdrop} onPress={() => setVerbOpen(null)}>
-          <Pressable style={styles.verbModalCard} onPress={() => {}}>
+          <Pressable style={[styles.verbModalCard, { maxWidth: modalMaxWidth }]} onPress={() => {}}>
             <View style={styles.verbModalHeader}>
               <Text style={styles.verbModalTitle} numberOfLines={1}>
                 {verbOpen ? wordLabel(formRowsFor(verbOpen)[0]?.text ?? "", lang) : ""}
               </Text>
               <Pressable onPress={() => setVerbOpen(null)} hitSlop={10} accessibilityLabel="Close">
-                <Ionicons name="close-circle" size={32} color="#94a3b8" />
+                <Ionicons name="close-circle" size={30} color="#94a3b8" />
               </Pressable>
             </View>
-            <View style={styles.verbModalGrid}>
+            <ScrollView
+              contentContainerStyle={[
+                styles.verbModalGrid,
+                { gap: colGap, flexWrap: isDesktop ? "nowrap" : "wrap" },
+              ]}
+              showsVerticalScrollIndicator={false}
+              showsHorizontalScrollIndicator={false}
+              bounces={false}
+            >
               {verbOpen &&
                 formRowsFor(verbOpen).map((r) => {
                   const base = verbGroups.get(verbOpen)!.tiles[0];
@@ -1091,12 +1158,15 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                     <Pressable
                       key={r.badge}
                       onPress={() => tapVerbForm(verbOpen, r.text, r.tile)}
-                      style={({ pressed }) => [styles.tile, styles.wordTile, { width: verbTileW }, pressed && styles.tilePressed]}
+                      style={({ pressed }) => [
+                        styles.verbModalTile,
+                        { width: verbTileW, minHeight: Math.round(verbTileW * 1.1) },
+                        pressed && styles.tilePressed,
+                      ]}
                     >
                       <View
                         style={[
-                          styles.verbFormBadge,
-                          styles.verbPopBadge,
+                          styles.verbModalTileBadge,
                           r.badge === "1st" && styles.verbFormBadge1st,
                           r.badge === "2nd" && styles.verbFormBadge2nd,
                           r.badge === "3rd" && styles.verbFormBadge3rd,
@@ -1106,35 +1176,41 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       >
                         <Text
                           style={[
-                            styles.verbFormBadgeText,
-                            styles.verbPopBadgeText,
+                            styles.verbModalTileBadgeText,
                             r.badge === "1st" && styles.verbFormBadgeText1st,
                             r.badge === "2nd" && styles.verbFormBadgeText2nd,
                             r.badge === "3rd" && styles.verbFormBadgeText3rd,
                             r.badge === "4th" && styles.verbFormBadgeText4th,
                             r.badge === "s" && styles.verbFormBadgeTextS,
                           ]}
+                          numberOfLines={1}
                         >
-                          {r.badge === "s" ? "s / es" : r.badge} {lang === "ar-SA" ? "تصريف" : lang === "ur-PK" ? "فارم" : "Form"}
+                          {verbFormBadgeTitle(r.badge, lang)}
                         </Text>
                       </View>
-                      <View style={styles.wordBody}>
+                      <View style={styles.verbModalTilePicWrap}>
                         <CardPic
                           label={pic.label}
                           imageUri={pic.imageUri || base.imageUri}
                           emoji={pic.emoji}
-                          size={Math.round(verbTileW * 0.8)}
+                          size={Math.round(Math.min(verbTileW * 0.62, 110))}
                         />
                       </View>
-                      <View style={styles.wordLabelBar}>
-                        <Text style={[styles.wordLabelText, { fontSize: Math.round(Math.min(24, Math.max(15, verbTileW * 0.09))) }]} numberOfLines={1}>
+                      <View style={styles.verbModalTileLabelBar}>
+                        <Text
+                          style={[
+                            styles.verbModalTileLabelText,
+                            { fontSize: Math.round(Math.min(18, Math.max(13, verbTileW * 0.095))) },
+                          ]}
+                          numberOfLines={1}
+                        >
                           {wordLabel(r.text, lang)}
                         </Text>
                       </View>
                     </Pressable>
                   );
                 })}
-            </View>
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -1731,13 +1807,62 @@ const styles = StyleSheet.create({
   verbFormBadgeS: { backgroundColor: "#fdf2f8", borderColor: "#fbcfe8" },
   verbFormBadgeTextS: { color: "#be185d" },
   verbFormsPill: { flexDirection: "row", alignItems: "center", gap: 3 },
-  verbModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.45)", alignItems: "center", justifyContent: "center", padding: 16 },
-  verbModalCard: { maxWidth: 1440, backgroundColor: "#f1f5f9", borderRadius: 28, padding: 20, gap: 16 },
-  verbModalHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
-  verbModalTitle: { flex: 1, fontSize: 32, fontWeight: "900", color: colors.textDark },
+  verbModalBackdrop: { flex: 1, backgroundColor: "rgba(15,23,42,0.48)", alignItems: "center", justifyContent: "center", padding: 12 },
+  verbModalCard: { width: "100%", backgroundColor: "#f1f5f9", borderRadius: 24, padding: 16, gap: 12, maxHeight: "88%", alignSelf: "center" },
+  verbModalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingBottom: 4 },
+  verbModalTitle: { flex: 1, fontSize: 26, fontWeight: "900", color: colors.textDark },
   verbPopBadge: { top: 8, left: 8, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10 },
   verbPopBadgeText: { fontSize: 13 },
-  verbModalGrid: { flexDirection: "row", flexWrap: "wrap", gap: 16, justifyContent: "center" },
+  verbModalGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", alignItems: "center", paddingVertical: 4 },
+  verbModalTile: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 8,
+  },
+  verbModalTileBadge: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignSelf: "center",
+    marginBottom: 2,
+  },
+  verbModalTileBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  verbModalTilePicWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 4,
+    minHeight: 65,
+  },
+  verbModalTileLabelBar: {
+    width: "100%",
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+  },
+  verbModalTileLabelText: {
+    color: "#0f172a",
+    fontWeight: "800",
+    textAlign: "center",
+  },
 
   // Tala Subcategory Breadcrumb Navigation Bar
   breadcrumbBar: {

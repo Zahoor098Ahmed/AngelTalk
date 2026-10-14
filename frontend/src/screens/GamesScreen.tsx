@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile, TabScreen } from "../types";
 import { useSettings } from "../context/SettingsContext";
 import { speak } from "../modules/tts";
-import { recordGamePlayed } from "../modules/storage";
+import { recordGamePlayed, awardChildStars } from "../modules/storage";
 import { t, gameAnswerLabel, type TKey } from "../modules/i18n";
 import { tapFeedback } from "../modules/haptics";
 import { useResponsive } from "../modules/responsive";
@@ -28,6 +28,9 @@ import SmartImage from "../components/SmartImage";
 function GamePic({ answer, emoji, size = 40 }: { answer: string; emoji: string; size?: number }) {
   const [imgError, setImgError] = useState(false);
   const uri = useMemo(() => getPictogramUrl(answer), [answer]);
+  useEffect(() => {
+    setImgError(false);
+  }, [answer]);
   if (uri && !imgError) {
     return (
       <SmartImage
@@ -45,6 +48,7 @@ interface Props {
   tab: TabScreen;
   onTabChange: (tab: TabScreen) => void;
   labels: Record<TabScreen, string>;
+  onUpdateChild?: (child: ChildProfile) => void;
 }
 
 type GameMode = "animals" | "letters" | "numbers" | "colors" | "shapes" | "emotions" | "food" | "puzzle" | "sequence" | "jigsaw" | "sort";
@@ -247,7 +251,7 @@ const MODE_TKEY: Record<GameMode, { title: TKey; sub: TKey }> = {
   sort: { title: "gSort", sub: "gSortSub" },
 };
 
-export default function GamesScreen({ child, tab, onTabChange, labels }: Props) {
+export default function GamesScreen({ child, tab, onTabChange, labels, onUpdateChild }: Props) {
   const { settings } = useSettings();
   const { isSmallPhone, isTablet, isLargeTablet } = useResponsive();
   const lang = settings.language;
@@ -256,6 +260,13 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
   const gSub = (m: GameMode) => tt(MODE_TKEY[m].sub);
   const [mode, setMode] = useState<GameMode>("animals");
   const [score, setScore] = useState(0);
+
+  function giveStars(count: number = 1) {
+    const updated = awardChildStars(child.id, count);
+    if (updated && onUpdateChild) {
+      onUpdateChild(updated);
+    }
+  }
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [roundIdx, setRoundIdx] = useState(0);
@@ -331,12 +342,14 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
       setTries((tr) => tr + 1);
       speak(tt("gGreatJob"), lang, settings.soundEnabled);
       recordGamePlayed(child.id);
+      giveStars(1);
 
       setTimeout(() => {
         setFeedback(null);
         if (roundIdx + 1 >= rounds.length) {
           setFinished(true);
           speak(tt("gYouFinished"), lang, settings.soundEnabled);
+          giveStars(2);
         } else {
           setRoundIdx((i) => i + 1);
         }
@@ -363,10 +376,12 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
     if (n === sequenceNext) {
       speak(String(n), lang, settings.soundEnabled);
       setScore((s) => s + 1);
+      giveStars(1);
       if (n >= SEQUENCE_MAX) {
         setTimeout(() => {
           setFinished(true);
           speak(tt("gYouFinished"), lang, settings.soundEnabled);
+          giveStars(2);
         }, 300);
         recordGamePlayed(child.id);
       } else {
@@ -405,12 +420,14 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
       setJigsawPieces((prev) => prev.map((p) => (p.answer === placedAnswer ? { ...p, placed: true } : p)));
       setJigsawSelected(null);
       speak(tt("gGreatJob"), lang, settings.soundEnabled);
+      giveStars(1);
       setScore((s) => {
         const nextScore = s + 1;
         if (nextScore >= jigsawTargets.length) {
           setTimeout(() => {
             setFinished(true);
             speak(tt("gYouFinished"), lang, settings.soundEnabled);
+            giveStars(2);
           }, 300);
           recordGamePlayed(child.id);
         }
@@ -436,6 +453,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
     if (current.category === category) {
       speak(tt("gGreatJob"), lang, settings.soundEnabled);
       setSortWrong(false);
+      giveStars(1);
       setScore((s) => {
         const nextScore = s + 1;
         const remaining = sortQueue.slice(1);
@@ -443,6 +461,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
           setTimeout(() => {
             setFinished(true);
             speak(tt("gYouFinished"), lang, settings.soundEnabled);
+            giveStars(2);
           }, 300);
           recordGamePlayed(child.id);
         } else {
@@ -485,6 +504,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
 
     if (isMatch) {
       speak(tt("gGreatJob"), lang, settings.soundEnabled);
+      giveStars(1);
       setTimeout(() => {
         setPuzzleCards((prev) => prev.map((c, i) => (i === i1 || i === i2 ? { ...c, matched: true } : c)));
         setFlippedIdx([]);
@@ -495,6 +515,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
             setTimeout(() => {
               setFinished(true);
               speak(tt("gYouFinished"), lang, settings.soundEnabled);
+              giveStars(2);
             }, 300);
             recordGamePlayed(child.id);
           }
@@ -545,7 +566,13 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
                 </View>
               </View>
             </View>
-            <LangBadge />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={styles.starBadgeHeader}>
+                <Ionicons name="star" size={16} color="#fbbf24" />
+                <Text style={styles.starBadgeHeaderText}>{child.stars ?? 0}</Text>
+              </View>
+              <LangBadge />
+            </View>
           </View>
         </View>
 
@@ -617,7 +644,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
                       c.matched && styles.puzzleCardMatched,
                     ]}
                   >
-                    {shown ? <GamePic answer={c.answer} emoji={c.emoji} size={44} /> : <Text style={styles.puzzleCardText}>❓</Text>}
+                    {shown ? <GamePic answer={c.answer} emoji={c.emoji} size={isTablet ? 60 : 50} /> : <Text style={styles.puzzleCardText}>❓</Text>}
                   </Pressable>
                 );
               })}
@@ -668,7 +695,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
                         jigsawWrongSlot === i && { borderColor: "#ef4444", backgroundColor: "#fee2e2" },
                       ]}
                     >
-                      {filledAnswer ? <GamePic answer={targetAnswer} emoji={filledEmoji ?? ""} size={44} /> : null}
+                      {filledAnswer ? <GamePic answer={targetAnswer} emoji={filledEmoji ?? ""} size={isTablet ? 60 : 50} /> : null}
                     </Pressable>
                   );
                 })}
@@ -685,7 +712,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
                       jigsawSelected === p.answer && styles.jigsawPieceSelected,
                     ]}
                   >
-                    <GamePic answer={p.answer} emoji={p.emoji} size={44} />
+                    <GamePic answer={p.answer} emoji={p.emoji} size={isTablet ? 60 : 50} />
                   </Pressable>
                 ))}
               </View>
@@ -696,7 +723,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
             <>
               <Text style={styles.sequenceHint}>{tt("gSortHint")}</Text>
               <View style={[styles.sortCard, sortWrong && { borderColor: "#ef4444", backgroundColor: "#fee2e2" }]}>
-                <GamePic answer={sortQueue[0].answer} emoji={sortQueue[0].emoji} size={90} />
+                <GamePic answer={sortQueue[0].answer} emoji={sortQueue[0].emoji} size={isTablet ? 140 : 120} />
               </View>
               <View style={styles.sortBinRow}>
                 <Pressable onPress={() => chooseSortBin("animal")} style={[styles.sortBin, { backgroundColor: "#dcfce7", borderColor: "#15803d" }]}>
@@ -740,17 +767,17 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
                   }}
                 >
                   {mode === "letters" || mode === "numbers" ? (
-                    <Text style={[styles.promptGlyph, isTablet && { fontSize: 104 }, isSmallPhone && { fontSize: 58 }]}>
+                    <Text style={[styles.promptGlyph, isTablet && { fontSize: 120 }, isSmallPhone && { fontSize: 68 }]}>
                       {round.prompt}
                     </Text>
                   ) : (
-                    <GamePic answer={round.answer} emoji={round.prompt} size={isTablet ? 130 : isSmallPhone ? 76 : 100} />
+                    <GamePic answer={round.answer} emoji={round.prompt} size={isTablet ? 200 : isSmallPhone ? 120 : 160} />
                   )}
                 </Animated.View>
 
                 {/* Hear Question Speaker Button */}
                 <Pressable onPress={speakPrompt} style={styles.speakPromptBtn}>
-                  <Ionicons name="volume-high" size={18} color="white" />
+                  <Ionicons name="volume-high" size={20} color="white" />
                   <Text style={styles.speakPromptText}>{tt("gListen")}</Text>
                 </Pressable>
 
@@ -825,8 +852,12 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
                         feedback === "wrong" && opt === round.answer && styles.optionCardHint,
                       ]}
                     >
-                      {optEmoji ? <GamePic answer={opt} emoji={optEmoji} size={isTablet ? 32 : 26} /> : null}
-                      <Text style={[styles.optionText, isTablet && { fontSize: 18 }, isCorrect && { color: "#166534", fontWeight: "900" }]}>
+                      {optEmoji ? (
+                        <View style={[styles.optionImgWrap, isTablet && styles.optionImgWrapTablet]}>
+                          <GamePic answer={opt} emoji={optEmoji} size={isTablet ? 50 : 44} />
+                        </View>
+                      ) : null}
+                      <Text style={[styles.optionText, isTablet && { fontSize: 20 }, isCorrect && { color: "#166534", fontWeight: "900" }]}>
                         {gameAnswerLabel(opt, lang)}
                       </Text>
                       <Pressable
@@ -837,7 +868,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
                         style={styles.optSpeakerBtn}
                         hitSlop={8}
                       >
-                        <Ionicons name="volume-medium-outline" size={isTablet ? 20 : 16} color="#64748b" />
+                        <Ionicons name="volume-medium-outline" size={isTablet ? 22 : 20} color="#64748b" />
                       </Pressable>
                     </Pressable>
                   );
@@ -867,7 +898,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels }: Props) 
                 <View style={styles.finishStatBox}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 3, justifyContent: "center" }}>
                     <Ionicons name="star" size={16} color="#f59e0b" />
-                    <Text style={[styles.finishStatNum, { color: "#f59e0b" }]}>+{score}</Text>
+                    <Text style={[styles.finishStatNum, { color: "#f59e0b" }]}>+{score + 2}</Text>
                   </View>
                   <Text style={styles.finishStatLabel}>{tt("starsEarnedLabel")}</Text>
                 </View>
@@ -972,6 +1003,22 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 18, fontWeight: "800", color: "#0f172a" },
   subtitle: { fontSize: 12, color: "#64748b", marginTop: 1 },
+  starBadgeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#fef3c7",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#fde68a",
+  },
+  starBadgeHeaderText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: "#b45309",
+  },
 
   /* Top Carousel */
   carouselContainer: {
@@ -1014,7 +1061,7 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, color: "#64748b", fontWeight: "600", marginTop: 2 },
 
   /* Progress Section */
-  progressSection: { width: "100%", maxWidth: 380, gap: 6 },
+  progressSection: { width: "100%", maxWidth: 420, gap: 6 },
   progressSectionTablet: { maxWidth: 580 },
   roundCount: { fontSize: 12, color: "#475569", fontWeight: "700" },
   roundPct: { fontSize: 12, color: "#64748b", fontWeight: "700" },
@@ -1030,8 +1077,8 @@ const styles = StyleSheet.create({
   /* Main Prompt Stage */
   promptCard: {
     width: "100%",
-    maxWidth: 380,
-    minHeight: 200,
+    maxWidth: 420,
+    minHeight: 250,
     borderRadius: 24,
     backgroundColor: "#ffffff",
     borderWidth: 2,
@@ -1043,26 +1090,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 10,
     elevation: 4,
-    gap: 12,
+    gap: 14,
   },
   promptCardTablet: {
     maxWidth: 580,
-    minHeight: 240,
+    minHeight: 300,
     paddingVertical: 32,
     borderRadius: 28,
+    gap: 18,
   },
-  promptGlyph: { fontSize: 80, textAlign: "center" },
+  promptGlyph: { fontSize: 92, textAlign: "center" },
   starBurst: { position: "absolute", top: "50%", left: "50%", marginTop: -20, marginLeft: -20 },
   speakPromptBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
     backgroundColor: colors.forest,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 22,
   },
-  speakPromptText: { color: "white", fontSize: 12, fontWeight: "700" },
+  speakPromptText: { color: "white", fontSize: 13, fontWeight: "800" },
   feedbackBadgeSuccess: {
     flexDirection: "row",
     alignItems: "center",
@@ -1091,14 +1139,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
     width: "100%",
-    maxWidth: 420,
+    maxWidth: 440,
     alignSelf: "center",
     marginBottom: 16,
   },
   puzzleCard: {
-    width: 76,
-    height: 76,
-    borderRadius: 16,
+    width: 82,
+    height: 82,
+    borderRadius: 18,
     backgroundColor: "#e0e7ff",
     borderWidth: 1.5,
     borderColor: "#c7d2fe",
@@ -1107,11 +1155,11 @@ const styles = StyleSheet.create({
   },
   puzzleCardShown: { backgroundColor: "#ffffff", borderColor: "#a5b4fc" },
   puzzleCardMatched: { backgroundColor: "#dcfce7", borderColor: colors.greenDeep },
-  puzzleCardText: { fontSize: 34 },
+  puzzleCardText: { fontSize: 36 },
   jigsawSlot: {
-    width: 76,
-    height: 76,
-    borderRadius: 16,
+    width: 82,
+    height: 82,
+    borderRadius: 18,
     backgroundColor: "#fffbeb",
     borderWidth: 2,
     borderStyle: "dashed",
@@ -1121,9 +1169,9 @@ const styles = StyleSheet.create({
   },
   jigsawPieceSelected: { borderColor: "#a16207", borderWidth: 3, backgroundColor: "#fef3c7" },
   sortCard: {
-    width: 160,
-    height: 160,
-    borderRadius: 24,
+    width: 180,
+    height: 180,
+    borderRadius: 26,
     backgroundColor: "#ffffff",
     borderWidth: 2,
     borderColor: "#e2e8f0",
@@ -1138,27 +1186,28 @@ const styles = StyleSheet.create({
   sequenceHint: { fontSize: 15, fontWeight: "700", color: colors.textDark, textAlign: "center", marginBottom: 12 },
 
   /* Options Grid */
-  optionsGrid: { width: "100%", maxWidth: 380, gap: 10 },
-  optionsGridTablet: { maxWidth: 580, gap: 12 },
+  optionsGrid: { width: "100%", maxWidth: 420, gap: 12 },
+  optionsGridTablet: { maxWidth: 580, gap: 14 },
   optionCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
     borderWidth: 1.5,
     borderColor: "#e2e8f0",
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    gap: 12,
+    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 14,
     shadowColor: "#000",
     shadowOpacity: 0.03,
     shadowRadius: 6,
     elevation: 2,
   },
   optionCardTablet: {
-    paddingVertical: 18,
-    paddingHorizontal: 22,
-    borderRadius: 18,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    gap: 16,
   },
   optionCardCorrect: {
     borderColor: "#16a34a",
@@ -1169,18 +1218,36 @@ const styles = StyleSheet.create({
     borderColor: "#16a34a",
     borderWidth: 2,
   },
-  optEmoji: { fontSize: 24 },
-  optionText: { flex: 1, fontWeight: "700", fontSize: 16, color: "#1e293b" },
+  optionImgWrap: {
+    width: 54,
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: "#f8fafc",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  optionImgWrapTablet: {
+    width: 62,
+    height: 62,
+    borderRadius: 16,
+  },
+  optEmoji: { fontSize: 28 },
+  optionText: { flex: 1, fontWeight: "800", fontSize: 17, color: "#1e293b" },
   optSpeakerBtn: {
-    padding: 6,
-    borderRadius: 8,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   /* Finish Card */
   finishCard: {
     width: "100%",
-    maxWidth: 380,
+    maxWidth: 420,
     backgroundColor: "#ffffff",
     borderRadius: 24,
     borderWidth: 1,
@@ -1289,7 +1356,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     width: "100%",
-    maxWidth: 380,
+    maxWidth: 420,
     justifyContent: "flex-end",
     marginTop: -4,
   },

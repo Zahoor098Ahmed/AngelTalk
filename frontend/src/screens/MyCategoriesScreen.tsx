@@ -1888,7 +1888,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             ]}
                             numberOfLines={1}
                           >
-                            {cat.isCustom ? cat.name : (wordLabel(cat.name, lang) || cat.name)}
+                            {wordLabel(cat.name, lang) || cat.name}
                           </Text>
                           {cat.hidden && (
                             <Text style={styles.hiddenTag}>(Hidden)</Text>
@@ -1964,7 +1964,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                                     ]}
                                     numberOfLines={1}
                                   >
-                                    {sc.isCustom ? sc.name : (wordLabel(sc.name, lang) || sc.name)}
+                                    {wordLabel(sc.name, lang) || sc.name}
                                   </Text>
                                   <Text style={styles.sidebarSubCatCount}>({sc.words.length})</Text>
                                 </View>
@@ -2049,14 +2049,14 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
                       <Pressable onPress={() => setSelectedSubCatId(null)}>
                         <Text style={[styles.selectedShelfTitle, selectedSubCatId ? { color: "#235E50" } : null]}>
-                          {currentShelf ? (currentShelf.isCustom ? currentShelf.name : (wordLabel(currentShelf.name, lang) || currentShelf.name)) : wordLabel("Core", lang)}
+                          {currentShelf ? (wordLabel(currentShelf.name, lang) || currentShelf.name) : wordLabel("Core", lang)}
                         </Text>
                       </Pressable>
                       {selectedSubCatId && (
                         <>
                           <Ionicons name="chevron-forward" size={16} color="#8A9590" />
                           <Text style={styles.selectedShelfTitle}>
-                            {activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || "")}
+                            {(activeCategory ? wordLabel(activeCategory.name, lang) : "") || activeCategory?.name || ""}
                           </Text>
                         </>
                       )}
@@ -2073,9 +2073,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     </View>
                     <Text style={styles.selectedShelfMeta} numberOfLines={1} ellipsizeMode="tail">
                       {selectedSubCatId
-                        ? t("wordsInSubCatMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || ""))
+                        ? t("wordsInSubCatMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", (activeCategory ? wordLabel(activeCategory.name, lang) : "") || activeCategory?.name || "")
                         : subCats.length > 0
-                        ? t("wordsInShelfAllMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", currentShelf?.isCustom ? currentShelf.name : (wordLabel(currentShelf?.name || "", lang) || currentShelf?.name || ""))
+                        ? t("wordsInShelfAllMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", (currentShelf ? wordLabel(currentShelf.name, lang) : "") || currentShelf?.name || "")
                         : t("wordsOnDeviceMeta", lang).replace("{count}", String(displayWords.length))}
                       {activeCategory?.hidden ? " · (Hidden from child)" : ""}
                     </Text>
@@ -2159,7 +2159,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   <View style={styles.emptyWrap}>
                     <Text style={styles.emptyIcon}>📝</Text>
                     <Text style={styles.emptyTitle}>{t("noWordsInShelfTitle", lang)}</Text>
-                    <Text style={styles.emptySub}>{t("noWordsInShelfSub", lang).replace("{name}", activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || ""))}</Text>
+                    <Text style={styles.emptySub}>{t("noWordsInShelfSub", lang).replace("{name}", (activeCategory ? wordLabel(activeCategory.name, lang) : "") || activeCategory?.name || "")}</Text>
                     <Pressable
                       onPress={openAddWordUnified}
                       style={[styles.actionPillBtn, { marginTop: 14 }]}
@@ -2223,7 +2223,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                               ]}
                               numberOfLines={1}
                             >
-                              {w.isCustom ? w.label : (wordLabel(w.label, lang) || w.label)}
+                              {wordLabel(w.label, lang) || w.label}
                             </Text>
                             {w.hidden && (
                               <Text style={[styles.wordHiddenNote, isRtl && { textAlign: "right" }]}>{t("hiddenFromChildNote", lang)}</Text>
@@ -2362,7 +2362,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                           cat.hidden && styles.textHiddenDim,
                         ]}
                       >
-                        {cat.isCustom ? cat.name : (wordLabel(cat.name, lang) || cat.name)}
+                        {wordLabel(cat.name, lang) || cat.name}
                       </Text>
 
                     </Pressable>
@@ -2377,12 +2377,12 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 <View>
                   <Text style={[styles.selectedShelfTitle, isRtl && { textAlign: "right" }]}>
                     {selectedSubCatId
-                      ? `${currentShelf ? (currentShelf.isCustom ? currentShelf.name : (wordLabel(currentShelf.name, lang) || currentShelf.name)) : wordLabel("Core", lang)} › ${activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || "")}`
+                      ? `${currentShelf ? (wordLabel(currentShelf.name, lang) || currentShelf.name) : wordLabel("Core", lang)} › ${(activeCategory ? wordLabel(activeCategory.name, lang) : "") || activeCategory?.name || ""}`
                       : (currentShelf ? wordLabel(currentShelf.name, lang) : wordLabel("Core", lang))}
                   </Text>
                   <Text style={[styles.selectedShelfMeta, isRtl && { textAlign: "right" }]}>
                     {selectedSubCatId
-                      ? t("wordsInSubCatMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || ""))
+                      ? t("wordsInSubCatMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", (activeCategory ? wordLabel(activeCategory.name, lang) : "") || activeCategory?.name || "")
                       : t("wordsOnDeviceMeta", lang).replace("{count}", String(displayWords.length))}
                     {activeCategory?.hidden ? t("hiddenShelfNote", lang) : ""}
                   </Text>
@@ -2436,7 +2436,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         !selectedSubCatId && styles.subCatTabPillTextActive,
                       ]}
                     >
-                      {currentShelf ? (currentShelf.isCustom ? currentShelf.name : (wordLabel(currentShelf.name, lang) || currentShelf.name)) : wordLabel("Core", lang)} (All)
+                      {currentShelf ? (wordLabel(currentShelf.name, lang) || currentShelf.name) : wordLabel("Core", lang)} (All)
                     </Text>
                     <View
                       style={[
@@ -2475,7 +2475,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             sc.hidden && styles.textHiddenDim,
                           ]}
                         >
-                          {sc.isCustom ? sc.name : (wordLabel(sc.name, lang) || sc.name)}
+                          {wordLabel(sc.name, lang) || sc.name}
                         </Text>
                         <View
                           style={[
@@ -2623,7 +2623,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             ]}
                             numberOfLines={1}
                           >
-                            {w.isCustom ? w.label : (wordLabel(w.label, lang) || w.label)}
+                            {wordLabel(w.label, lang) || w.label}
                           </Text>
                           {w.hidden && (
                             <Text style={[styles.wordHiddenNote, isRtl && { textAlign: "right" }]}>{t("hiddenFromChildNote", lang)}</Text>

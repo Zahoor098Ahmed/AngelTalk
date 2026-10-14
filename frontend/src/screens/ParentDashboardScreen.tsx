@@ -29,6 +29,7 @@ import LangBadge from "../components/LangBadge";
 import TabBar from "../components/TabBar";
 import EmergencyPasscardModal from "../components/EmergencyPasscardModal";
 import SensoryCalmerModal from "../components/SensoryCalmerModal";
+import ShareProgressModal from "../components/ShareProgressModal";
 import MoodFace, { type MoodType } from "../components/MoodFace";
 import { tapFeedback } from "../modules/haptics";
 import { colors, radius } from "../theme";
@@ -89,6 +90,7 @@ export default function ParentDashboardScreen({
   const [subTab, setSubTab] = useState<SubTab>("overview");
   const [passcardModalOpen, setPasscardModalOpen] = useState(false);
   const [sensoryModalOpen, setSensoryModalOpen] = useState(false);
+  const [shareDoctorModalOpen, setShareDoctorModalOpen] = useState(false);
   const [journalModalOpen, setJournalModalOpen] = useState(false);
 
   // Journal form state
@@ -191,47 +193,8 @@ export default function ParentDashboardScreen({
   }
 
   function handleShareProgressWithDoctor() {
-    const report = `📋 ANGEL TALK PARENT & CLINICAL PROGRESS UPDATE
-Child: ${child.name} (Age ${child.age})
-Diagnoses: ${child.diagnoses.map((d) => DIAGNOSIS_LABELS[d] || d).join(", ")}
-Date: ${new Date().toLocaleDateString()}
-
-📊 AAC COMMUNICATION METRICS:
-• Words Tapped This Week: ${wordsThisWeek}
-• Cumulative Words: ${totalWords} (${uniqueWords} unique vocabulary words)
-• Full Sentences Spoken: ${sentencesSpoken}
-• Longest Sentence: ${longestSentenceLength > 0 ? `${longestSentenceLength} words (${longestSentenceWords.join(" ")})` : "None yet"}
-• Weekly Routine Adherence: ${avgAdherence}%
-• Top Words: ${topWords.map(([w, c]) => `${w} (${c})`).join(", ") || "None"}
-
-🎯 PRESCRIBED THERAPY GOALS:
-${
-  therapyGoals.length > 0
-    ? therapyGoals
-        .map(
-          (g) =>
-            `• [${g.category.toUpperCase()}] ${g.title}: ${g.currentCount}/${g.targetCount} ${g.unit} (${g.completed ? "COMPLETED" : "In Progress"})`
-        )
-        .join("\n")
-    : "No prescribed goals currently set."
-}
-
-📔 RECENT CAREGIVER JOURNAL ENTRIES:
-${
-  careLogs.length > 0
-    ? careLogs
-        .slice(0, 3)
-        .map(
-          (l) =>
-            `• ${new Date(l.date).toLocaleDateString()}: Mood=${l.mood}${l.meltdownDurationMin ? `, Meltdown=${l.meltdownDurationMin}min` : ""}${l.communicationWins ? `, Wins: ${l.communicationWins}` : ""}`
-        )
-        .join("\n")
-    : "No recent journal logs."
-}
-
-Sent via Angel Talk AAC & Pediatric Support Portal.`;
-
-    Share.share({ message: report, title: `${child.name}_Progress_Report.txt` });
+    tapFeedback();
+    setShareDoctorModalOpen(true);
   }
 
   function toggleFaceConsent(value: boolean) {
@@ -1000,6 +963,24 @@ Daily Target: ${child.stars ?? 0} Stars Earned! Keep up the great work!`;
       <SensoryCalmerModal
         visible={sensoryModalOpen}
         onClose={() => setSensoryModalOpen(false)}
+      />
+
+      {/* Share Progress with Doctor / SLP Modal */}
+      <ShareProgressModal
+        visible={shareDoctorModalOpen}
+        onClose={() => setShareDoctorModalOpen(false)}
+        child={child}
+        totalWords={totalWords}
+        uniqueWords={uniqueWords}
+        wordsThisWeek={wordsThisWeek}
+        sentencesSpoken={sentencesSpoken}
+        longestSentenceLength={longestSentenceLength}
+        longestSentenceWords={longestSentenceWords}
+        avgAdherence={avgAdherence}
+        topWords={topWords}
+        therapyGoals={therapyGoals}
+        careLogs={careLogs}
+        consecutiveDays={consecutiveDays}
       />
 
       {/* New Care Log Modal */}

@@ -1,11 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile, TabScreen } from "../types";
 import { useSettings } from "../context/SettingsContext";
 import { t, type TKey } from "../modules/i18n";
-import { getUsage } from "../modules/storage";
+import { getUsage, getChild, awardChildStars } from "../modules/storage";
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { tapFeedback } from "../modules/haptics";
 import SmartImage from "../components/SmartImage";
@@ -23,6 +23,7 @@ interface Props {
   onOpenMore: () => void;
   onOpenSocialStories?: () => void;
   labels: Record<TabScreen, string>;
+  onUpdateChild?: (child: ChildProfile) => void;
 }
 
 type QuickItem = {
@@ -58,7 +59,8 @@ const QUICK_ACCESS: QuickItem[] = [
 ];
 
 export default function HomeScreen(props: Props) {
-  const { child, tab, onTabChange, onOpenMore, labels } = props;
+  const { child: propChild, tab, onTabChange, onOpenMore, labels, onUpdateChild } = props;
+  const child = getChild(propChild.id) ?? propChild;
   const { settings } = useSettings();
   const { isTablet } = useResponsive();
   const lang = settings.language;
@@ -68,6 +70,16 @@ export default function HomeScreen(props: Props) {
 
   const usage = useMemo(() => getUsage(child.id), [child.id]);
   const weekWords = usage.wordsByDay.reduce((sum, v) => sum + v, 0);
+
+  // If child has 0 stars but has already played games, restore baseline stars right away
+  useEffect(() => {
+    if ((!child.stars || child.stars === 0) && ((usage.consecutiveDays ?? 0) > 0 || (usage.gameStreak ?? 0) > 0 || usage.lastPlayedDate)) {
+      const updated = awardChildStars(child.id, 8);
+      if (updated && onUpdateChild) {
+        onUpdateChild(updated);
+      }
+    }
+  }, [child.id, child.stars, usage.consecutiveDays, usage.gameStreak, usage.lastPlayedDate, onUpdateChild]);
 
   const STATS: { icon: keyof typeof Ionicons.glyphMap; tint: string; bg: string; value: number; label: string }[] = [
     { icon: "star", tint: "#d97706", bg: "#fef3c7", value: child.stars ?? 0, label: tr("Stars", "نجوم", "ستارے") },

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView } from "react-native";
+import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView, Platform } from "react-native";
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
@@ -56,6 +56,18 @@ const TAB_LABEL: Record<TabScreen, string> = {
 
 function AppInner() {
   const { ready, settings } = useSettings();
+
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof document !== "undefined" && document.head) {
+      let meta = document.querySelector('meta[name="referrer"]');
+      if (!meta) {
+        meta = document.createElement("meta");
+        meta.setAttribute("name", "referrer");
+        meta.setAttribute("content", "no-referrer");
+        document.head.appendChild(meta);
+      }
+    }
+  }, []);
   const [screen, setScreen] = useState<Screen>("face-scan");
   const [currentTab, setCurrentTab] = useState<TabScreen>("home");
   const [currentChild, setCurrentChild] = useState<ChildProfile | null>(null);
@@ -160,6 +172,7 @@ function AppInner() {
           onTabChange={(t) => setCurrentTab(t)}
           onOpenMore={() => go("more")}
           onOpenSocialStories={() => go("social-stories")}
+          onUpdateChild={setCurrentChild}
           labels={tabLabels}
         />
       );
@@ -192,6 +205,7 @@ function AppInner() {
           child={currentChild}
           tab={currentTab}
           onTabChange={(t) => setCurrentTab(t)}
+          onUpdateChild={setCurrentChild}
           labels={tabLabels}
         />
       );
