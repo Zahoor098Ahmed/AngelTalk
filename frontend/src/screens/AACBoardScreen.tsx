@@ -651,15 +651,6 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
             <Text style={styles.mistakeHeaderBtnText}>{t("oopsBtn", lang)}</Text>
           </Pressable>
 
-          {/* Voice Add button */}
-          <Pressable
-            onPress={startVoiceAdd}
-            style={styles.voiceHeaderBtn}
-            accessibilityLabel={t("makeAWord", lang)}
-          >
-            <Ionicons name="mic" size={16} color="#ffffff" />
-          </Pressable>
-
           <LangBadge />
 
           <Pressable
