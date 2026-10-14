@@ -677,26 +677,30 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     if (!raw) return;
     const names = raw
       .split(/[\n,;]+/)
-      .map((n) => n.trim())
+      .map((n) => n.trim().replace(/[.,!?;:]+$/, "").trim())
       .filter((n) => n.length > 0);
     if (names.length === 0) return;
 
     if (names.length === 1) {
+      const customImg = newShelfImageUri || bulkShelvesImages[names[0]] || bulkShelvesImages[names[0].toLowerCase()];
       const cat = createBlankCategory({
         name: names[0],
         icon: newShelfIcon,
         color: "#235E50",
-        imageUri: newShelfImageUri || getPictogramUrl(names[0]) || undefined,
+        imageUri: customImg || getPictogramUrl(names[0]) || undefined,
       });
       setSelectedShelfId(cat.id);
     } else {
       const created = createBlankCategoriesBulk(
-        names.map((n) => ({
-          name: n,
-          icon: newShelfIcon,
-          color: "#235E50",
-          imageUri: getPictogramUrl(n) || undefined,
-        }))
+        names.map((n) => {
+          const customImg = bulkShelvesImages[n] || bulkShelvesImages[n.toLowerCase()];
+          return {
+            name: n,
+            icon: getCategoryIconForName(n) || newShelfIcon,
+            color: "#235E50",
+            imageUri: customImg || getPictogramUrl(n) || undefined,
+          };
+        })
       );
       if (created.length > 0) {
         setSelectedShelfId(created[0].id);
@@ -706,6 +710,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     setNewShelfOpen(false);
     setNewShelfName("");
     setNewShelfImageUri(undefined);
+    setBulkShelvesImages({});
     refresh();
   }
 
@@ -720,21 +725,27 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
     let createdId: string | null = null;
     if (names.length === 1) {
+      const customImg = bulkSubCatsImages[names[0]] || bulkSubCatsImages[names[0].toLowerCase()];
       const cat = createBlankCategory({
         name: names[0],
         parentCategoryId: currentShelf.id,
         icon: currentShelf.icon,
         color: currentShelf.color,
+        imageUri: customImg || getPictogramUrl(names[0]) || undefined,
       });
       createdId = cat.id;
     } else {
       const createdList = createBlankCategoriesBulk(
-        names.map((n) => ({
-          name: n,
-          parentCategoryId: currentShelf.id,
-          icon: currentShelf.icon,
-          color: currentShelf.color,
-        }))
+        names.map((n) => {
+          const customImg = bulkSubCatsImages[n] || bulkSubCatsImages[n.toLowerCase()];
+          return {
+            name: n,
+            parentCategoryId: currentShelf.id,
+            icon: currentShelf.icon,
+            color: currentShelf.color,
+            imageUri: customImg || getPictogramUrl(n) || undefined,
+          };
+        })
       );
       if (createdList.length > 0) {
         createdId = createdList[0].id;
@@ -1003,12 +1014,13 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             const key = `${f.verbFormTag}::${f.label.toLowerCase()}`;
             if (!seenLabels.has(key)) {
               seenLabels.add(key);
+              const customImg = bulkWordsImages[item] || bulkWordsImages[item.toLowerCase()];
               wordsToInsert.push({
                 label: f.label,
                 phrase: f.label,
                 color: newWordColor,
                 emoji: vForms.emoji || "⚡",
-                imageUri: getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
+                imageUri: customImg || getPictogramUrl(f.label) || getPictogramUrl(form1) || undefined,
                 size: "md" as TileSize,
                 useTextToSpeech: true,
                 verbForms: vForms,
@@ -1019,6 +1031,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
         } else {
           const cLabel = capWord(item);
           const lower = cLabel.toLowerCase();
+          const customImg = bulkWordsImages[item] || bulkWordsImages[item.toLowerCase()] || bulkWordsImages[cLabel];
           if (!seenLabels.has(lower)) {
             seenLabels.add(lower);
             wordsToInsert.push({
@@ -1026,7 +1039,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               phrase: cLabel,
               color: newWordColor,
               emoji: "🔹",
-              imageUri: getPictogramUrl(cLabel) || undefined,
+              imageUri: customImg || getPictogramUrl(cLabel) || undefined,
               size: "md" as TileSize,
               useTextToSpeech: true,
             });
@@ -1825,7 +1838,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
           /* WIDE DESKTOP/TABLET LAYOUT */
           <View style={[styles.mainLayoutWide, isRtl && { flexDirection: "row-reverse" }]}>
             {/* Left Column: Shelves */}
-            <View style={[styles.sidebarCard, compactTable && { width: 250, padding: 14 }]}>
+            <View style={[styles.sidebarCard, compactTable && { width: 295, padding: 12 }]}>
               <View style={styles.sidebarHeader}>
                 <Text style={[styles.sidebarTitle, isRtl && { textAlign: "right" }]}>{t("shelvesHeader", lang)}</Text>
                 <Text style={[styles.sidebarSub, isRtl && { textAlign: "right" }]}>{t("shelvesSub", lang)}</Text>
@@ -2016,6 +2029,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               <Pressable
                 onPress={() => {
                   setNewShelfName("");
+                  setNewShelfImageUri(undefined);
+                  setBulkShelvesImages({});
                   setNewShelfOpen(true);
                 }}
                 style={styles.newShelfBtn}
@@ -2027,66 +2042,59 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
             {/* Right Column: Words Table for Selected Shelf / Sub-Category */}
             <View style={styles.contentCard}>
-              <View style={[styles.tableHeaderRow, isRtl && { flexDirection: "row-reverse" }]}>
-                <View style={{ flexShrink: 1, maxWidth: "100%" }}>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-                    <Pressable onPress={() => setSelectedSubCatId(null)}>
-                      <Text style={[styles.selectedShelfTitle, selectedSubCatId ? { color: "#235E50" } : null]}>
-                        {currentShelf ? (currentShelf.isCustom ? currentShelf.name : (wordLabel(currentShelf.name, lang) || currentShelf.name)) : wordLabel("Core", lang)}
-                      </Text>
-                    </Pressable>
-                    {selectedSubCatId && (
-                      <>
-                        <Ionicons name="chevron-forward" size={16} color="#8A9590" />
-                        <Text style={styles.selectedShelfTitle}>
-                          {activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || "")}
+              <View style={[styles.tableHeaderSection, isRtl && { flexDirection: "column" }]}>
+                {/* Row 1: Title + Subtitle (Left) and Add Words Button (Right) */}
+                <View style={[styles.tableHeaderTopRow, isRtl && { flexDirection: "row-reverse" }]}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                      <Pressable onPress={() => setSelectedSubCatId(null)}>
+                        <Text style={[styles.selectedShelfTitle, selectedSubCatId ? { color: "#235E50" } : null]}>
+                          {currentShelf ? (currentShelf.isCustom ? currentShelf.name : (wordLabel(currentShelf.name, lang) || currentShelf.name)) : wordLabel("Core", lang)}
                         </Text>
-                      </>
-                    )}
-                    <Pressable
-                      onPress={() => activeCategory && openEditCategory(activeCategory)}
-                      style={styles.editCategoryTopPill}
-                      accessibilityLabel="Edit category settings"
-                    >
-                      <Ionicons name="pencil" size={12} color="#235E50" />
-                      <Text style={styles.editCategoryTopPillText}>
-                        {selectedSubCatId ? t("editSubCatPill", lang) : t("editShelfPill", lang)}
-                      </Text>
-                    </Pressable>
+                      </Pressable>
+                      {selectedSubCatId && (
+                        <>
+                          <Ionicons name="chevron-forward" size={16} color="#8A9590" />
+                          <Text style={styles.selectedShelfTitle}>
+                            {activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || "")}
+                          </Text>
+                        </>
+                      )}
+                      <Pressable
+                        onPress={() => activeCategory && openEditCategory(activeCategory)}
+                        style={styles.editCategoryTopPill}
+                        accessibilityLabel="Edit category settings"
+                      >
+                        <Ionicons name="pencil" size={12} color="#235E50" />
+                        <Text style={styles.editCategoryTopPillText}>
+                          {selectedSubCatId ? t("editSubCatPill", lang) : t("editShelfPill", lang)}
+                        </Text>
+                      </Pressable>
+                    </View>
+                    <Text style={styles.selectedShelfMeta} numberOfLines={1} ellipsizeMode="tail">
+                      {selectedSubCatId
+                        ? t("wordsInSubCatMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || ""))
+                        : subCats.length > 0
+                        ? t("wordsInShelfAllMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", currentShelf?.isCustom ? currentShelf.name : (wordLabel(currentShelf?.name || "", lang) || currentShelf?.name || ""))
+                        : t("wordsOnDeviceMeta", lang).replace("{count}", String(displayWords.length))}
+                      {activeCategory?.hidden ? " · (Hidden from child)" : ""}
+                    </Text>
                   </View>
-                  <Text style={styles.selectedShelfMeta}>
-                    {selectedSubCatId
-    ? t("wordsInSubCatMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", activeCategory?.isCustom ? activeCategory.name : (wordLabel(activeCategory?.name || "", lang) || activeCategory?.name || ""))
-    : subCats.length > 0
-    ? t("wordsInShelfAllMeta", lang).replace("{count}", String(displayWords.length)).replace("{name}", currentShelf?.isCustom ? currentShelf.name : (wordLabel(currentShelf?.name || "", lang) || currentShelf?.name || ""))
-    : t("wordsOnDeviceMeta", lang).replace("{count}", String(displayWords.length))}
-                    {activeCategory?.hidden ? " · (Hidden from child)" : ""}
-                  </Text>
+
+                  <Pressable
+                    onPress={openAddWordUnified}
+                    style={styles.addWordSearchBtn}
+                    accessibilityLabel="Add words to category"
+                  >
+                    <Ionicons name="add" size={17} color="#FFFFFF" />
+                    <Ionicons name="mic" size={14} color="#FFFFFF" />
+                    <Text style={styles.addWordSearchBtnText}>Add words</Text>
+                  </Pressable>
                 </View>
 
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                  <View style={styles.sortToggleRow}>
-                    <Pressable
-                      onPress={() => handleToggleWordOrder("alphabetical")}
-                      style={[styles.sortBtn, wordSortMode === "alphabetical" && styles.sortBtnActive]}
-                    >
-                      <Ionicons name="text" size={12} color={wordSortMode === "alphabetical" ? "#FFFFFF" : "#235E50"} />
-                      <Text style={[styles.sortBtnText, wordSortMode === "alphabetical" && styles.sortBtnTextActive]}>
-                        A-Z (Alphabetical)
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => handleToggleWordOrder("as-spoken")}
-                      style={[styles.sortBtn, wordSortMode === "as-spoken" && styles.sortBtnActive]}
-                    >
-                      <Ionicons name="mic-outline" size={12} color={wordSortMode === "as-spoken" ? "#FFFFFF" : "#235E50"} />
-                      <Text style={[styles.sortBtnText, wordSortMode === "as-spoken" && styles.sortBtnTextActive]}>
-                        As Spoken / Added
-                      </Text>
-                    </Pressable>
-                  </View>
-
-                  <View style={styles.searchBarWrap}>
+                {/* Row 2: Search Bar (Flexible Left) and Sort Toggles (Right) */}
+                <View style={[styles.tableHeaderSubRow, isRtl && { flexDirection: "row-reverse" }]}>
+                  <View style={[styles.searchBarWrap, { flex: 1, minWidth: 120 }]}>
                     <Ionicons name="search" size={16} color="#8A9590" />
                     <TextInput
                       value={wordSearch}
@@ -2102,23 +2110,44 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                     ) : null}
                   </View>
 
-                  <Pressable
-                    onPress={openAddWordUnified}
-                    style={styles.addWordSearchBtn}
-                    accessibilityLabel="Add words to category"
-                  >
-                    <Ionicons name="add" size={17} color="#FFFFFF" />
-                    <Ionicons name="mic" size={14} color="#FFFFFF" />
-                    <Text style={styles.addWordSearchBtnText}>Add words</Text>
-                  </Pressable>
+                  <View style={styles.sortToggleRow}>
+                    <Pressable
+                      onPress={() => handleToggleWordOrder("alphabetical")}
+                      style={[styles.sortBtn, wordSortMode === "alphabetical" && styles.sortBtnActive]}
+                    >
+                      <Ionicons name="text" size={12} color={wordSortMode === "alphabetical" ? "#FFFFFF" : "#235E50"} />
+                      <Text style={[styles.sortBtnText, wordSortMode === "alphabetical" && styles.sortBtnTextActive]}>
+                        A-Z
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleToggleWordOrder("as-spoken")}
+                      style={[styles.sortBtn, wordSortMode === "as-spoken" && styles.sortBtnActive]}
+                    >
+                      <Ionicons name="mic-outline" size={12} color={wordSortMode === "as-spoken" ? "#FFFFFF" : "#235E50"} />
+                      <Text style={[styles.sortBtnText, wordSortMode === "as-spoken" && styles.sortBtnTextActive]}>
+                        As Spoken
+                      </Text>
+                    </Pressable>
+                  </View>
                 </View>
               </View>
 
               <View style={[styles.tableHead, isRtl && { flexDirection: "row-reverse" }]}>
-                <Text style={[styles.colHead, styles.colHeadWord, isRtl && { textAlign: "right" }]}>{t("colWord", lang)}</Text>
-                <Text style={[styles.colHead, styles.colHeadCount, isRtl && { textAlign: "center" }]}>{t("colUseCount", lang)}</Text>
-                {!compactTable && <Text style={[styles.colHead, styles.colHeadDate, isRtl && { textAlign: "center" }]}>{t("colLastUsed", lang)}</Text>}
-                <Text style={[styles.colHead, styles.colHeadAction, isRtl && { textAlign: "center" }]}>{t("colActions", lang)}</Text>
+                <Text style={[styles.colHead, styles.colHeadWord, { textAlign: isRtl ? "right" : "left" }]}>
+                  {t("colWord", lang)}
+                </Text>
+                <Text style={[styles.colHead, styles.colHeadCount, { textAlign: "center" }]} numberOfLines={1}>
+                  {t("colUseCount", lang)}
+                </Text>
+                {!compactTable && (
+                  <Text style={[styles.colHead, styles.colHeadDate, { textAlign: "center" }]} numberOfLines={1}>
+                    {t("colLastUsed", lang)}
+                  </Text>
+                )}
+                <Text style={[styles.colHead, styles.colHeadAction, { textAlign: isRtl ? "left" : "right" }]}>
+                  {t("colActions", lang)}
+                </Text>
               </View>
 
               <ScrollView
@@ -2280,6 +2309,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 <Pressable
                   onPress={() => {
                     setNewShelfName("");
+                    setNewShelfImageUri(undefined);
+                    setBulkShelvesImages({});
                     setNewShelfOpen(true);
                   }}
                   style={styles.mobileNewShelfSmallBtn}
@@ -2334,46 +2365,6 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                         {cat.isCustom ? cat.name : (wordLabel(cat.name, lang) || cat.name)}
                       </Text>
 
-                      {/* Pencil Edit button */}
-                      <Pressable
-                        onPress={(e) => {
-                          e.stopPropagation?.();
-                          openEditCategory(cat);
-                        }}
-                        hitSlop={4}
-                        style={{ marginLeft: 2 }}
-                        accessibilityLabel={`Edit ${cat.name}`}
-                      >
-                        <Ionicons name="pencil" size={13} color="#235E50" />
-                      </Pressable>
-
-                      {/* Eye button */}
-                      <Pressable
-                        onPress={() => toggleShelfHidden(cat)}
-                        hitSlop={4}
-                        style={{ marginLeft: 2 }}
-                      >
-                        <Ionicons
-                          name={cat.hidden ? "eye-off" : "eye-outline"}
-                          size={14}
-                          color={cat.hidden ? "#B8AFA2" : "#235E50"}
-                        />
-                      </Pressable>
-
-                      {/* Delete button */}
-                      <Pressable
-                        onPress={() =>
-                          setDeleteTarget({
-                            type: "shelf",
-                            id: cat.id,
-                            name: cat.name,
-                          })
-                        }
-                        hitSlop={4}
-                        style={{ marginLeft: 2 }}
-                      >
-                        <Ionicons name="trash-outline" size={14} color="#A39D90" />
-                      </Pressable>
                     </Pressable>
                   );
                 })}
@@ -2420,63 +2411,12 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                 </View>
               </View>
 
-              {/* Order Toggle for Mobile */}
-              <View style={[styles.sortToggleRowMobile, isRtl && { flexDirection: "row-reverse" }]}>
-                <Pressable
-                  onPress={() => handleToggleWordOrder("alphabetical")}
-                  style={[styles.sortBtnMobile, wordSortMode === "alphabetical" && styles.sortBtnActiveMobile]}
-                >
-                  <Ionicons name="text" size={12} color={wordSortMode === "alphabetical" ? "#FFFFFF" : "#235E50"} />
-                  <Text style={[styles.sortBtnTextMobile, wordSortMode === "alphabetical" && styles.sortBtnTextActiveMobile]}>
-                    A-Z (Alphabetical)
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => handleToggleWordOrder("as-spoken")}
-                  style={[styles.sortBtnMobile, wordSortMode === "as-spoken" && styles.sortBtnActiveMobile]}
-                >
-                  <Ionicons name="mic-outline" size={12} color={wordSortMode === "as-spoken" ? "#FFFFFF" : "#235E50"} />
-                  <Text style={[styles.sortBtnTextMobile, wordSortMode === "as-spoken" && styles.sortBtnTextActiveMobile]}>
-                    As Spoken / Added
-                  </Text>
-                </Pressable>
-              </View>
-
-              {/* Search Bar & Add Words */}
-              <View style={[styles.mobileSearchRow, isRtl && { flexDirection: "row-reverse" }]}>
-                <View style={[styles.mobileSearchWrap, { flex: 1 }]}>
-                  <Ionicons name="search" size={15} color="#8A9590" />
-                  <TextInput
-                    value={wordSearch}
-                    onChangeText={setWordSearch}
-                    placeholder={t("findAWordPlaceholder", lang)}
-                    placeholderTextColor="#8A9590"
-                    style={styles.searchInput}
-                  />
-                  {wordSearch ? (
-                    <Pressable onPress={() => setWordSearch("")} hitSlop={6}>
-                      <Ionicons name="close-circle" size={15} color="#8A9590" />
-                    </Pressable>
-                  ) : null}
-                </View>
-
-                <Pressable
-                  onPress={openAddWordUnified}
-                  style={styles.mobileAddWordBtn}
-                  accessibilityLabel="Add words"
-                >
-                  <Ionicons name="add" size={16} color="#FFFFFF" />
-                  <Ionicons name="mic" size={13} color="#FFFFFF" />
-                  <Text style={styles.mobileAddWordBtnText}>Add words</Text>
-                </Pressable>
-              </View>
-
               {/* Mobile Interactive Sub-Categories Tabs */}
               {subCats.length > 0 && (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={[styles.subCatPillRow, { marginBottom: 12 }]}
+                  contentContainerStyle={[styles.subCatPillRow, { marginTop: 4, marginBottom: 10 }]}
                 >
                   <Pressable
                     onPress={() => setSelectedSubCatId(null)}
@@ -2552,64 +2492,62 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                             {sc.words.length}
                           </Text>
                         </View>
-
-                        {/* Edit button */}
-                        <Pressable
-                          onPress={(e) => {
-                            e.stopPropagation?.();
-                            openEditCategory(sc);
-                          }}
-                          hitSlop={4}
-                          style={styles.subCatPillActionBtn}
-                          accessibilityLabel={`Edit ${sc.name}`}
-                        >
-                          <Ionicons
-                            name="pencil"
-                            size={11}
-                            color={isSubActive ? "#FFFFFF" : "#235E50"}
-                          />
-                        </Pressable>
-
-                        {/* Eye toggle */}
-                        <Pressable
-                          onPress={(e) => {
-                            e.stopPropagation?.();
-                            toggleSubCatHidden(sc);
-                          }}
-                          hitSlop={4}
-                          style={styles.subCatPillActionBtn}
-                        >
-                          <Ionicons
-                            name={sc.hidden ? "eye-off" : "eye-outline"}
-                            size={12}
-                            color={isSubActive ? "#FFFFFF" : "#547A70"}
-                          />
-                        </Pressable>
-
-                        {/* Delete button */}
-                        <Pressable
-                          onPress={(e) => {
-                            e.stopPropagation?.();
-                            setDeleteTarget({
-                              type: "shelf",
-                              id: sc.id,
-                              name: sc.name,
-                            });
-                          }}
-                          hitSlop={4}
-                          style={styles.subCatPillActionBtn}
-                        >
-                          <Ionicons
-                            name="trash-outline"
-                            size={12}
-                            color={isSubActive ? "#FFD0D0" : "#8A9590"}
-                          />
-                        </Pressable>
                       </Pressable>
                     );
                   })}
                 </ScrollView>
               )}
+
+              {/* Search Bar & Add Words */}
+              <View style={[styles.mobileSearchRow, isRtl && { flexDirection: "row-reverse" }]}>
+                <View style={[styles.mobileSearchWrap, { flex: 1 }]}>
+                  <Ionicons name="search" size={15} color="#8A9590" />
+                  <TextInput
+                    value={wordSearch}
+                    onChangeText={setWordSearch}
+                    placeholder={t("findAWordPlaceholder", lang)}
+                    placeholderTextColor="#8A9590"
+                    style={styles.searchInput}
+                  />
+                  {wordSearch ? (
+                    <Pressable onPress={() => setWordSearch("")} hitSlop={6}>
+                      <Ionicons name="close-circle" size={15} color="#8A9590" />
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                <Pressable
+                  onPress={openAddWordUnified}
+                  style={styles.mobileAddWordBtn}
+                  accessibilityLabel="Add words"
+                >
+                  <Ionicons name="add" size={16} color="#FFFFFF" />
+                  <Ionicons name="mic" size={13} color="#FFFFFF" />
+                  <Text style={styles.mobileAddWordBtnText}>Add words</Text>
+                </Pressable>
+              </View>
+
+              {/* Order Toggle for Mobile */}
+              <View style={[styles.sortToggleRowMobile, isRtl && { flexDirection: "row-reverse" }]}>
+                <Pressable
+                  onPress={() => handleToggleWordOrder("alphabetical")}
+                  style={[styles.sortBtnMobile, wordSortMode === "alphabetical" && styles.sortBtnActiveMobile]}
+                >
+                  <Ionicons name="text" size={12} color={wordSortMode === "alphabetical" ? "#FFFFFF" : "#235E50"} />
+                  <Text style={[styles.sortBtnTextMobile, wordSortMode === "alphabetical" && styles.sortBtnTextActiveMobile]}>
+                    A-Z
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => handleToggleWordOrder("as-spoken")}
+                  style={[styles.sortBtnMobile, wordSortMode === "as-spoken" && styles.sortBtnActiveMobile]}
+                >
+                  <Ionicons name="mic-outline" size={12} color={wordSortMode === "as-spoken" ? "#FFFFFF" : "#235E50"} />
+                  <Text style={[styles.sortBtnTextMobile, wordSortMode === "as-spoken" && styles.sortBtnTextActiveMobile]}>
+                    As Spoken
+                  </Text>
+                </Pressable>
+              </View>
 
               {/* Table Header */}
               <View style={styles.tableHead}>
@@ -3639,6 +3577,139 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               Type or speak. Separate multiple sub-categories with commas or new lines.
             </Text>
 
+            {subCatName.trim().length > 0 && (() => {
+              const parsedSubCats = subCatName
+                .split(/[\n,;]+/)
+                .map((n) => n.trim())
+                .filter(Boolean);
+
+              if (parsedSubCats.length === 0) return null;
+
+              if (parsedSubCats.length === 1) {
+                const singleName = parsedSubCats[0];
+                const customImg = bulkSubCatsImages[singleName] || bulkSubCatsImages[singleName.toLowerCase()];
+                const autoImg = getPictogramUrl(singleName);
+                const displayImg = customImg || autoImg || undefined;
+
+                return (
+                  <View style={{ marginTop: 12 }}>
+                    <Text style={styles.fieldLabel}>Picture (3 Options)</Text>
+                    <View style={styles.imagePickerRow}>
+                      {displayImg ? (
+                        <View style={styles.imagePreviewBox}>
+                          <SmartImage source={{ uri: displayImg }} style={styles.imagePreviewThumb} />
+                          {customImg ? (
+                            <Pressable
+                              onPress={() =>
+                                setBulkSubCatsImages((prev) => {
+                                  const next = { ...prev };
+                                  delete next[singleName];
+                                  delete next[singleName.toLowerCase()];
+                                  return next;
+                                })
+                              }
+                              style={styles.imagePreviewRemove}
+                              hitSlop={6}
+                              accessibilityLabel="Remove custom image"
+                            >
+                              <Ionicons name="close" size={12} color="#ffffff" />
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      ) : (
+                        <View style={styles.imagePlaceholderBox}>
+                          <Ionicons name="image-outline" size={24} color="#8A9590" />
+                        </View>
+                      )}
+                      <View style={{ flex: 1, gap: 3 }}>
+                        <Pressable
+                          onPress={() =>
+                            setImagePickerTarget({
+                              type: "bulkSubCat",
+                              label: singleName,
+                              currentUri: displayImg,
+                            })
+                          }
+                          style={styles.pickImageBtn}
+                        >
+                          <Ionicons name="sparkles" size={14} color="#ffffff" />
+                          <Text style={styles.pickImageBtnText}>
+                            {customImg ? "Change Custom Picture" : displayImg ? "Change Picture" : "Choose Picture"}
+                          </Text>
+                        </Pressable>
+                        <Text style={styles.imagePickerHint}>
+                          1. Gallery • 2. App Library • 3. Chrome Search
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              }
+
+              return (
+                <View style={[styles.bulkWordsListCard, { marginTop: 12 }]}>
+                  <View style={styles.bulkWordsListHeader}>
+                    <Ionicons name="sparkles" size={16} color="#235E50" />
+                    <Text style={styles.bulkWordsListTitle}>
+                      {parsedSubCats.length} sub-categories · Auto pictures (Tap photo to change):
+                    </Text>
+                  </View>
+                  <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                    {parsedSubCats.map((sc, idx) => {
+                      const customPic = bulkSubCatsImages[sc] || bulkSubCatsImages[sc.toLowerCase()];
+                      const autoPic = getPictogramUrl(sc);
+                      const displayPic = customPic || autoPic || undefined;
+
+                      return (
+                        <View key={idx} style={styles.bulkWordListRow}>
+                          <Pressable
+                            onPress={() =>
+                              setImagePickerTarget({
+                                type: "bulkSubCat",
+                                label: sc,
+                                currentUri: displayPic,
+                              })
+                            }
+                            style={styles.bulkWordRowImageWrap}
+                            accessibilityLabel={`Choose picture for ${sc}`}
+                          >
+                            {displayPic ? (
+                              <SmartImage source={{ uri: displayPic }} style={styles.bulkWordRowThumb} />
+                            ) : (
+                              <Text style={{ fontSize: 18 }}>📁</Text>
+                            )}
+                            <View style={styles.bulkWordThumbCameraIcon}>
+                              <Ionicons name="camera" size={8} color="#FFFFFF" />
+                            </View>
+                          </Pressable>
+                          <Text style={styles.bulkWordRowLabel}>{capWord(sc)}</Text>
+                          <Pressable
+                            onPress={() =>
+                              setImagePickerTarget({
+                                type: "bulkSubCat",
+                                label: sc,
+                                currentUri: displayPic,
+                              })
+                            }
+                            style={[styles.bulkRowPickImgBtn, customPic ? styles.bulkRowPickImgBtnActive : null]}
+                          >
+                            <Ionicons
+                              name={customPic ? "checkmark-circle" : "image-outline"}
+                              size={13}
+                              color={customPic ? "#1F594A" : "#235E50"}
+                            />
+                            <Text style={[styles.bulkRowPickImgText, customPic ? styles.bulkRowPickImgTextActive : null]}>
+                              {customPic ? "Photo set" : "Change photo"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              );
+            })()}
+
             <View style={styles.modalFooter}>
               <Pressable
                 onPress={() => {
@@ -3652,7 +3723,11 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               </Pressable>
               <Pressable onPress={handleCreateSubCategory} style={styles.actionPillBtn}>
                 <Ionicons name="add" size={16} color="#FFFFFF" />
-                <Text style={styles.actionPillBtnText}>Add sub-category</Text>
+                <Text style={styles.actionPillBtnText}>
+                  {subCatName.split(/[\n,;]+/).filter((w) => w.trim()).length > 1
+                    ? `Add ${subCatName.split(/[\n,;]+/).filter((w) => w.trim()).length} sub-categories`
+                    : "Add sub-category"}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -3689,8 +3764,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               </Pressable>
             </View>
 
-            {/* Target Category / Sub-Category Selector */}
-            {subCats.length > 0 ? (
+            {/* Target Category / Sub-Category Selector: Only shown when at root shelf level with no sub-category selected */}
+            {!selectedSubCatId && subCats.length > 0 ? (
               <View style={{ marginBottom: 14 }}>
                 <Text style={styles.fieldLabel}>Save words to sub-category</Text>
                 <ScrollView
@@ -3719,11 +3794,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   ))}
                 </ScrollView>
               </View>
-            ) : (
-              <View style={{ marginBottom: 14 }}>
-                <Text style={styles.fieldLabel}>Saving words to: {currentShelf?.name || "Shelf"}</Text>
-              </View>
-            )}
+            ) : null}
 
             <Text style={styles.fieldLabel}>Word(s) or phrase</Text>
             <View style={[styles.inputWithMicRow, wordVoiceActive && styles.inputWithMicRowListening]}>
@@ -3751,152 +3822,204 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               Type or speak words. Separate multiple words with commas or new lines for bulk add.
             </Text>
 
-            {/* Live Bulk or Single Word Preview */}
+            {/* Live Bulk or Single Word Preview & Picture Picker */}
             {(() => {
               const parsedWords = newWordText
                 .split(/[\n,;]+/)
                 .map((w) => w.trim())
                 .filter((w) => w.length > 0);
 
+              if (parsedWords.length === 0) return null;
+
               if (parsedWords.length > 1) {
                 return (
-                  <View style={styles.bulkWordsPreviewBox}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                      <Ionicons name="flash" size={15} color="#235E50" />
-                      <Text style={styles.bulkWordsPreviewTitle}>
-                        Bulk Mode · {parsedWords.length} words to add:
+                  <View style={styles.bulkWordsListCard}>
+                    <View style={styles.bulkWordsListHeader}>
+                      <Ionicons name="sparkles" size={16} color="#235E50" />
+                      <Text style={styles.bulkWordsListTitle}>
+                        {parsedWords.length} words to add · Auto pictures:
                       </Text>
                     </View>
-                    <View style={styles.bulkWordsChipsRow}>
-                      {parsedWords.map((w, idx) => (
-                        <View key={idx} style={styles.bulkWordChip}>
-                          <Text style={styles.bulkWordChipText}>{w}</Text>
+                    <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                      {parsedWords.map((word, idx) => {
+                        const customPic = bulkWordsImages[word] || bulkWordsImages[word.toLowerCase()];
+                        const autoPic = getPictogramUrl(word);
+                        const displayPic = customPic || autoPic || undefined;
+
+                        return (
+                          <View key={idx} style={styles.bulkWordListRow}>
+                            <Pressable
+                              onPress={() =>
+                                setImagePickerTarget({
+                                  type: "bulkWord",
+                                  label: word,
+                                  currentUri: displayPic,
+                                })
+                              }
+                              style={styles.bulkWordRowImageWrap}
+                              accessibilityLabel={`Choose picture for ${word}`}
+                            >
+                              {displayPic ? (
+                                <SmartImage source={{ uri: displayPic }} style={styles.bulkWordRowThumb} />
+                              ) : (
+                                <Text style={{ fontSize: 18 }}>🔹</Text>
+                              )}
+                              <View style={styles.bulkWordThumbCameraIcon}>
+                                <Ionicons name="camera" size={8} color="#FFFFFF" />
+                              </View>
+                            </Pressable>
+                            <Text style={styles.bulkWordRowLabel}>{capWord(word)}</Text>
+                            <Pressable
+                              onPress={() =>
+                                setImagePickerTarget({
+                                  type: "bulkWord",
+                                  label: word,
+                                  currentUri: displayPic,
+                                })
+                              }
+                              style={[styles.bulkRowPickImgBtn, customPic ? styles.bulkRowPickImgBtnActive : null]}
+                            >
+                              <Ionicons
+                                name={customPic ? "checkmark-circle" : "image-outline"}
+                                size={13}
+                                color={customPic ? "#1F594A" : "#235E50"}
+                              />
+                              <Text style={[styles.bulkRowPickImgText, customPic ? styles.bulkRowPickImgTextActive : null]}>
+                                {customPic ? "Photo set" : "Change photo"}
+                              </Text>
+                            </Pressable>
+                          </View>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                );
+              }
+
+              // Single Word Mode
+              const singleWord = parsedWords[0];
+              const effectivePic = newWordImageUri || getPictogramUrl(singleWord) || undefined;
+
+              return (
+                <>
+                  {detectedVerbForms && (
+                    <View style={styles.verbFormsCard}>
+                      <View style={styles.verbFormsHeader}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+                          <Ionicons name="sparkles" size={15} color="#235E50" />
+                          <Text style={styles.verbFormsTitle}>Verb Forms (1st, s/es, 2nd, 3rd, 4th)</Text>
                         </View>
-                      ))}
-                    </View>
-                  </View>
-                );
-              }
+                        <Pressable
+                          onPress={() => setAutoAddVerbForms(!autoAddVerbForms)}
+                          style={styles.verbCheckboxRow}
+                          accessibilityLabel="Toggle auto-add all 4 verb forms"
+                        >
+                          <Ionicons
+                            name={autoAddVerbForms ? "checkbox" : "square-outline"}
+                            size={18}
+                            color="#235E50"
+                          />
+                          <Text style={styles.verbCheckboxLabel}>Auto-add 4 forms</Text>
+                        </Pressable>
+                      </View>
 
-              if (parsedWords.length === 1 && detectedVerbForms) {
-                return (
-                  <View style={styles.verbFormsCard}>
-                    <View style={styles.verbFormsHeader}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
-                        <Ionicons name="sparkles" size={15} color="#235E50" />
-                        <Text style={styles.verbFormsTitle}>Verb Forms (1st, s/es, 2nd, 3rd, 4th)</Text>
+                      <View style={styles.verbGrid}>
+                        <View style={styles.verbTilePreview}>
+                          <Text style={styles.verbFormBadge}>1st · Base</Text>
+                          <Text style={styles.verbTileWord}>{detectedVerbForms.base}</Text>
+                        </View>
+                        <View style={styles.verbTilePreview}>
+                          <Text style={styles.verbFormBadge}>s / es Form</Text>
+                          <Text style={styles.verbTileWord}>{sFormOf(detectedVerbForms.base)}</Text>
+                        </View>
+                        <View style={styles.verbTilePreview}>
+                          <Text style={styles.verbFormBadge}>2nd · Past</Text>
+                          <Text style={styles.verbTileWord}>{detectedVerbForms.past}</Text>
+                        </View>
+                        <View style={styles.verbTilePreview}>
+                          <Text style={styles.verbFormBadge}>3rd · Participle</Text>
+                          <Text style={styles.verbTileWord}>{detectedVerbForms.participle}</Text>
+                        </View>
+                        <View style={styles.verbTilePreview}>
+                          <Text style={styles.verbFormBadge}>4th · Continuous</Text>
+                          <Text style={styles.verbTileWord}>{detectedVerbForms.continuous}</Text>
+                        </View>
                       </View>
-                      <Pressable
-                        onPress={() => setAutoAddVerbForms(!autoAddVerbForms)}
-                        style={styles.verbCheckboxRow}
-                        accessibilityLabel="Toggle auto-add all 4 verb forms"
-                      >
-                        <Ionicons
-                          name={autoAddVerbForms ? "checkbox" : "square-outline"}
-                          size={18}
-                          color="#235E50"
-                        />
-                        <Text style={styles.verbCheckboxLabel}>Auto-add 4 forms</Text>
-                      </Pressable>
-                    </View>
-
-                    <View style={styles.verbGrid}>
-                      <View style={styles.verbTilePreview}>
-                        <Text style={styles.verbFormBadge}>1st · Base</Text>
-                        <Text style={styles.verbTileWord}>{detectedVerbForms.base}</Text>
-                      </View>
-                      <View style={styles.verbTilePreview}>
-                        <Text style={styles.verbFormBadge}>s / es Form</Text>
-                        <Text style={styles.verbTileWord}>{sFormOf(detectedVerbForms.base)}</Text>
-                      </View>
-                      <View style={styles.verbTilePreview}>
-                        <Text style={styles.verbFormBadge}>2nd · Past</Text>
-                        <Text style={styles.verbTileWord}>{detectedVerbForms.past}</Text>
-                      </View>
-                      <View style={styles.verbTilePreview}>
-                        <Text style={styles.verbFormBadge}>3rd · Participle</Text>
-                        <Text style={styles.verbTileWord}>{detectedVerbForms.participle}</Text>
-                      </View>
-                      <View style={styles.verbTilePreview}>
-                        <Text style={styles.verbFormBadge}>4th · Continuous</Text>
-                        <Text style={styles.verbTileWord}>{detectedVerbForms.continuous}</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.verbHintText}>
-                      {autoAddVerbForms
-                        ? "✨ All 5 forms will automatically be added as individual shelf tiles."
-                        : "Only this single word will be added."}
-                    </Text>
-                  </View>
-                );
-              }
-
-              return null;
-            })()}
-
-            {/* Image Selection (Shown for single word mode) */}
-            {newWordText.split(/[\n,;]+/).filter((w) => w.trim()).length <= 1 && (
-              <>
-                <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Picture (3 Options)</Text>
-                <View style={styles.imagePickerRow}>
-                  {newWordImageUri ? (
-                    <View style={styles.imagePreviewBox}>
-                      <SmartImage source={{ uri: newWordImageUri }} style={styles.imagePreviewThumb} />
-                      <Pressable
-                        onPress={() => setNewWordImageUri(undefined)}
-                        style={styles.imagePreviewRemove}
-                        hitSlop={6}
-                        accessibilityLabel="Remove image"
-                      >
-                        <Ionicons name="close" size={12} color="#ffffff" />
-                      </Pressable>
-                    </View>
-                  ) : (
-                    <View style={styles.imagePlaceholderBox}>
-                      <Ionicons name="image-outline" size={24} color="#8A9590" />
+                      <Text style={styles.verbHintText}>
+                        {autoAddVerbForms
+                          ? "✨ All 5 forms will automatically be added as individual shelf tiles."
+                          : "Only this single word will be added."}
+                      </Text>
                     </View>
                   )}
-                  <View style={{ flex: 1, gap: 3 }}>
-                    <Pressable
-                      onPress={() =>
-                        setImagePickerTarget({
-                          type: "word",
-                          label: newWordText || "Word",
-                          currentUri: newWordImageUri,
-                        })
-                      }
-                      style={styles.pickImageBtn}
-                    >
-                      <Ionicons name="sparkles" size={14} color="#ffffff" />
-                      <Text style={styles.pickImageBtnText}>
-                        {newWordImageUri ? "Change Picture" : "Choose Picture"}
+
+                  {/* Picture Selection for Single Word */}
+                  <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Picture (3 Options)</Text>
+                  <View style={styles.imagePickerRow}>
+                    {effectivePic ? (
+                      <View style={styles.imagePreviewBox}>
+                        <SmartImage source={{ uri: effectivePic }} style={styles.imagePreviewThumb} />
+                        <Pressable
+                          onPress={() => setNewWordImageUri(undefined)}
+                          style={styles.imagePreviewRemove}
+                          hitSlop={6}
+                          accessibilityLabel="Remove image"
+                        >
+                          <Ionicons name="close" size={12} color="#ffffff" />
+                        </Pressable>
+                      </View>
+                    ) : (
+                      <View style={styles.imagePlaceholderBox}>
+                        <Ionicons name="image-outline" size={24} color="#8A9590" />
+                      </View>
+                    )}
+                    <View style={{ flex: 1, gap: 3 }}>
+                      <Pressable
+                        onPress={() =>
+                          setImagePickerTarget({
+                            type: "word",
+                            label: newWordText || "Word",
+                            currentUri: effectivePic,
+                          })
+                        }
+                        style={styles.pickImageBtn}
+                      >
+                        <Ionicons name="sparkles" size={14} color="#ffffff" />
+                        <Text style={styles.pickImageBtnText}>
+                          {effectivePic ? "Change Picture" : "Choose Picture"}
+                        </Text>
+                      </Pressable>
+                      <Text style={styles.imagePickerHint}>
+                        1. Gallery • 2. App Library • 3. Chrome Search
                       </Text>
-                    </Pressable>
-                    <Text style={styles.imagePickerHint}>
-                      1. Gallery • 2. App Library • 3. Chrome Search
-                    </Text>
+                    </View>
                   </View>
+                </>
+              );
+            })()}
+
+            {/* Tile color: Only show when words are typed! */}
+            {newWordText.trim().length > 0 && (
+              <>
+                <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Tile color</Text>
+                <View style={styles.colorSwatchesRow}>
+                  {PASTEL_PALETTE.map((c) => {
+                    const isSelected = newWordColor === c;
+                    return (
+                      <Pressable
+                        key={c}
+                        onPress={() => setNewWordColor(c)}
+                        style={[
+                          styles.colorSwatch,
+                          { backgroundColor: c },
+                          isSelected && styles.colorSwatchSelected,
+                        ]}
+                      />
+                    );
+                  })}
                 </View>
               </>
             )}
-
-            <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Tile color</Text>
-            <View style={styles.colorSwatchesRow}>
-              {PASTEL_PALETTE.map((c) => {
-                const isSelected = newWordColor === c;
-                return (
-                  <Pressable
-                    key={c}
-                    onPress={() => setNewWordColor(c)}
-                    style={[
-                      styles.colorSwatch,
-                      { backgroundColor: c },
-                      isSelected && styles.colorSwatchSelected,
-                    ]}
-                  />
-                );
-              })}
-            </View>
 
             <View style={styles.modalFooter}>
               <Pressable
@@ -3933,6 +4056,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
           setShelfVoiceActive(false);
           setNewShelfOpen(false);
           setNewShelfImageUri(undefined);
+          setBulkShelvesImages({});
         }}
       >
         <View style={styles.modalBackdrop}>
@@ -3945,6 +4069,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   setShelfVoiceActive(false);
                   setNewShelfOpen(false);
                   setNewShelfImageUri(undefined);
+                  setBulkShelvesImages({});
                 }}
                 hitSlop={8}
                 style={styles.modalCloseBtn}
@@ -3979,67 +4104,157 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
               Type or speak. Separate multiple shelves with commas or new lines to create in bulk.
             </Text>
 
-            {newShelfName.trim().length > 0 && (
-              <>
-                {/* Shelf Image Selection (1. Gallery, 2. App Library, 3. Chrome Search) */}
-                <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Shelf Picture (3 Options)</Text>
-                <View style={styles.imagePickerRow}>
-                  {newShelfImageUri ? (
-                    <View style={styles.imagePreviewBox}>
-                      <SmartImage source={{ uri: newShelfImageUri }} style={styles.imagePreviewThumb} />
-                      <Pressable
-                        onPress={() => setNewShelfImageUri(undefined)}
-                        style={styles.imagePreviewRemove}
-                        hitSlop={6}
-                        accessibilityLabel="Remove image"
-                      >
-                        <Ionicons name="close" size={12} color="#ffffff" />
-                      </Pressable>
+            {newShelfName.trim().length > 0 && (() => {
+              const parsedShelves = newShelfName
+                .split(/[\n,;]+/)
+                .map((n) => n.trim().replace(/[.,!?;:]+$/, "").trim())
+                .filter(Boolean);
+
+              if (parsedShelves.length === 0) return null;
+
+              if (parsedShelves.length === 1) {
+                const singleName = parsedShelves[0];
+                const customImg = newShelfImageUri || bulkShelvesImages[singleName] || bulkShelvesImages[singleName.toLowerCase()];
+                const autoImg = getPictogramUrl(singleName);
+                const displayImg = customImg || autoImg || undefined;
+
+                return (
+                  <>
+                    {/* Shelf Image Selection (1. Gallery, 2. App Library, 3. Chrome Search) */}
+                    <Text style={[styles.fieldLabel, { marginTop: 14 }]}>Shelf Picture (3 Options)</Text>
+                    <View style={styles.imagePickerRow}>
+                      {displayImg ? (
+                        <View style={styles.imagePreviewBox}>
+                          <SmartImage source={{ uri: displayImg }} style={styles.imagePreviewThumb} />
+                          {customImg ? (
+                            <Pressable
+                              onPress={() => {
+                                setNewShelfImageUri(undefined);
+                                setBulkShelvesImages((prev) => {
+                                  const next = { ...prev };
+                                  delete next[singleName];
+                                  delete next[singleName.toLowerCase()];
+                                  return next;
+                                });
+                              }}
+                              style={styles.imagePreviewRemove}
+                              hitSlop={6}
+                              accessibilityLabel="Remove image"
+                            >
+                              <Ionicons name="close" size={12} color="#ffffff" />
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      ) : (
+                        <View style={styles.imagePlaceholderBox}>
+                          <Text style={{ fontSize: 22 }}>{newShelfIcon || "📁"}</Text>
+                        </View>
+                      )}
+                      <View style={{ flex: 1, gap: 3 }}>
+                        <Pressable
+                          onPress={() =>
+                            setImagePickerTarget({
+                              type: "shelf",
+                              label: singleName || "Shelf",
+                              currentUri: displayImg,
+                            })
+                          }
+                          style={styles.pickImageBtn}
+                        >
+                          <Ionicons name="sparkles" size={14} color="#ffffff" />
+                          <Text style={styles.pickImageBtnText}>
+                            {customImg ? "Change Custom Picture" : displayImg ? "Change Picture" : "Choose Picture"}
+                          </Text>
+                        </Pressable>
+                        <Text style={styles.imagePickerHint}>
+                          1. Gallery • 2. App Library • 3. Chrome Search
+                        </Text>
+                      </View>
                     </View>
-                  ) : (
-                    <View style={styles.imagePlaceholderBox}>
-                      <Text style={{ fontSize: 22 }}>{newShelfIcon || "📁"}</Text>
+
+                    <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Shelf icon</Text>
+                    <View style={styles.shelfIconsRow}>
+                      {SHELF_ICONS.map((ic) => (
+                        <Pressable
+                          key={ic}
+                          onPress={() => setNewShelfIcon(ic)}
+                          style={[
+                            styles.shelfIconPickBtn,
+                            newShelfIcon === ic && styles.shelfIconPickBtnActive,
+                          ]}
+                        >
+                          <Text style={{ fontSize: 18 }}>{ic}</Text>
+                        </Pressable>
+                      ))}
                     </View>
-                  )}
-                  <View style={{ flex: 1, gap: 3 }}>
-                    <Pressable
-                      onPress={() =>
-                        setImagePickerTarget({
-                          type: "shelf",
-                          label: newShelfName || "Shelf",
-                          currentUri: newShelfImageUri,
-                        })
-                      }
-                      style={styles.pickImageBtn}
-                    >
-                      <Ionicons name="sparkles" size={14} color="#ffffff" />
-                      <Text style={styles.pickImageBtnText}>
-                        {newShelfImageUri ? "Change Picture" : "Choose Picture"}
-                      </Text>
-                    </Pressable>
-                    <Text style={styles.imagePickerHint}>
-                      1. Gallery • 2. App Library • 3. Chrome Search
+                  </>
+                );
+              }
+
+              // Multiple shelves mode
+              return (
+                <View style={[styles.bulkWordsListCard, { marginTop: 12 }]}>
+                  <View style={styles.bulkWordsListHeader}>
+                    <Ionicons name="sparkles" size={16} color="#235E50" />
+                    <Text style={styles.bulkWordsListTitle}>
+                      {parsedShelves.length} shelves to create · Auto pictures (Tap photo to change):
                     </Text>
                   </View>
-                </View>
+                  <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                    {parsedShelves.map((sh, idx) => {
+                      const customPic = bulkShelvesImages[sh] || bulkShelvesImages[sh.toLowerCase()];
+                      const autoPic = getPictogramUrl(sh);
+                      const displayPic = customPic || autoPic || undefined;
 
-                <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Shelf icon</Text>
-                <View style={styles.shelfIconsRow}>
-                  {SHELF_ICONS.map((ic) => (
-                    <Pressable
-                      key={ic}
-                      onPress={() => setNewShelfIcon(ic)}
-                      style={[
-                        styles.shelfIconPickBtn,
-                        newShelfIcon === ic && styles.shelfIconPickBtnActive,
-                      ]}
-                    >
-                      <Text style={{ fontSize: 18 }}>{ic}</Text>
-                    </Pressable>
-                  ))}
+                      return (
+                        <View key={idx} style={styles.bulkWordListRow}>
+                          <Pressable
+                            onPress={() =>
+                              setImagePickerTarget({
+                                type: "bulkShelf",
+                                label: sh,
+                                currentUri: displayPic,
+                              })
+                            }
+                            style={styles.bulkWordRowImageWrap}
+                            accessibilityLabel={`Choose picture for ${sh}`}
+                          >
+                            {displayPic ? (
+                              <SmartImage source={{ uri: displayPic }} style={styles.bulkWordRowThumb} />
+                            ) : (
+                              <Text style={{ fontSize: 18 }}>📁</Text>
+                            )}
+                            <View style={styles.bulkWordThumbCameraIcon}>
+                              <Ionicons name="camera" size={8} color="#FFFFFF" />
+                            </View>
+                          </Pressable>
+                          <Text style={styles.bulkWordRowLabel}>{capWord(sh)}</Text>
+                          <Pressable
+                            onPress={() =>
+                              setImagePickerTarget({
+                                type: "bulkShelf",
+                                label: sh,
+                                currentUri: displayPic,
+                              })
+                            }
+                            style={[styles.bulkRowPickImgBtn, customPic ? styles.bulkRowPickImgBtnActive : null]}
+                          >
+                            <Ionicons
+                              name={customPic ? "checkmark-circle" : "image-outline"}
+                              size={13}
+                              color={customPic ? "#1F594A" : "#235E50"}
+                            />
+                            <Text style={[styles.bulkRowPickImgText, customPic ? styles.bulkRowPickImgTextActive : null]}>
+                              {customPic ? "Photo set" : "Change photo"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
                 </View>
-              </>
-            )}
+              );
+            })()}
 
             <View style={styles.modalFooter}>
               <Pressable
@@ -4048,6 +4263,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                   setShelfVoiceActive(false);
                   setNewShelfOpen(false);
                   setNewShelfImageUri(undefined);
+                  setBulkShelvesImages({});
                 }}
                 style={styles.cancelTextBtn}
               >
@@ -4841,11 +5057,13 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerMobile: {
-    flexDirection: "column",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 10,
-    gap: 10,
+    gap: 8,
   },
   headerLeft: {
     flexDirection: "row",
@@ -4859,23 +5077,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    width: "100%",
+    flex: 1,
   },
   headerActionsRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
     alignItems: "center",
+    justifyContent: "flex-end",
     gap: 8,
   },
   headerActionsRowMobile: {
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: 8,
-    width: "100%",
-    marginTop: 6,
+    marginTop: 0,
   },
   backBtn: {
     width: 36,
@@ -5036,10 +5250,10 @@ const styles = StyleSheet.create({
   rowActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 4,
   },
   shelfActionBtn: {
-    padding: 4,
+    padding: 2,
   },
   newShelfBtn: {
     flexDirection: "row",
@@ -5059,6 +5273,7 @@ const styles = StyleSheet.create({
   // Right Column (Words table)
   contentCard: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: "#FFFFFF",
     borderRadius: 24,
     padding: 24,
@@ -5068,6 +5283,23 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.03,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
+  },
+  tableHeaderSection: {
+    marginBottom: 12,
+    gap: 8,
+  },
+  tableHeaderTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  tableHeaderSubRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 10,
   },
   tableHeaderRow: {
     flexDirection: "row",
@@ -5084,7 +5316,7 @@ const styles = StyleSheet.create({
     fontFamily: "serif",
   },
   selectedShelfMeta: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: "#7A8580",
     marginTop: 2,
   },
@@ -5095,9 +5327,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#DDD8CD",
     borderRadius: 20,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 7,
-    minWidth: 240,
+    minWidth: 120,
     backgroundColor: "#FCFCF9",
   },
   searchInput: {
@@ -5126,7 +5358,7 @@ const styles = StyleSheet.create({
     color: "#1A3830",
   },
   sidebarSubCatList: {
-    paddingLeft: 18,
+    paddingLeft: 8,
     paddingTop: 4,
     paddingBottom: 6,
     gap: 4,
@@ -5146,7 +5378,7 @@ const styles = StyleSheet.create({
   sidebarSubCatLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
     flex: 1,
   },
   sidebarSubCatIndent: {
@@ -5295,28 +5527,34 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   colHead: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: "700",
     color: "#8A9590",
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
   colHeadWord: {
-    flex: 2.8,
+    flex: 2,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
   colHeadCount: {
-    flex: 1,
+    width: 105,
+    minWidth: 105,
     alignItems: "center",
+    justifyContent: "center",
   },
   colHeadDate: {
-    flex: 1,
+    width: 110,
+    minWidth: 110,
     alignItems: "center",
+    justifyContent: "center",
   },
   colHeadAction: {
-    width: 124,
+    width: 116,
+    minWidth: 116,
     alignItems: "flex-end",
+    justifyContent: "center",
   },
   tableBodyScroll: {
     flex: 1,
@@ -5611,9 +5849,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     backgroundColor: "#235E50",
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 12,
+    flexShrink: 0,
   },
   addWordSearchBtnText: {
     color: "#FFFFFF",
@@ -5670,6 +5909,101 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#1A3830",
+  },
+  bulkWordsListCard: {
+    backgroundColor: "#F2F8F5",
+    borderWidth: 1.5,
+    borderColor: "#B7D8CD",
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 12,
+  },
+  bulkWordsListHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  bulkWordsListTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#235E50",
+  },
+  bulkWordListRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: "#E0EBE6",
+    gap: 10,
+  },
+  bulkWordRowImageWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#F4EEE4",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  bulkWordRowThumb: {
+    width: 36,
+    height: 36,
+  },
+  bulkWordRowLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1A3830",
+  },
+  bulkWordRowBadge: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#235E50",
+    backgroundColor: "#E2EFE9",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  bulkRowPickImgBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F2F8F5",
+    borderWidth: 1,
+    borderColor: "#B7D8CD",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  bulkRowPickImgBtnActive: {
+    backgroundColor: "#E2EFE9",
+    borderColor: "#235E50",
+  },
+  bulkRowPickImgText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#235E50",
+  },
+  bulkRowPickImgTextActive: {
+    color: "#1F594A",
+  },
+  bulkWordThumbCameraIcon: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    backgroundColor: "#235E50",
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
   },
   colorSwatchesRow: {
     flexDirection: "row",
@@ -6599,12 +6933,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 3,
     gap: 4,
+    flexShrink: 0,
   },
   sortBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 9,
+    gap: 4,
+    paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 8,
   },
