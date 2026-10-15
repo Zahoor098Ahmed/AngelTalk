@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: angeltalk-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: angel_talk
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: angeltalk-redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./angel-talk-backend
+      dockerfile: Dockerfile
+    container_name: angeltalk-backend
+    restart: always
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      MONGO_URI: mongodb+srv://zahoorjamali32_db_user:angeltalk%40123@angeltalk.kjnj4hp.mongodb.net/angeltalk?retryWrites=true&w=majority
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: angeltalk_production_jwt_access_secret_min_32_characters_long!
+      JWT_REFRESH_SECRET: angeltalk_production_jwt_refresh_secret_min_32_characters_long!
+      JWT_PIN_SECRET: angeltalk_production_jwt_pin_secret_min_32_characters_long!
+      CORS_ORIGIN: "*"
+      ADMIN_EMAIL: admin@angeltalk.sa
+      ADMIN_PASSWORD: ChangeMe123!SafeAdmin
+    depends_on:
+      - mongodb
+      - redis
+
+volumes:
+  mongo_data:
+

@@ -770,9 +770,182 @@
     - `frontend/src/screens/AACBoardScreen.tsx`
     - `.gitignore`
 
-- **16:50:28 – 16:55:10** ⏱️ Active Coding Session (**5 min**)
-  - 📁 **Files Worked On (4):**
+- **16:50:28 – 16:56:39** ⏱️ Active Coding Session (**6 min**)
+  - 📁 **Files Worked On (5):**
     - `frontend/metro.config.js`
     - `frontend/src/modules/audio.ts`
     - `frontend/src/screens/AACBoardScreen.tsx`
     - `.gitignore`
+    - `.gitattributes`
+
+## 2026-10-15
+
+- **10:08:02 – 10:08:02** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+- **10:08:05 – 10:21:07** ⏱️ Active Coding Session (**13 min**)
+  - 📁 **Files Worked On (3):**
+    - `.gitattributes`
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `BACKEND_AND_DATABASE_WORKFLOW.md`
+
+- **11:01:47 – 11:08:10** ⏱️ Active Coding Session (**6 min**)
+  - 📁 **Files Worked On (6):**
+    - `angel-talk-backend/package.json`
+    - `angel-talk-backend/tsconfig.json`
+    - `angel-talk-backend/jest.config.js`
+    - `angel-talk-backend/.eslintrc.json`
+    - `angel-talk-backend/.prettierrc`
+    - `.gitignore`
+
+- **11:12:43 – 11:12:44** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `angel-talk-backend/.eslintrc.json`
+
+- **11:32:08 – 12:32:15** ⏱️ Active Coding Session (**60 min**)
+  - 📁 **Files Worked On (30):**
+    - `angel-talk-backend/package.json`
+    - `angel-talk-backend/src/config/env.ts`
+    - `angel-talk-backend/src/common/types.ts`
+    - `angel-talk-backend/src/common/errors.ts`
+    - `angel-talk-backend/src/common/response.ts`
+    - `angel-talk-backend/src/common/logger.ts`
+    - `angel-talk-backend/src/common/events.ts`
+    - `angel-talk-backend/src/middleware/validate.ts`
+    - `angel-talk-backend/src/middleware/error-handler.ts`
+    - `angel-talk-backend/src/middleware/rate-limiter.ts`
+    - `angel-talk-backend/src/models/base.schema.ts`
+    - `angel-talk-backend/src/models/User.ts`
+    - `angel-talk-backend/src/models/RefreshToken.ts`
+    - `angel-talk-backend/src/models/Device.ts`
+    - `angel-talk-backend/src/models/Consent.ts`
+    - `angel-talk-backend/src/models/Child.ts`
+    - `angel-talk-backend/src/models/CareTeam.ts`
+    - `angel-talk-backend/src/models/FaceEmbedding.ts`
+    - `angel-talk-backend/src/models/Shelf.ts`
+    - `angel-talk-backend/src/models/Word.ts`
+    - `angel-talk-backend/src/models/VerbGroup.ts`
+    - `angel-talk-backend/src/models/SocialStory.ts`
+    - `angel-talk-backend/src/models/ScheduleTask.ts`
+    - `angel-talk-backend/src/models/Passcard.ts`
+    - `angel-talk-backend/src/models/GamesProgress.ts`
+    - `angel-talk-backend/src/models/SentenceLog.ts`
+    - `backend`
+    - `angel-talk-backend/src/models/CareLog.ts`
+    - `angel-talk-backend/src/models/TherapyGoal.ts`
+    - `angel-talk-backend/src/models/ClinicalNote.ts`
+
+- **12:44:54 – 13:32:27** ⏱️ Active Coding Session (**48 min**)
+  - 📁 **Files Worked On (30):**
+    - `angel-talk-backend/src/modules/children/children.schema.ts`
+    - `angel-talk-backend/src/modules/children/children.service.ts`
+    - `angel-talk-backend/src/modules/children/children.routes.ts`
+    - `angel-talk-backend/src/modules/board/board.schema.ts`
+    - `angel-talk-backend/src/modules/board/board.service.ts`
+    - `angel-talk-backend/src/modules/board/board.routes.ts`
+    - `angel-talk-backend/src/modules/verbs/verbs.routes.ts`
+    - `angel-talk-backend/src/middleware/auth.ts`
+    - `angel-talk-backend/.eslintrc.json`
+    - `angel-talk-backend/src/modules/auth/auth.controller.ts`
+    - `angel-talk-backend/src/modules/auth/auth.routes.ts`
+    - `angel-talk-backend/src/modules/auth/auth.schema.ts`
+    - `angel-talk-backend/src/modules/auth/auth.service.ts`
+    - `angel-talk-backend/src/modules/auth/token.service.ts`
+    - `angel-talk-backend/src/modules/careteam/careteam.routes.ts`
+    - `angel-talk-backend/src/modules/consents/consents.routes.ts`
+    - `angel-talk-backend/src/modules/devices/devices.routes.ts`
+    - `angel-talk-backend/src/modules/sync/sync.types.ts`
+    - `angel-talk-backend/src/modules/sync/sync.registry.ts`
+    - `angel-talk-backend/src/modules/sync/sync.service.ts`
+    - `angel-talk-backend/src/modules/sync/sync.routes.ts`
+    - `angel-talk-backend/src/modules/face/face.routes.ts`
+    - `angel-talk-backend/src/modules/media-speech/tts.adapter.ts`
+    - `angel-talk-backend/src/modules/media-speech/s3.service.ts`
+    - `angel-talk-backend/src/modules/media-speech/media.routes.ts`
+    - `angel-talk-backend/src/modules/routines-clinical/routines-clinical.routes.ts`
+    - `angel-talk-backend/src/modules/pdpl/pdpl.routes.ts`
+    - `angel-talk-backend/src/modules/admin/admin.routes.ts`
+    - `angel-talk-backend/src/app.ts`
+    - `angel-talk-backend/src/server.ts`
+
+- **14:50:11 – 15:03:15** ⏱️ Active Coding Session (**13 min**)
+  - 📁 **Files Worked On (18):**
+    - `.gitignore`
+    - `frontend/metro.config.js`
+    - `angel-talk-backend/src/modules/media-speech/tts.adapter.ts`
+    - `angel-talk-backend/src/modules/media-speech/media.routes.ts`
+    - `angel-talk-backend/src/app.ts`
+    - `angel-talk-admin/src/components/layout/AdminLayout.tsx`
+    - `angel-talk-backend/src/modules/auth/token.service.ts`
+    - `angel-talk-backend/tests/auth.test.ts`
+    - `angel-talk-backend/tests/sync.test.ts`
+    - `angel-talk-admin/src/pages/Login.tsx`
+    - `angel-talk-admin/src/pages/Dashboard.tsx`
+    - `angel-talk-admin/src/pages/Users.tsx`
+    - `angel-talk-admin/src/pages/Children.tsx`
+    - `angel-talk-admin/src/pages/Verbs.tsx`
+    - `angel-talk-admin/src/pages/Templates.tsx`
+    - `angel-talk-admin/src/pages/AuditLogs.tsx`
+    - `angel-talk-admin/src/App.tsx`
+    - `angel-talk-admin/src/main.tsx`
+
+- **15:11:06 – 16:07:19** ⏱️ Active Coding Session (**56 min**)
+  - 📁 **Files Worked On (30):**
+    - `angel-talk-admin/src/vite-env.d.ts`
+    - `angel-talk-admin/src/pages/Templates.tsx`
+    - `angel-talk-admin/src/pages/Users.tsx`
+    - `angel-talk-admin/src/pages/Verbs.tsx`
+    - `frontend/src/modules/backendSync.ts`
+    - `frontend/src/modules/audio.ts`
+    - `docker-compose.yml`
+    - `angel-talk-backend/Dockerfile`
+    - `README.md`
+    - `angel-talk-admin/src/App.tsx`
+    - `angel-talk-admin/src/components/layout/AdminLayout.tsx`
+    - `angel-talk-admin/src/main.tsx`
+    - `angel-talk-admin/src/pages/AuditLogs.tsx`
+    - `angel-talk-admin/src/pages/Children.tsx`
+    - `angel-talk-admin/src/pages/Dashboard.tsx`
+    - `angel-talk-admin/src/pages/Login.tsx`
+    - `angel-talk-backend/src/modules/auth/token.service.ts`
+    - `angel-talk-backend/src/modules/media-speech/media.routes.ts`
+    - `angel-talk-backend/src/modules/media-speech/tts.adapter.ts`
+    - `angel-talk-backend/tests/auth.test.ts`
+    - `angel-talk-backend/tests/sync.test.ts`
+    - `frontend/metro.config.js`
+    - `angel-talk-backend/scripts/test-atlas-connection.ts`
+    - `angel-talk-backend/scripts/test-atlas-variations.ts`
+    - `angel-talk-backend/.env`
+    - `angel-talk-backend/.env.example`
+    - `angel-talk-admin/.env`
+    - `angel-talk-admin/.env.example`
+    - `frontend/.env`
+    - `frontend/.env.example`
+
+- **16:37:17 – 16:37:17** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `angel-talk-backend/src/server.ts`
+
+- **16:48:50 – 16:50:33** ⏱️ Active Coding Session (**2 min**)
+  - 📁 **Files Worked On (3):**
+    - `angel-talk-backend/scripts/seed.ts`
+    - `angel-talk-backend/src/server.ts`
+    - `.gitignore`
+
+- **16:57:06 – 17:06:28** ⏱️ Active Coding Session (**9 min**)
+  - 📁 **Files Worked On (7):**
+    - `angel-talk-backend/scripts/seed.ts`
+    - `angel-talk-admin/src/pages/Login.tsx`
+    - `angel-talk-backend/.env`
+    - `angel-talk-backend/src/config/env.ts`
+    - `angel-talk-backend/src/modules/auth/auth.schema.ts`
+    - `angel-talk-backend/src/modules/auth/auth.service.ts`
+    - `angel-talk-backend/src/server.ts`
+
+- **17:20:02 – 17:20:40** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (4):**
+    - `.gitattributes`
+    - `README.md`
+    - `BACKEND_AND_DATABASE_WORKFLOW.md`
+    - `docker-compose.yml`

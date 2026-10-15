@@ -389,40 +389,58 @@ export function playOnlineTTS(text: string, langCode: "ar" | "ur"): Promise<bool
           if (currentPlayingWebAudio === audio) currentPlayingWebAudio = null;
           finish(true);
         };
-        audio.onerror = () => {
+        const backendUrl = (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_BACKEND_URL) || "http://localhost:4000";
+        const backendProxyUrl = `${backendUrl}/api/tts?q=${encodeURIComponent(cleanText)}&tl=${langCode}`;
+
+        const tryFallback = () => {
           try {
-            const alt = new Audio(directUrl);
-            currentPlayingWebAudio = alt;
-            alt.onended = () => {
-              if (currentPlayingWebAudio === alt) currentPlayingWebAudio = null;
+            const altBackend = new Audio(backendProxyUrl);
+            currentPlayingWebAudio = altBackend;
+            altBackend.onended = () => {
+              if (currentPlayingWebAudio === altBackend) currentPlayingWebAudio = null;
               finish(true);
             };
-            alt.onerror = () => {
-              if (currentPlayingWebAudio === alt) currentPlayingWebAudio = null;
-              finish(false);
+            altBackend.onerror = () => {
+              try {
+                const direct = new Audio(directUrl);
+                currentPlayingWebAudio = direct;
+                direct.onended = () => {
+                  if (currentPlayingWebAudio === direct) currentPlayingWebAudio = null;
+                  finish(true);
+                };
+                direct.onerror = () => {
+                  if (currentPlayingWebAudio === direct) currentPlayingWebAudio = null;
+                  finish(false);
+                };
+                direct.play().catch(() => finish(false));
+              } catch {
+                finish(false);
+              }
             };
-            alt.play().catch(() => finish(false));
+            altBackend.play().catch(() => {
+              try {
+                const direct = new Audio(directUrl);
+                currentPlayingWebAudio = direct;
+                direct.onended = () => {
+                  if (currentPlayingWebAudio === direct) currentPlayingWebAudio = null;
+                  finish(true);
+                };
+                direct.onerror = () => {
+                  if (currentPlayingWebAudio === direct) currentPlayingWebAudio = null;
+                  finish(false);
+                };
+                direct.play().catch(() => finish(false));
+              } catch {
+                finish(false);
+              }
+            });
           } catch {
             finish(false);
           }
         };
-        audio.play().catch(() => {
-          try {
-            const alt = new Audio(directUrl);
-            currentPlayingWebAudio = alt;
-            alt.onended = () => {
-              if (currentPlayingWebAudio === alt) currentPlayingWebAudio = null;
-              finish(true);
-            };
-            alt.onerror = () => {
-              if (currentPlayingWebAudio === alt) currentPlayingWebAudio = null;
-              finish(false);
-            };
-            alt.play().catch(() => finish(false));
-          } catch {
-            finish(false);
-          }
-        });
+
+        audio.onerror = tryFallback;
+        audio.play().catch(tryFallback);
 
         setTimeout(() => finish(true), 4000);
         return;

@@ -60,9 +60,16 @@ config.server = {
 
           const targetUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${lang}&client=gtx`;
           const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 4000);
+          const timer = setTimeout(() => controller.abort(), 8000);
 
-          fetch(targetUrl, { signal: controller.signal })
+          fetch(targetUrl, {
+            signal: controller.signal,
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+              "Referer": "https://translate.google.com/",
+              "Accept": "*/*",
+            },
+          })
             .then((upstream) => {
               clearTimeout(timer);
               if (!upstream.ok) throw new Error(`HTTP ${upstream.status}`);

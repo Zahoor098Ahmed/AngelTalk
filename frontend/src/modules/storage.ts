@@ -175,6 +175,7 @@ export function saveChildren(children: ChildProfile[]): void {
 
 export function addChild(child: ChildProfile): void {
   saveChildren([...childrenCache, child]);
+  import("./backendSync").then((m) => m.syncChildBioData(child)).catch(() => {});
 }
 
 export function updateChild(updated: ChildProfile): void {
@@ -183,6 +184,7 @@ export function updateChild(updated: ChildProfile): void {
   const next = [...childrenCache];
   next[idx] = updated;
   saveChildren(next);
+  import("./backendSync").then((m) => m.syncChildBioData(updated)).catch(() => {});
 }
 
 export function deleteChild(id: string): void {

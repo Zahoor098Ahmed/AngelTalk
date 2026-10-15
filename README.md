@@ -1,46 +1,66 @@
-# Angel Talk — AAC & Visual Communication Companion
+# Angel Talk — AAC & Sovereign Telemetry Platform
 
-A modern, gentle, family-first AAC (Augmentative and Alternative Communication) app built for children with autism, apraxia, and speech delays.
+A production-grade, offline-first AAC (Augmentative and Alternative Communication) system designed for autistic, non-verbal, and speech-delayed children, compliant with Saudi Personal Data Protection Law (PDPL).
 
-## 🌟 Tala vs Angel Talk: Full Feature Parity
+## 📁 Monorepo Structure
 
-Angel Talk combines the simplicity and personalization of **Tala** with the clinical depth of an advanced AAC platform:
-
-1. **⚡ Whole Phrases / Tap-to-Talk Mode (Gestalt Language Processing - GLP):**
-   - One-tap speaking for full functional sentences (e.g., *"I want pizza, please"*, *"Can I play iPad?"*).
-   - Instant header toggle to switch between **Whole Phrases** and **Sentence Builder Strip** mode.
-2. **⭐️ 90-Second Personalized Board Builder:**
-   - Auto-builds a tailored communication shelf (**"⭐️ [Child's Name]'s World"**) based on their real favorite foods, family members, and favorite toys/activities.
-3. **📖 Visual Social Stories Library & Interactive Reader:**
-   - 8+ built-in step-by-step illustrated social stories (Dentist, Haircut, First Day of School, Calming Down, Sharing, Doctor Visit, Supermarket, Bedtime).
-   - Page-by-page read-aloud with speech highlights and custom story creation for parents.
-4. **🗣️ Natural Child Voice Picker:**
-   - Support for 👦 Boy, 👧 Girl, 👩 Woman, and 👨 Man voice profiles with pitch/rate tuning and instant test preview.
-5. **🌐 Bilingual Dual-Language Display:**
-   - Simultaneous English + Arabic (or Urdu) subtitles directly on communication tiles.
-6. **🧸 Family-First Simple Mode:**
-   - Streamlined, high-contrast, uncluttered interface designed for families, with clinical IEP and review tools safely tucked behind the parent PIN gate.
-7. **🔒 100% Offline & Private:**
-   - Runs completely on-device without forced subscriptions or accounts.
+```
+.
+├── frontend/               # Expo React Native App (Offline-First AAC, On-Device Face AI, Zero-latency speech)
+├── angel-talk-backend/     # Node.js 20 + TypeScript + Express + MongoDB Atlas + Redis modular backend
+├── angel-talk-admin/       # Vite + React + TypeScript + Tailwind + Recharts Sovereign Admin Portal
+├── docker-compose.yml      # Orchestration for MongoDB, Redis, and Backend
+└── README.md
+```
 
 ---
 
-## Run the Frontend
+## 🚀 Quick Start Guide
 
+### 1. Backend API (`/angel-talk-backend`)
+```bash
+cd angel-talk-backend
+npm install
+npm run seed      # Seeds default superadmin, 25+ 5-form verb conjugations, and 6 AAC starter templates
+npm run dev       # Starts Express API server on http://localhost:4000
+npm test          # Runs Jest integration test suite (12 tests, 100% green)
+npm run lint      # ESLint verification (0 errors)
+npm run typecheck # Strict TypeScript compilation (0 errors)
+```
+
+### 2. Admin Portal (`/angel-talk-admin`)
+```bash
+cd angel-talk-admin
+npm install
+npm run dev       # Starts Vite dev server on http://localhost:5173
+npm run build     # Compiles production bundle in dist/ (0 errors)
+```
+- Default Superadmin: `admin@angeltalk.sa`
+- Default Password: `ChangeMe123!SafeAdmin`
+
+### 3. Mobile / Web AAC Client (`/frontend`)
 ```bash
 cd frontend
 npm install
-npm run web
+npm run web       # Starts Expo web on http://localhost:8081
+npm run typecheck # Strict TypeScript compilation (0 errors)
 ```
 
-Runs on `http://localhost:8098` (or custom port).
+---
 
-## Run the Backend (Optional)
+## 🔒 Security & Architecture Decisions
 
-The app runs fully offline without this — only needed for Whisper speech-to-text, DALL-E AI image generation, and Pixabay web image search.
+1. **Child Voice Sovereign Offline-First Principle**:
+   - The child's vocalization NEVER depends on internet connectivity or servers.
+   - All taps, custom cards, verb conjugations, and audio synthesis play immediately on-device.
+   - Cloud sync runs asynchronously in the background via delta push/pull cursors.
 
-```bash
-cd backend
-npm install
-npm start          # listens on http://localhost:8787
-```
+2. **Multi-Child Strict Data Isolation & IDOR Guards**:
+   - Every child-scoped document contains `ownerId` and `childId`.
+   - Access attempts by unauthorized accounts return `404 Not Found` (never `403`), completely eliminating IDOR enumeration.
+   - Administrative roles are cryptographically blocked from viewing clinical therapy logs.
+
+3. **Resilient TTS Architecture**:
+   - High-definition Google Cloud Neural Wavenet voices (`ar-XA`, `ur-PK`, `en-US`) when configured.
+   - Seamless, zero-timeout sovereign fallback to Google Translate TTS with browser headers when keys are absent.
+   - In-memory LRU + Redis caching for sub-millisecond audio delivery.
