@@ -1,10 +1,12 @@
+# Each app has its own .gitignore (frontend/, angel-talk-backend/, angel-talk-admin/).
 node_modules/
 .env
-.env.local
+.env.*
+!.env.example
 dist/
 build/
 .expo/
 .cache/
- 
-# catalog dry-run export
-angel-talk-backend/catalog-export.json
+*.log
+.DS_Store
+Thumbs.db

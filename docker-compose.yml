@@ -27,17 +27,13 @@ services:
     restart: always
     ports:
       - "4000:4000"
+    # Secrets (MONGO_URI, JWT secrets, admin password…) come from angel-talk-backend/.env, which is not in git
+    env_file:
+      - ./angel-talk-backend/.env
     environment:
       NODE_ENV: production
       PORT: 4000
-      MONGO_URI: mongodb+srv://zahoorjamali32_db_user:angeltalk%40123@angeltalk.kjnj4hp.mongodb.net/angeltalk?retryWrites=true&w=majority
       REDIS_URL: redis://redis:6379
-      JWT_ACCESS_SECRET: angeltalk_production_jwt_access_secret_min_32_characters_long!
-      JWT_REFRESH_SECRET: angeltalk_production_jwt_refresh_secret_min_32_characters_long!
-      JWT_PIN_SECRET: angeltalk_production_jwt_pin_secret_min_32_characters_long!
-      CORS_ORIGIN: "*"
-      ADMIN_EMAIL: admin@angeltalk.sa
-      ADMIN_PASSWORD: ChangeMe123!SafeAdmin
     depends_on:
       - mongodb
       - redis

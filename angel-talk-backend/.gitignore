@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Secrets (keep the example)
+.env
+.env.*
+!.env.example
+
+# Local exports and caches
+catalog-export.json
+.cache/
+uploads/
+tmp/
+
+# Tests, logs, OS
+coverage/
+logs/
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db

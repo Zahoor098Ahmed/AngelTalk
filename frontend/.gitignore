@@ -1,7 +1,44 @@
+# Dependencies
 node_modules/
+
+# Expo / Metro
+.expo/
+.expo-shared/
+.metro-health-check*
+.cache/
+web-build/
 dist/
 out/
-*.vsix
 
-# Expo
-.expo/
+# Native folders made by "expo prebuild" (EAS builds create them)
+/android/
+/ios/
+
+# Builds and signing keys
+*.apk
+*.aab
+*.ipa
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+credentials.json
+
+# Secrets (keep the example)
+.env
+.env.*
+!.env.example
+
+# Logs, editors, OS
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+coverage/
+*.vsix
+.DS_Store
+Thumbs.db
