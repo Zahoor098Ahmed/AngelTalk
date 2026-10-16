@@ -2904,6 +2904,21 @@ function persistDynamicCache() {
   AsyncStorage.setItem(DYNAMIC_CACHE_KEY, JSON.stringify(DYNAMIC_CACHE)).catch(() => { });
 }
 
+/** Arabic / Urdu sent by the admin panel for words it added (the app's own dictionary still wins). */
+export function registerTranslations(en: string, translations?: Partial<Record<string, string>> | null): void {
+  const clean = (en || '').trim();
+  if (!clean || !translations) return;
+  let changed = false;
+  for (const lang of ['ar-SA', 'ur-PK'] as const) {
+    const t = translations[lang]?.trim();
+    if (!t || DYNAMIC_CACHE[lang][clean.toLowerCase()] === t) continue;
+    DYNAMIC_CACHE[lang][clean.toLowerCase()] = t;
+    DYNAMIC_CACHE['en-US'][t.toLowerCase()] = clean;
+    changed = true;
+  }
+  if (changed) persistDynamicCache();
+}
+
 // Backward-compatible reverse dictionaries
 function buildReverse(dict: Record<string, string>): Record<string, string> {
   const out: Record<string, string> = {};

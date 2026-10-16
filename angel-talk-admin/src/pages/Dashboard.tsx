@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Users,
   Baby,
   Volume2,
   Activity,
-  ArrowUpRight,
+  FolderOpen,
+  Layers,
+  MessageSquare,
   ShieldCheck,
   TrendingUp,
 } from "lucide-react";
@@ -21,58 +23,30 @@ import {
 } from "recharts";
 import { api } from "../api/client";
 import { DashboardStats } from "../types";
+import { ErrorNotice, EmptyState } from "../components/common/ErrorNotice";
+import { errorMessage } from "../api/errors";
 
 export const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get("/admin/stats");
+      setStats(response.data?.data ?? null);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await api.get("/admin/stats");
-        if (response.data?.data) {
-          setStats(response.data.data);
-        }
-      } catch {
-        // Fallback demo/initial data if database is fresh
-        setStats({
-          usersCount: 142,
-          childrenCount: 98,
-          activeTodayCount: 64,
-          wordsSpokenToday: 1248,
-          meltdownsThisWeek: 14,
-          usersByRole: { parent: 120, slp: 18, educator: 4 },
-          userGrowth: [
-            { date: "Oct 01", users: 80 },
-            { date: "Oct 04", users: 95 },
-            { date: "Oct 08", users: 110 },
-            { date: "Oct 12", users: 128 },
-            { date: "Oct 15", users: 142 },
-          ],
-          meltdownTrends: [
-            { date: "Mon", count: 3 },
-            { date: "Tue", count: 1 },
-            { date: "Wed", count: 4 },
-            { date: "Thu", count: 2 },
-            { date: "Fri", count: 2 },
-            { date: "Sat", count: 1 },
-            { date: "Sun", count: 1 },
-          ],
-          topWords: [
-            { word: "Water / ماء", count: 312 },
-            { word: "Help / مساعدة", count: 245 },
-            { word: "Mom / ماما", count: 210 },
-            { word: "Eat / أكل", count: 180 },
-            { word: "Toilet / حمام", count: 165 },
-          ],
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, []);
+    load();
+  }, [load]);
 
   if (loading) {
     return (
@@ -82,6 +56,15 @@ export const Dashboard: React.FC = () => {
     );
   }
 
+  if (error && !stats) {
+    return (
+      <div className="max-w-7xl mx-auto">
+        <ErrorNotice message={error} onRetry={load} />
+      </div>
+    );
+  }
+
+  const roles = stats?.usersByRole ?? {};
   const kpis = [
     {
       title: "Registered Users",
@@ -89,7 +72,7 @@ export const Dashboard: React.FC = () => {
       sub: "Parents, SLPs & Educators",
       icon: Users,
       color: "from-blue-500 to-indigo-600",
-      change: "+12% this month",
+      change: `${roles.parent ?? 0} parents · ${roles.slp ?? 0} SLPs · ${roles.educator ?? 0} educators`,
     },
     {
       title: "Active Children Profiles",
@@ -97,7 +80,7 @@ export const Dashboard: React.FC = () => {
       sub: "Autism & Speech Support",
       icon: Baby,
       color: "from-purple-500 to-pink-600",
-      change: "+8 new profiles",
+      change: `${stats?.activeTodayCount ?? 0} used the app today`,
     },
     {
       title: "AAC Words Spoken Today",
@@ -105,7 +88,7 @@ export const Dashboard: React.FC = () => {
       sub: "Zero-latency vocalizations",
       icon: Volume2,
       color: "from-emerald-500 to-teal-600",
-      change: "Continuous offline usage",
+      change: "Sent by the app when online",
     },
     {
       title: "Meltdowns Logged (7d)",
@@ -113,7 +96,7 @@ export const Dashboard: React.FC = () => {
       sub: "Sensory & Emotional Care",
       icon: Activity,
       color: "from-amber-500 to-rose-600",
-      change: "Safe tracking enabled",
+      change: "Frustrated / overwhelmed entries",
     },
   ];
 
@@ -122,11 +105,9 @@ export const Dashboard: React.FC = () => {
       {/* Page Title & Status */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            System Overview & Telemetry
-          </h1>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Overview</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Real-time AAC utilization across clinical, educational, and home environments.
+            Live numbers from the Angel Talk app: families, children, and how the board is used.
           </p>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold">
@@ -159,10 +140,30 @@ export const Dashboard: React.FC = () => {
               </div>
               <div className="mt-3 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-3">
                 <span>{kpi.sub}</span>
-                <span className="text-emerald-600 font-semibold flex items-center">
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                  {kpi.change}
-                </span>
+                <span className="text-slate-600 font-semibold text-right">{kpi.change}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* App content */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {[
+          { title: "Board folders", value: stats?.totalTemplates ?? 0, sub: "Templates (app folders + your own)", icon: FolderOpen },
+          { title: "Verbs", value: stats?.totalVerbs ?? 0, sub: "Each with all 5 forms", icon: Layers },
+          { title: "Words on children's boards", value: stats?.totalWords ?? 0, sub: "As last sent by the app", icon: MessageSquare },
+        ].map((c) => {
+          const Icon = c.icon;
+          return (
+            <div key={c.title} className="bg-white rounded-2xl p-5 ring-1 ring-slate-200/80 shadow-sm flex items-center gap-4">
+              <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Icon className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-500">{c.title}</div>
+                <div className="text-2xl font-extrabold text-slate-900">{c.value.toLocaleString()}</div>
+                <div className="text-xs text-slate-500">{c.sub}</div>
               </div>
             </div>
           );
@@ -175,8 +176,8 @@ export const Dashboard: React.FC = () => {
         <div className="bg-white rounded-2xl p-6 ring-1 ring-slate-200/80 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base font-bold text-slate-900">User Growth & Adoption</h3>
-              <p className="text-xs text-slate-500">Cumulative accounts registered</p>
+              <h3 className="text-base font-bold text-slate-900">Families over the last 30 days</h3>
+              <p className="text-xs text-slate-500">Accounts registered (running total)</p>
             </div>
             <TrendingUp className="w-5 h-5 text-indigo-600" />
           </div>
@@ -218,8 +219,8 @@ export const Dashboard: React.FC = () => {
         <div className="bg-white rounded-2xl p-6 ring-1 ring-slate-200/80 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-base font-bold text-slate-900">Sensory Incidents & Meltdowns</h3>
-              <p className="text-xs text-slate-500">Recorded occurrences over the past 7 days</p>
+              <h3 className="text-base font-bold text-slate-900">Hard moments (care journal)</h3>
+              <p className="text-xs text-slate-500">Frustrated or overwhelmed entries, last 7 days</p>
             </div>
             <Activity className="w-5 h-5 text-rose-500" />
           </div>
@@ -252,10 +253,13 @@ export const Dashboard: React.FC = () => {
             Most Frequently Spoken AAC Words
           </h3>
           <p className="text-xs text-slate-500">
-            Aggregated system-wide communication choices (anonymized)
+            Taps added up across all children (no names shown)
           </p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+        {!stats?.topWords?.length && (
+          <EmptyState title="No words spoken yet" hint="Words appear here once children use the app while it is online." />
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {stats?.topWords?.map((item, idx) => (
             <div
               key={item.word}

@@ -7,8 +7,6 @@ import { Child } from "../src/models/Child";
 import { Shelf } from "../src/models/Shelf";
 import { Word } from "../src/models/Word";
 import { VerbGroup } from "../src/models/VerbGroup";
-import { SeedTemplate } from "../src/models/SeedTemplate";
-import { SocialStory } from "../src/models/SocialStory";
 import { ScheduleTask } from "../src/models/ScheduleTask";
 import { Passcard } from "../src/models/Passcard";
 import { UsageSummary } from "../src/models/UsageSummary";
@@ -424,6 +422,17 @@ export async function seedAll(options: { closeConnection?: boolean } = { closeCo
   );
   console.log(`✅ [USERS] Seeded Superadmin: ${env.ADMIN_EMAIL} (username: angeltalkadmin, password: ${env.ADMIN_PASSWORD})`);
 
+  // Demo family, verbs, schedule and board are only for local demos (SEED_DEMO=true). The real
+  // database holds only what the app sends and the app's own content (npm run seed:catalog).
+  if (process.env.SEED_DEMO !== "true") {
+    console.log("ℹ️ Demo data skipped (set SEED_DEMO=true to add the demo family).");
+    if (options.closeConnection) {
+      await mongoose.connection.close();
+      process.exit(0);
+    }
+    return;
+  }
+
   // 2. SEED DEFAULT PARENT ACCOUNT & CHILD BIO DATA
   const parentEmail = "parent@angeltalk.sa";
   let parent = await User.findOne({ email: parentEmail });
@@ -521,26 +530,7 @@ export async function seedAll(options: { closeConnection?: boolean } = { closeCo
   }
   console.log(`✅ [VERBS] Seeded ${verbsCount} 5-Form Verb Groups (EN, UR, AR).`);
 
-  // 4. SEED ALL 8 SOCIAL STORIES
-  let storiesCount = 0;
-  for (const s of ALL_STORIES) {
-    await SocialStory.findOneAndUpdate(
-      { childId: child._id, title: s.title },
-      {
-        ownerId: parent._id,
-        childId: child._id,
-        title: s.title,
-        category: s.category,
-        icon: s.icon,
-        description: s.description,
-        pages: s.pages,
-        clientUpdatedAt: new Date(),
-      },
-      { upsert: true, new: true }
-    );
-    storiesCount++;
-  }
-  console.log(`✅ [STORIES] Seeded ${storiesCount} Illustrated Social Stories.`);
+  // 4. Social stories are not shown in the app, so none are seeded (ALL_STORIES is kept for later).
 
   // 5. SEED VISUAL SCHEDULE TASKS
   let tasksCount = 0;
@@ -608,20 +598,7 @@ export async function seedAll(options: { closeConnection?: boolean } = { closeCo
       wordsCount++;
     }
 
-    // Also register as Starter AAC SeedTemplate
-    await SeedTemplate.findOneAndUpdate(
-      { seedName: s.seedName },
-      {
-        name: s.name,
-        seedName: s.seedName,
-        icon: s.icon,
-        color: s.color,
-        words: s.words,
-        active: true,
-        order: s.order,
-      },
-      { upsert: true, new: true }
-    );
+    // Board templates come from the app itself (npm run seed:catalog), not from this demo list
   }
   console.log(`✅ [BOARD] Seeded ${shelvesCount} Shelves and ${wordsCount} Communication Word Cards.`);
 

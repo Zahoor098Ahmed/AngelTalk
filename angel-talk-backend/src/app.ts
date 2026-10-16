@@ -18,6 +18,7 @@ import { routinesClinicalRouter } from "./modules/routines-clinical/routines-cli
 import { syncRouter } from "./modules/sync/sync.routes";
 import { pdplRouter } from "./modules/pdpl/pdpl.routes";
 import { adminRouter } from "./modules/admin/admin.routes";
+import { contentRouter } from "./modules/content/content.routes";
 
 export function createApp(): Express {
   const app = express();
@@ -25,8 +26,11 @@ export function createApp(): Express {
   // Security Headers
   app.use(helmet());
 
-  // Strict CORS Allowlist
-  const origins = env.CORS_ORIGIN === "*" ? "*" : env.CORS_ORIGIN.split(",").map((s) => s.trim());
+  // Strict CORS Allowlist (reflect request origin when '*' so credentials: true works in browsers)
+  const origins =
+    env.CORS_ORIGIN === "*"
+      ? true
+      : env.CORS_ORIGIN.split(",").map((s) => s.trim());
   app.use(
     cors({
       origin: origins,
@@ -61,6 +65,7 @@ export function createApp(): Express {
   app.use(apiPrefix, careTeamRouter);
   app.use(apiPrefix, boardRouter);
   app.use(apiPrefix, verbsRouter);
+  app.use(apiPrefix, contentRouter);
   app.use(apiPrefix, faceRouter);
   app.use(apiPrefix, mediaRouter);
   app.use("/api", mediaRouter);

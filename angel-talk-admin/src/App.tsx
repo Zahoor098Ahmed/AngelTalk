@@ -9,6 +9,7 @@ import { ChildrenPage } from "./pages/Children";
 import { VerbsPage } from "./pages/Verbs";
 import { TemplatesPage } from "./pages/Templates";
 import { AuditLogsPage } from "./pages/AuditLogs";
+import { ContentPage } from "./pages/Content";
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -69,6 +70,14 @@ export const App: React.FC = () => {
         element={
           <ProtectedRoute>
             <TemplatesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/content"
+        element={
+          <ProtectedRoute>
+            <ContentPage />
           </ProtectedRoute>
         }
       />

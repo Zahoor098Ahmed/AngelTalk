@@ -92,7 +92,7 @@ export async function checkServerHealth(): Promise<boolean> {
 /**
  * Standard fetch with auth header & automatic token refresh
  */
-async function authFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
+export async function authFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const token = await getAccessToken();
   const headers = new Headers(options.headers || {});
   headers.set("Content-Type", "application/json");

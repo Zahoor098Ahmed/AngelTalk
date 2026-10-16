@@ -21,6 +21,9 @@ export interface IVerbGroup {
   pictogramId?: string;
   forms: IVerbGroupForms;
   active: boolean;
+  /** "app" = built-in verb of the app (written by npm run seed:catalog); otherwise added in the admin panel */
+  source?: string;
+  editedByAdmin?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -65,6 +68,8 @@ const VerbGroupSchema = new Schema<IVerbGroup>(
       default: true,
       index: true,
     },
+    source: { type: String, index: true },
+    editedByAdmin: { type: Boolean, default: false },
   },
   {
     timestamps: true,

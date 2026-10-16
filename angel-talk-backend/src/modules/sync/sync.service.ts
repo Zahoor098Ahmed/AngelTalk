@@ -184,6 +184,11 @@ export class SyncService {
       // Check permission with cache
       const cacheKey = `${childId}:${config.requiredPermission || "default"}`;
       let hasAccess = accessCheckCache.get(cacheKey);
+      // A device pushing a child profile that is not on the server yet creates it for its own account
+      if (hasAccess === undefined && mutation.table === "children" && !(await Child.exists({ _id: childId }))) {
+        hasAccess = true;
+        accessCheckCache.set(cacheKey, true);
+      }
       if (hasAccess === undefined) {
         try {
           const child = await assertChildAccess(user, childId, config.requiredPermission);
@@ -280,6 +285,8 @@ export class SyncService {
         }
 
         sanitizedData.clientUpdatedAt = clientTime;
+        // care-journal entries written on the device are logged by the account that sent them
+        if (mutation.table === "carelogs" && !sanitizedData.loggedBy) sanitizedData.loggedBy = user.id;
         if (mutation.table !== "children") {
           sanitizedData.childId = childId;
           const childDoc = await Child.findById(childId);
@@ -306,6 +313,7 @@ export class SyncService {
         } else {
           sanitizedData._id = mutation.id;
           sanitizedData.deletedAt = null;
+          if (mutation.table === "children") sanitizedData.ownerId = user.id;
           await config.model.create(sanitizedData);
         }
 

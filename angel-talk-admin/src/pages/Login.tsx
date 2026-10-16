@@ -20,14 +20,17 @@ export const Login: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const result = await login(email, password, showMfaPrompt ? mfaCode : undefined);
+      const result = await login(email.trim(), password, showMfaPrompt ? mfaCode.trim() : undefined);
       if (result.mfaRequired) {
         setShowMfaPrompt(true);
       } else {
         navigate("/dashboard");
       }
     } catch (err: unknown) {
-      if (err instanceof Error) {
+      const axiosMsg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      if (axiosMsg) {
+        setError(axiosMsg);
+      } else if (err instanceof Error) {
         setError(err.message);
       } else {
         setError("Invalid credentials or server unavailable");

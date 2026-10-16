@@ -1,13 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Search, Trash2, Edit2, Globe2 } from "lucide-react";
 import { api } from "../api/client";
+import { verbFromApi, verbToApi } from "../api/adapters";
+import { ErrorNotice } from "../components/common/ErrorNotice";
+import { errorMessage } from "../api/errors";
 import { VerbGroup } from "../types";
 import { Modal } from "../components/common/Modal";
+
+/** Regular English forms of a verb, as a starting point the admin can correct. */
+function suggestForms(raw: string) {
+  const b = raw.trim().toLowerCase();
+  if (!b) return { first: "", s_es: "", second: "", third: "", fourth: "" };
+  const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
+  const cvc = /[^aeiou][aeiou][^aeiouwxy]$/.test(b) && b.length <= 4;
+  const s = /(s|x|z|ch|sh|o)$/.test(b) ? b + "es" : /[^aeiou]y$/.test(b) ? b.slice(0, -1) + "ies" : b + "s";
+  const past = b.endsWith("e") ? b + "d" : /[^aeiou]y$/.test(b) ? b.slice(0, -1) + "ied" : cvc ? b + b.slice(-1) + "ed" : b + "ed";
+  const ing = b.endsWith("ie") ? b.slice(0, -2) + "ying" : b.endsWith("ee") ? b + "ing" : b.endsWith("e") ? b.slice(0, -1) + "ing" : cvc ? b + b.slice(-1) + "ing" : b + "ing";
+  return { first: cap(b), s_es: cap(s), second: cap(past), third: cap(past), fourth: cap(ing) };
+}
 
 export const VerbsPage: React.FC = () => {
   const [verbs, setVerbs] = useState<VerbGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -37,45 +53,14 @@ export const VerbsPage: React.FC = () => {
 
   const fetchVerbs = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const response = await api.get("/verbs");
+      const response = await api.get("/admin/verbs");
       if (response.data?.data) {
-        setVerbs(response.data.data);
+        setVerbs((response.data.data as Parameters<typeof verbFromApi>[0][]).map(verbFromApi));
       }
-    } catch {
-      // Demo verb fallback
-      setVerbs([
-        {
-          _id: "vb-1",
-          baseKey: "eat",
-          icon: "silverware-fork-knife",
-          forms: {
-            first: { en: "eat", ur: "کھانا", ar: "يأكل" },
-            s_es: { en: "eats", ur: "کھاتا ہے", ar: "تأكل" },
-            second: { en: "ate", ur: "کھایا", ar: "أكل" },
-            third: { en: "eaten", ur: "کھا چکا", ar: "مأكول" },
-            fourth: { en: "eating", ur: "کھا رہا ہے", ar: "جاري الأكل" },
-          },
-          isCustom: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          _id: "vb-2",
-          baseKey: "drink",
-          icon: "cup-water",
-          forms: {
-            first: { en: "drink", ur: "پینا", ar: "يشرب" },
-            s_es: { en: "drinks", ur: "پیتا ہے", ar: "تشرب" },
-            second: { en: "drank", ur: "پیا", ar: "شرب" },
-            third: { en: "drunk", ur: "پی چکا", ar: "مشروب" },
-            fourth: { en: "drinking", ur: "پی رہا ہے", ar: "جاري الشرب" },
-          },
-          isCustom: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ]);
+    } catch (err) {
+      setLoadError(errorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -127,14 +112,14 @@ export const VerbsPage: React.FC = () => {
 
     try {
       if (isEditing && editingId) {
-        await api.put(`/admin/verbs/${editingId}`, payload);
+        await api.put(`/admin/verbs/${editingId}`, verbToApi(payload));
       } else {
-        await api.post("/admin/verbs", payload);
+        await api.post("/admin/verbs", verbToApi(payload));
       }
       setIsModalOpen(false);
       await fetchVerbs();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to save verb group");
+      alert(errorMessage(err));
     }
   };
 
@@ -144,7 +129,7 @@ export const VerbsPage: React.FC = () => {
       await api.delete(`/admin/verbs/${id}`);
       await fetchVerbs();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to delete verb");
+      alert(errorMessage(err));
     }
   };
 
@@ -164,7 +149,7 @@ export const VerbsPage: React.FC = () => {
             5-Form Verb Conjugation Library
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Multilingual verb engine supporting English, Urdu, and Arabic with automatic grammatical conjugation.
+            Every verb of the app with its 5 forms. Verbs you add or change here reach the app's Actions folders automatically.
           </p>
         </div>
         <button
@@ -175,6 +160,8 @@ export const VerbsPage: React.FC = () => {
           <span>Add New Verb Group</span>
         </button>
       </div>
+
+      {loadError && <ErrorNotice message={loadError} onRetry={fetchVerbs} />}
 
       {/* Search */}
       <div className="bg-white p-4 rounded-2xl ring-1 ring-slate-200/80 shadow-sm flex items-center justify-between gap-4">
@@ -219,7 +206,7 @@ export const VerbsPage: React.FC = () => {
               ) : filteredVerbs.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-400">
-                    No verbs match your search.
+                    {verbs.length ? "No verbs match your search." : "No verbs yet."}
                   </td>
                 </tr>
               ) : (
@@ -227,6 +214,7 @@ export const VerbsPage: React.FC = () => {
                   <tr key={v._id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-3 px-5 font-bold text-slate-900 font-mono text-xs">
                       {v.baseKey}
+                      <div className="mt-1 font-sans text-[10px] font-semibold text-slate-400">{v.isCustom ? "Added in admin" : "Built into the app"}</div>
                     </td>
 
                     {/* 1st form */}
@@ -294,30 +282,44 @@ export const VerbsPage: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={isEditing ? `Edit Verb: ${formBaseKey}` : "Create 5-Form Verb Conjugation Group"}
+        title={isEditing ? `Edit verb: ${formBaseKey}` : "Add a verb"}
         maxWidth="2xl"
       >
         <form onSubmit={handleSave} className="space-y-4 text-xs">
+          <div className="rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2 text-indigo-800">
+            Write English only. The other English forms are filled in for you (check irregular verbs like go → went), and
+            Arabic and Urdu are added automatically when you save. Empty a translation to make it again.
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Base Key (Unique Identifier)</label>
+              <label className="block font-bold text-slate-700 mb-1">Verb (English)</label>
               <input
                 type="text"
                 required
                 disabled={isEditing}
                 value={formBaseKey}
-                onChange={(e) => setFormBaseKey(e.target.value)}
-                placeholder="e.g. want, go, play"
+                onChange={(e) => {
+                  setFormBaseKey(e.target.value);
+                  if (!isEditing) {
+                    const f = suggestForms(e.target.value);
+                    setFormFirstEn(f.first);
+                    setFormSesEn(f.s_es);
+                    setFormSecondEn(f.second);
+                    setFormThirdEn(f.third);
+                    setFormFourthEn(f.fourth);
+                  }
+                }}
+                placeholder="e.g. jump"
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-xs focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Icon Name (Optional)</label>
+              <label className="block font-bold text-slate-700 mb-1">Emoji (optional)</label>
               <input
                 type="text"
                 value={formIcon}
                 onChange={(e) => setFormIcon(e.target.value)}
-                placeholder="e.g. food-apple, run"
+                placeholder="e.g. 🏃"
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -344,18 +346,16 @@ export const VerbsPage: React.FC = () => {
                 />
                 <input
                   type="text"
-                  required
                   dir="rtl"
-                  placeholder="العربية (Arabic)"
+                  placeholder="العربية · automatic"
                   value={row.ar}
                   onChange={(e) => row.setAr(e.target.value)}
                   className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 bg-white font-tajawal text-right"
                 />
                 <input
                   type="text"
-                  required
                   dir="rtl"
-                  placeholder="اردو (Urdu)"
+                  placeholder="اردو · automatic"
                   value={row.ur}
                   onChange={(e) => row.setUr(e.target.value)}
                   className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 bg-white font-tajawal text-right"

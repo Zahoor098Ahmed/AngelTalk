@@ -16,6 +16,8 @@ import { User, UserRole } from "../types";
 import { Badge } from "../components/common/Badge";
 import { Modal } from "../components/common/Modal";
 import { useAuth } from "../context/AuthContext";
+import { ErrorNotice } from "../components/common/ErrorNotice";
+import { errorMessage } from "../api/errors";
 
 export const UsersPage: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -29,9 +31,11 @@ export const UsersPage: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams({
         page: String(page),
@@ -46,36 +50,8 @@ export const UsersPage: React.FC = () => {
         setTotalPages(response.data.data.totalPages || 1);
         setTotalCount(response.data.data.total || response.data.data.users.length);
       }
-    } catch {
-      // Fallback preview data
-      setUsers([
-        {
-          _id: "usr-1",
-          email: "parent1@angeltalk.sa",
-          fullName: "Fatimah Al-Harbi",
-          role: "parent",
-          status: "active",
-          mfaEnabled: false,
-          pinFailedAttempts: 0,
-          pinLockedUntil: null,
-          lastLoginAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          _id: "usr-2",
-          email: "slp.sarah@riyadhclinic.sa",
-          fullName: "Sarah Al-Ghamdi (SLP)",
-          role: "slp",
-          status: "active",
-          mfaEnabled: true,
-          pinFailedAttempts: 0,
-          pinLockedUntil: null,
-          lastLoginAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ]);
+    } catch (err) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -92,7 +68,7 @@ export const UsersPage: React.FC = () => {
       await api.patch(`/admin/users/${user._id}/status`, { status: newStatus });
       await fetchUsers();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to update user status");
+      alert(errorMessage(err));
     } finally {
       setActionLoading(false);
     }
@@ -104,7 +80,7 @@ export const UsersPage: React.FC = () => {
       await api.patch(`/admin/users/${userId}/role`, { role: newRole });
       await fetchUsers();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to update user role");
+      alert(errorMessage(err));
     } finally {
       setActionLoading(false);
     }
@@ -117,7 +93,7 @@ export const UsersPage: React.FC = () => {
       await api.post(`/admin/users/${userId}/revoke-sessions`);
       alert("All sessions successfully revoked.");
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to revoke sessions");
+      alert(errorMessage(err));
     } finally {
       setActionLoading(false);
     }
@@ -132,7 +108,7 @@ export const UsersPage: React.FC = () => {
       setSelectedUser(null);
       await fetchUsers();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to delete user");
+      alert(errorMessage(err));
     } finally {
       setActionLoading(false);
     }
@@ -145,7 +121,7 @@ export const UsersPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">User Management</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Total of {totalCount} registered accounts across the Kingdom.
+            {totalCount} accounts. Every family that uses the app online gets one automatically.
           </p>
         </div>
         <button
@@ -156,6 +132,8 @@ export const UsersPage: React.FC = () => {
           <span>Refresh List</span>
         </button>
       </div>
+
+      {error && <ErrorNotice message={error} onRetry={fetchUsers} />}
 
       {/* Filters and Search Bar */}
       <div className="bg-white p-4 rounded-2xl ring-1 ring-slate-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
@@ -225,6 +203,9 @@ export const UsersPage: React.FC = () => {
                     <td className="py-4 px-6">
                       <div className="font-bold text-slate-900">{u.fullName}</div>
                       <div className="text-xs text-slate-500 font-mono">{u.email}</div>
+                      {u.email.endsWith("@devices.angeltalk.app") && (
+                        <div className="mt-0.5 text-[10px] font-semibold text-emerald-600">Family using the app (account made automatically)</div>
+                      )}
                     </td>
                     <td className="py-4 px-6">
                       {currentUser?.role === "superadmin" ? (

@@ -29,6 +29,7 @@ import ContentReviewQueueScreen from "./src/screens/ContentReviewQueueScreen";
 import VoiceCommandMatchScreen from "./src/screens/VoiceCommandMatchScreen";
 import QuickOnboardingScreen from "./src/screens/QuickOnboardingScreen";
 import SocialStoriesScreen from "./src/screens/SocialStoriesScreen";
+import { startCloudConnect } from "./src/modules/cloudConnect";
 
 type Screen =
   | "landing"
@@ -56,6 +57,10 @@ const TAB_LABEL: Record<TabScreen, string> = {
 
 function AppInner() {
   const { ready, settings } = useSettings();
+  // Connect to the Angel Talk server / admin panel in the background once local data is loaded
+  useEffect(() => {
+    if (ready) startCloudConnect();
+  }, [ready]);
 
   useEffect(() => {
     if (Platform.OS === "web" && typeof document !== "undefined" && document.head) {

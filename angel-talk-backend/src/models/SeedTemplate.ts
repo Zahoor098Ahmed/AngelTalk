@@ -22,6 +22,12 @@ export interface ISeedTemplate {
   words: ITemplateWord[];
   forDiagnoses: DiagnosisType[];
   active: boolean;
+  description?: string;
+  imageUri?: string;
+  nameTranslations?: Record<string, string>;
+  /** "app" = built-in folder of the app (written by npm run seed:catalog); otherwise made in the admin panel */
+  source?: string;
+  editedByAdmin?: boolean;
   order: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -78,6 +84,11 @@ const SeedTemplateSchema = new Schema<ISeedTemplate>(
       default: true,
       index: true,
     },
+    description: { type: String },
+    imageUri: { type: String },
+    nameTranslations: { type: Map, of: String, default: {} },
+    source: { type: String, index: true },
+    editedByAdmin: { type: Boolean, default: false },
     order: {
       type: Number,
       default: 0,

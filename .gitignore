@@ -6,3 +6,5 @@ build/
 .expo/
 .cache/
  
+# catalog dry-run export
+angel-talk-backend/catalog-export.json

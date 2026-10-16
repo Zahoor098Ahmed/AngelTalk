@@ -4,42 +4,26 @@ import { api } from "../api/client";
 import { AuditLog } from "../types";
 import { Badge } from "../components/common/Badge";
 import { Modal } from "../components/common/Modal";
+import { ErrorNotice } from "../components/common/ErrorNotice";
+import { errorMessage } from "../api/errors";
 
 export const AuditLogsPage: React.FC = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchLogs = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await api.get("/admin/audit-logs");
       if (response.data?.data) {
         setLogs(response.data.data.logs || response.data.data);
       }
-    } catch {
-      // Demo security logs
-      setLogs([
-        {
-          _id: "log-1",
-          userId: "usr-admin-1",
-          action: "admin.login",
-          details: { ip: "10.0.0.4", mfaUsed: true },
-          ipAddress: "10.0.0.4",
-          userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-          createdAt: new Date().toISOString(),
-        },
-        {
-          _id: "log-2",
-          userId: "usr-parent-1",
-          action: "pin.verified",
-          details: { deviceId: "iphone-15-pro" },
-          ipAddress: "192.168.1.12",
-          userAgent: "Expo/52.0.0 iOS",
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-        },
-      ]);
+    } catch (err) {
+      setError(errorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -52,8 +36,9 @@ export const AuditLogsPage: React.FC = () => {
   const filteredLogs = logs.filter(
     (l) =>
       l.action.toLowerCase().includes(search.toLowerCase()) ||
-      l.userId?.toLowerCase().includes(search.toLowerCase()) ||
-      l.ipAddress?.includes(search)
+      l.actorId?.toLowerCase().includes(search.toLowerCase()) ||
+      String(l.meta?.email ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      l.ip?.includes(search)
   );
 
   return (
@@ -74,6 +59,8 @@ export const AuditLogsPage: React.FC = () => {
           <span>Refresh Audit Trail</span>
         </button>
       </div>
+
+      {error && <ErrorNotice message={error} onRetry={fetchLogs} />}
 
       {/* Search */}
       <div className="bg-white p-4 rounded-2xl ring-1 ring-slate-200/80 shadow-sm flex items-center justify-between gap-4">
@@ -138,10 +125,10 @@ export const AuditLogsPage: React.FC = () => {
                       </Badge>
                     </td>
                     <td className="py-3 px-5 font-mono text-slate-700">
-                      {log.userId || "system"}
+                      {String(log.meta?.email ?? "") || log.actorId || "system"}
                     </td>
                     <td className="py-3 px-5 font-mono text-slate-500">
-                      {log.ipAddress || "127.0.0.1"}
+                      {log.ip || "—"}
                     </td>
                     <td className="py-3 px-5 text-right">
                       <button

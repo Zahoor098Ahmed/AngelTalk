@@ -1,79 +1,105 @@
 import mongoose from "mongoose";
+import { execSync } from "child_process";
+import { Server } from "http";
 import { createApp } from "./app";
 import { env } from "./config/env";
 import { logger } from "./common/logger";
 import { seedAll } from "../scripts/seed";
 
 let memoryServer: { stop: () => Promise<boolean | void> } | null = null;
+const globalForServer = globalThis as unknown as {
+  __angelTalkServer?: Server;
+};
+
+function freePortWindows(port: number) {
+  try {
+    if (process.platform === "win32") {
+      const cmd = `powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | ForEach-Object { if ($_.OwningProcess -ne ${process.pid} -and $_.OwningProcess -gt 0) { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } }"`;
+      execSync(cmd, { stdio: "ignore" });
+    }
+  } catch {
+    // Ignore errors
+  }
+}
 
 async function bootstrap() {
   try {
+    if (globalForServer.__angelTalkServer) {
+      await new Promise<void>((resolve) => {
+        globalForServer.__angelTalkServer?.close(() => resolve());
+      });
+    }
+
     const app = createApp();
 
-    const server = app.listen(env.PORT, () => {
+    const server: Server = app.listen(env.PORT, () => {
       logger.info(`Angel Talk Backend API listening on port ${env.PORT} (${env.NODE_ENV})`);
       logger.info(`Health check: http://localhost:${env.PORT}/api/v1/health`);
     });
+    globalForServer.__angelTalkServer = server;
 
-    let atlasConnected = false;
-    try {
-      logger.info("Connecting to MongoDB Atlas...");
-      await mongoose.connect(env.MONGO_URI, {
-        serverSelectionTimeoutMS: 5000,
-        autoIndex: true,
-      });
-      logger.info("Connected to MongoDB Atlas successfully");
-      atlasConnected = true;
-      try {
-        await seedAll({ closeConnection: false });
-        logger.info("Atlas database auto-seeded successfully with all platform data");
-      } catch (seedErr) {
-        logger.warn({ seedErr }, "Database auto-seed warning");
+    server.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        logger.warn(`Port ${env.PORT} was in use. Reclaiming port ${env.PORT}...`);
+        freePortWindows(env.PORT);
+        setTimeout(() => {
+          server.close();
+          server.listen(env.PORT);
+        }, 500);
+      } else {
+        logger.error({ err }, "HTTP server error");
       }
-    } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      logger.warn({ msg: errorMsg }, "MongoDB Atlas connection pending/auth issue. Starting instant local database...");
+    });
 
+    // 1. Start instant local database & seed immediately so login works with zero delay
+    if (mongoose.connection.readyState !== 1) {
       try {
         const { MongoMemoryServer } = await import("mongodb-memory-server");
         const memInstance = await MongoMemoryServer.create();
         memoryServer = memInstance;
         const memUri = memInstance.getUri();
         await mongoose.connect(memUri, { autoIndex: true });
-        logger.info("Connected to instant local database. Seeding all data...");
         await seedAll({ closeConnection: false });
-        logger.info("Local database 100% seeded and active for instant login!");
+        logger.info("Database 100% seeded and ready for instant login!");
       } catch (localErr) {
         logger.error({ localErr }, "Could not start local memory database");
       }
-
-      // Retry Atlas in background
-      const retryInterval = setInterval(async () => {
-        try {
-          if (atlasConnected) {
-            clearInterval(retryInterval);
-            return;
-          }
-          const testConn = await mongoose.createConnection(env.MONGO_URI, { serverSelectionTimeoutMS: 4000 }).asPromise();
-          if (testConn.readyState === 1) {
-            logger.info("MongoDB Atlas authenticated and connected! Syncing...");
-            await testConn.close();
-            if (memoryServer) {
-              await mongoose.disconnect();
-              await memoryServer.stop();
-              memoryServer = null;
-            }
-            await mongoose.connect(env.MONGO_URI, { autoIndex: true });
-            await seedAll({ closeConnection: false });
-            logger.info("Switched to live MongoDB Atlas successfully!");
-            atlasConnected = true;
-            clearInterval(retryInterval);
-          }
-        } catch {
-          // Retry silently in background
-        }
-      }, 15000);
     }
+
+    // 2. Attempt live MongoDB Atlas connection in background
+    let atlasConnected = false;
+    const tryConnectAtlas = async () => {
+      if (atlasConnected) return;
+      try {
+        const testConn = await mongoose
+          .createConnection(env.MONGO_URI, { serverSelectionTimeoutMS: 4000 })
+          .asPromise();
+        if (testConn.readyState === 1) {
+          logger.info("Connected to live MongoDB Atlas! Switching over...");
+          await testConn.close();
+          if (memoryServer) {
+            await mongoose.disconnect();
+            await memoryServer.stop();
+            memoryServer = null;
+          }
+          await mongoose.connect(env.MONGO_URI, { autoIndex: true });
+          await seedAll({ closeConnection: false });
+          logger.info("Switched to live MongoDB Atlas and seeded successfully!");
+          atlasConnected = true;
+        }
+      } catch {
+        // Keep using seeded local database while Atlas whitelist/credentials are pending
+      }
+    };
+
+    tryConnectAtlas();
+    const retryInterval = setInterval(async () => {
+      if (atlasConnected) {
+        clearInterval(retryInterval);
+        return;
+      }
+      await tryConnectAtlas();
+    }, 20000);
 
     // Graceful Shutdown
     const shutdown = async (signal: string) => {

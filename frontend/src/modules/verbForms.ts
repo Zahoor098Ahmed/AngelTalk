@@ -212,6 +212,14 @@ for (const v of VERB_FORMS_LIST) {
   LOOKUP_MAP.set(v.continuous.toLowerCase(), v);
 }
 
+/** Verbs added in the admin panel: make every form of them known to the app (e.g. "went" -> "go"). */
+export function registerVerbForms(list: VerbForms[]): void {
+  for (const v of list) {
+    if (!v?.base) continue;
+    for (const f of [v.base, v.past, v.participle, v.continuous]) if (f) LOOKUP_MAP.set(f.toLowerCase(), v);
+  }
+}
+
 /** Check if a word ends with a short consonant-vowel-consonant (CVC) pattern */
 function isCVC(word: string): boolean {
   if (word.length < 3) return false;

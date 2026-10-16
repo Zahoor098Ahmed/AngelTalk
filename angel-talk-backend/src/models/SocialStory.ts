@@ -68,7 +68,8 @@ const SocialStorySchema = new Schema<ISocialStory>(
       },
     },
   },
-  baseSchemaOptions
+  // Social stories are not shown in the app right now: don't create an empty collection on start-up
+  { ...baseSchemaOptions, autoCreate: false, autoIndex: false }
 );
 
 SocialStorySchema.index({ ownerId: 1, updatedAt: -1 });

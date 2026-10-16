@@ -41,6 +41,10 @@ export interface Child {
     consecutiveDays: number;
     lastActiveDate: string | null;
   };
+  owner?: { _id: string; email: string; fullName: string; role: string } | null;
+  boardWords?: number;
+  boardShelves?: number;
+  usage?: { wordsThisWeek: number; sentencesSpoken: number; lastActive: string | null } | null;
   face: {
     consent: boolean;
     consentAt: string | null;
@@ -76,6 +80,8 @@ export interface VerbGroup {
 export interface SeedWord {
   label: string;
   phrase: string;
+  order?: number;
+  verbFormTag?: string;
   emoji?: string;
   imageUri?: string;
   color?: string;
@@ -93,20 +99,26 @@ export interface SeedShelf {
 export interface SeedTemplate {
   _id: string;
   name: string;
-  description: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  source?: string;
+  editedByAdmin?: boolean;
+  words: SeedWord[];
   targetDiagnosis?: string;
-  shelves: SeedShelf[];
+  shelves?: SeedShelf[];
   createdAt: string;
   updatedAt: string;
 }
 
 export interface AuditLog {
   _id: string;
-  userId: string;
+  actorId?: string;
   action: string;
-  details?: Record<string, unknown>;
-  ipAddress?: string;
-  userAgent?: string;
+  targetType?: string;
+  targetId?: string;
+  meta?: Record<string, unknown>;
+  ip?: string;
   createdAt: string;
 }
 
@@ -120,6 +132,9 @@ export interface DashboardStats {
   userGrowth: Array<{ date: string; users: number }>;
   meltdownTrends: Array<{ date: string; count: number }>;
   topWords: Array<{ word: string; count: number }>;
+  totalVerbs?: number;
+  totalTemplates?: number;
+  totalWords?: number;
 }
 
 export interface ApiResponse<T = unknown> {

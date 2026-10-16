@@ -7,6 +7,7 @@ import {
   BookOpen,
   Layers,
   ShieldAlert,
+  Database,
   LogOut,
   Sparkles,
 } from "lucide-react";
@@ -22,11 +23,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const location = useLocation();
 
   const navItems = [
-    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { label: "User Management", href: "/users", icon: Users },
-    { label: "Children Profiles", href: "/children", icon: Baby },
-    { label: "Verb Conjugation Library", href: "/verbs", icon: BookOpen },
-    { label: "AAC Seed Templates", href: "/templates", icon: Layers },
+    { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Families (Users)", href: "/users", icon: Users },
+    { label: "Children", href: "/children", icon: Baby },
+    { label: "Board Folders & Words", href: "/templates", icon: Layers },
+    { label: "Verbs (5 forms)", href: "/verbs", icon: BookOpen },
+    { label: "App Content", href: "/content", icon: Database },
     { label: "Security & Audit Logs", href: "/audit-logs", icon: ShieldAlert },
   ];
 
@@ -45,7 +47,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 <span>ANGEL TALK</span>
               </div>
               <div className="text-[10px] uppercase tracking-wider text-indigo-400 font-semibold">
-                Sovereign Portal
+                Admin Panel
               </div>
             </div>
           </div>
