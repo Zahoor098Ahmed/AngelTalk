@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Search,
   UserCheck,
@@ -12,6 +13,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { api } from "../api/client";
+import { keep, peek } from "../api/cache";
 import { User, UserRole } from "../types";
 import { Badge } from "../components/common/Badge";
 import { Modal } from "../components/common/Modal";
@@ -26,7 +28,12 @@ export const UsersPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [search, setSearch] = useState("");
+  const [params] = useSearchParams();
+  const [search, setSearch] = useState(() => params.get("search") ?? "");
+  useEffect(() => {
+    const fromUrl = params.get("search");
+    if (fromUrl !== null) setSearch(fromUrl);
+  }, [params]);
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -34,22 +41,26 @@ export const UsersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
-    setLoading(true);
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: "10",
+      ...(search ? { search } : {}),
+      ...(selectedRole ? { role: selectedRole } : {}),
+    });
+    type UsersPage = { users: User[]; totalPages?: number; total?: number };
+    const show = (d: UsersPage) => {
+      setUsers(d.users);
+      setTotalPages(d.totalPages || 1);
+      setTotalCount(d.total || d.users.length);
+    };
+    const key = `users:${params.toString()}`;
+    const before = peek<UsersPage>(key);
+    if (before) show(before);
+    else setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: "10",
-        ...(search ? { search } : {}),
-        ...(selectedRole ? { role: selectedRole } : {}),
-      });
-
       const response = await api.get(`/admin/users?${params.toString()}`);
-      if (response.data?.data) {
-        setUsers(response.data.data.users);
-        setTotalPages(response.data.data.totalPages || 1);
-        setTotalCount(response.data.data.total || response.data.data.users.length);
-      }
+      if (response.data?.data) show(keep(key, response.data.data as UsersPage));
     } catch (err) {
       setError(errorMessage(err));
     } finally {

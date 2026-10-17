@@ -9,7 +9,7 @@ import { Child } from "../../models/Child";
 import { CareTeam } from "../../models/CareTeam";
 import { assertChildAccess } from "../../middleware/auth";
 import { AuthenticatedUser, CareTeamPermission } from "../../common/types";
-import { BadRequestError } from "../../common/errors";
+import { BadRequestError, ForbiddenError, NotFoundError } from "../../common/errors";
 
 const PULL_LIMIT = 200;
 
@@ -135,6 +135,12 @@ export class SyncService {
     };
   }
 
+  /**
+   * Applies a batch of changes from a device. Works in bulk — the children, the existing records
+   * and the writes each take one database round trip per table — so a whole board (1,000+ words)
+   * goes through quickly even on a slow connection. Rules per record are unchanged:
+   * access check, child match, last-write-wins on clientUpdatedAt, additive counters.
+   */
   public static async push(
     user: AuthenticatedUser,
     mutations: SyncMutationItem[]
@@ -147,189 +153,170 @@ export class SyncService {
       throw new BadRequestError("Cannot push more than 500 mutations per batch");
     }
 
-    const results: SyncMutationResult[] = [];
-    const accessCheckCache = new Map<string, boolean>();
+    const results: (SyncMutationResult | undefined)[] = new Array(mutations.length);
+    const reject = (i: number, reason: string) => (results[i] = { id: mutations[i].id, status: "rejected", reason });
 
-    for (const mutation of mutations) {
-      const config = SYNC_TABLE_REGISTRY[mutation.table];
-      if (!config) {
-        results.push({
-          id: mutation.id,
-          status: "rejected",
-          reason: `Unknown sync table: ${mutation.table}`,
-        });
-        continue;
+    // 1. shape checks
+    type Prepared = { i: number; m: SyncMutationItem; childId: string; clientTime: Date };
+    const prepared: Prepared[] = [];
+    mutations.forEach((m, i) => {
+      if (!SYNC_TABLE_REGISTRY[m.table]) {
+        reject(i, `Unknown sync table: ${m.table}`);
+        return;
       }
-
-      const clientTime = new Date(mutation.clientUpdatedAt);
+      const clientTime = new Date(m.clientUpdatedAt);
       if (isNaN(clientTime.getTime())) {
-        results.push({
-          id: mutation.id,
-          status: "rejected",
-          reason: "Invalid clientUpdatedAt timestamp",
-        });
-        continue;
+        reject(i, "Invalid clientUpdatedAt timestamp");
+        return;
       }
-
-      const childId = (mutation.data?.childId as string) || (mutation.table === "children" ? mutation.id : undefined);
+      const childId = (m.data?.childId as string) || (m.table === "children" ? m.id : undefined);
       if (!childId) {
-        results.push({
-          id: mutation.id,
-          status: "rejected",
-          reason: "Missing childId in mutation",
-        });
-        continue;
+        reject(i, "Missing childId in mutation");
+        return;
       }
+      prepared.push({ i, m, childId, clientTime });
+    });
 
-      // Check permission with cache
-      const cacheKey = `${childId}:${config.requiredPermission || "default"}`;
-      let hasAccess = accessCheckCache.get(cacheKey);
-      // A device pushing a child profile that is not on the server yet creates it for its own account
-      if (hasAccess === undefined && mutation.table === "children" && !(await Child.exists({ _id: childId }))) {
-        hasAccess = true;
-        accessCheckCache.set(cacheKey, true);
-      }
-      if (hasAccess === undefined) {
+    // 2. access: all children of this batch in one query
+    const childIds = [...new Set(prepared.map((p) => p.childId))];
+    const children = await Child.find({ _id: { $in: childIds } }).select("ownerId deletedAt").lean();
+    const childById = new Map<string, { ownerId: string; deletedAt?: Date | null }>(
+      children.map((c) => [String(c._id), { ownerId: c.ownerId, deletedAt: c.deletedAt }])
+    );
+    const accessCache = new Map<string, boolean>();
+    const hasAccess = async (p: Prepared): Promise<boolean | "retry"> => {
+      const config = SYNC_TABLE_REGISTRY[p.m.table];
+      const child = childById.get(p.childId);
+      // a device pushing a child profile that is not on the server yet creates it for its own account
+      if (!child && p.m.table === "children") return true;
+      const key = `${p.childId}:${config.requiredPermission || "default"}:${config.ownerOnly ? 1 : 0}`;
+      const known = accessCache.get(key);
+      if (known !== undefined) return known;
+      let ok = false;
+      if (child && !child.deletedAt && child.ownerId === user.id) ok = true;
+      else {
         try {
-          const child = await assertChildAccess(user, childId, config.requiredPermission);
-          if (config.ownerOnly && child.ownerId !== user.id && user.role !== "superadmin") {
-            hasAccess = false;
-          } else {
-            hasAccess = true;
-          }
-        } catch {
-          hasAccess = false;
+          const full = await assertChildAccess(user, p.childId, config.requiredPermission);
+          ok = !(config.ownerOnly && full.ownerId !== user.id && user.role !== "superadmin");
+        } catch (err) {
+          // a database hiccup is not a "no": leave it for the device to send again next time
+          if (!(err instanceof NotFoundError || err instanceof ForbiddenError)) return "retry";
+          ok = false;
         }
-        accessCheckCache.set(cacheKey, hasAccess);
       }
+      accessCache.set(key, ok);
+      return ok;
+    };
+    const allowed: Prepared[] = [];
+    for (const p of prepared) {
+      const access = await hasAccess(p);
+      if (access === "retry") reject(p.i, "Temporary server problem, please send again");
+      else if (access) allowed.push(p);
+      else reject(p.i, "Unauthorized access to child data or insufficient permissions");
+    }
 
-      if (!hasAccess) {
-        results.push({
-          id: mutation.id,
-          status: "rejected",
-          reason: "Unauthorized access to child data or insufficient permissions",
-        });
-        continue;
-      }
+    // 3. per table: read the existing records once, then write everything in one bulk call
+    const byTable = new Map<string, Prepared[]>();
+    allowed.forEach((p) => byTable.set(p.m.table, [...(byTable.get(p.m.table) ?? []), p]));
+    // children first, so the records that belong to a new child find its owner
+    const tables = [...byTable.keys()].sort((a, b) => Number(b === "children") - Number(a === "children"));
 
-      try {
-        // Find existing record
-        const existing = await config.model.findById(mutation.id);
+    for (const table of tables) {
+      const config = SYNC_TABLE_REGISTRY[table];
+      const items = byTable.get(table)!;
+      const existingDocs = await config.model.find({ _id: { $in: items.map((p) => p.m.id) } }).lean();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const existingById = new Map<string, any>(existingDocs.map((d: { _id: unknown }) => [String(d._id), d]));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const ops: any[] = [];
+      const opOwner: number[] = []; // op index -> mutation index
 
+      for (const p of items) {
+        const { m, childId, clientTime } = p;
+        const existing = existingById.get(m.id);
         if (existing) {
-          // Verify childId matches existing doc (security cross-child injection check)
           const existingChildId = existing.childId || existing._id;
-          if (existingChildId !== childId) {
-            results.push({
-              id: mutation.id,
-              status: "rejected",
-              reason: "Security rejection: childId does not match existing document",
-            });
+          if (String(existingChildId) !== childId) {
+            reject(p.i, "Security rejection: childId does not match existing document");
             continue;
           }
-
-          // Last-Write-Wins (LWW) Conflict Resolution
-          if (existing.clientUpdatedAt && clientTime <= existing.clientUpdatedAt) {
-            results.push({
-              id: mutation.id,
-              status: "skipped_stale",
-              reason: "Server has a newer or identical clientUpdatedAt timestamp",
-            });
+          if (existing.clientUpdatedAt && clientTime <= new Date(existing.clientUpdatedAt)) {
+            results[p.i] = { id: m.id, status: "skipped_stale", reason: "Server has a newer or identical clientUpdatedAt timestamp" };
             continue;
           }
         }
 
-        // Action: DELETE
-        if (mutation.action === "DELETE") {
+        if (m.action === "DELETE") {
           if (existing) {
-            existing.deletedAt = new Date();
-            existing.clientUpdatedAt = clientTime;
-            await existing.save();
-          }
-          results.push({ id: mutation.id, status: "applied" });
+            ops.push({ updateOne: { filter: { _id: m.id }, update: { $set: { deletedAt: new Date(), clientUpdatedAt: clientTime } } } });
+            opOwner.push(p.i);
+          } else results[p.i] = { id: m.id, status: "applied" };
           continue;
         }
 
-        // Action: INCREMENT (Additive telemetry)
-        if (mutation.action === "INCREMENT") {
-          if (existing && config.additiveCounters) {
-            const incOps: Record<string, number> = {};
-            for (const field of config.additiveCounters) {
-              const delta = Number(mutation.data?.[field]) || 0;
-              if (delta > 0) {
-                incOps[field] = delta;
-              }
-            }
-            if (Object.keys(incOps).length > 0) {
-              await config.model.updateOne(
-                { _id: mutation.id },
-                {
-                  $inc: incOps,
-                  $set: { clientUpdatedAt: clientTime },
-                }
-              );
-            }
+        if (m.action === "INCREMENT") {
+          const inc: Record<string, number> = {};
+          for (const field of config.additiveCounters ?? []) {
+            const delta = Number(m.data?.[field]) || 0;
+            if (delta > 0) inc[field] = delta;
           }
-          results.push({ id: mutation.id, status: "applied" });
+          if (existing && Object.keys(inc).length > 0) {
+            ops.push({ updateOne: { filter: { _id: m.id }, update: { $inc: inc, $set: { clientUpdatedAt: clientTime } } } });
+            opOwner.push(p.i);
+          } else results[p.i] = { id: m.id, status: "applied" };
           continue;
         }
 
-        // Action: UPSERT
-        const sanitizedData: Record<string, unknown> = {};
-        if (mutation.data) {
-          for (const key of config.allowedFields) {
-            if (mutation.data[key] !== undefined) {
-              sanitizedData[key] = mutation.data[key];
-            }
-          }
+        // UPSERT
+        const data: Record<string, unknown> = {};
+        for (const key of config.allowedFields) if (m.data?.[key] !== undefined) data[key] = m.data[key];
+        data.clientUpdatedAt = clientTime;
+        if (table === "carelogs" && !data.loggedBy) data.loggedBy = user.id;
+        if (table !== "children") {
+          data.childId = childId;
+          const owner = childById.get(childId)?.ownerId;
+          if (owner) data.ownerId = owner;
         }
-
-        sanitizedData.clientUpdatedAt = clientTime;
-        // care-journal entries written on the device are logged by the account that sent them
-        if (mutation.table === "carelogs" && !sanitizedData.loggedBy) sanitizedData.loggedBy = user.id;
-        if (mutation.table !== "children") {
-          sanitizedData.childId = childId;
-          const childDoc = await Child.findById(childId);
-          if (childDoc) {
-            sanitizedData.ownerId = childDoc.ownerId;
-          }
+        for (const counter of config.additiveCounters ?? []) {
+          if (existing && m.data?.[counter] !== undefined) data[counter] = Math.max(Number(existing[counter]) || 0, Number(m.data[counter]) || 0);
         }
 
         if (existing) {
-          // If additive counters exist, merge them additively
-          if (config.additiveCounters) {
-            for (const counter of config.additiveCounters) {
-              if (mutation.data?.[counter] !== undefined) {
-                const currentVal = Number(existing[counter]) || 0;
-                const newVal = Number(mutation.data[counter]) || 0;
-                sanitizedData[counter] = Math.max(currentVal, newVal);
-              }
-            }
-          }
-
-          Object.assign(existing, sanitizedData);
-          existing.deletedAt = null; // Un-delete if re-upserted
-          await existing.save();
+          ops.push({ updateOne: { filter: { _id: m.id }, update: { $set: { ...data, deletedAt: null } } } });
         } else {
-          sanitizedData._id = mutation.id;
-          sanitizedData.deletedAt = null;
-          if (mutation.table === "children") sanitizedData.ownerId = user.id;
-          await config.model.create(sanitizedData);
+          const doc = { ...data, _id: m.id, deletedAt: null, ...(table === "children" ? { ownerId: user.id } : {}) };
+          const invalid = new config.model(doc).validateSync();
+          if (invalid) {
+            reject(p.i, invalid.message);
+            continue;
+          }
+          ops.push({ insertOne: { document: doc } });
+          if (table === "children") childById.set(childId, { ownerId: user.id, deletedAt: null });
         }
-
-        results.push({ id: mutation.id, status: "applied" });
-      } catch (err) {
-        results.push({
-          id: mutation.id,
-          status: "rejected",
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          reason: (err as any).message || "Database update failed",
-        });
+        opOwner.push(p.i);
       }
+
+      if (ops.length === 0) continue;
+      const failed = new Map<number, string>();
+      try {
+        await config.model.bulkWrite(ops, { ordered: false });
+      } catch (err) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const writeErrors: any[] = (err as any)?.writeErrors ?? (err as any)?.result?.result?.writeErrors ?? [];
+        if (writeErrors.length === 0) {
+          ops.forEach((_op, k) => failed.set(k, (err as Error).message || "Database update failed"));
+        } else {
+          for (const we of writeErrors) failed.set(Number(we.index ?? we.err?.index), we.errmsg ?? we.err?.errmsg ?? "Database update failed");
+        }
+      }
+      ops.forEach((_op, k) => {
+        const i = opOwner[k];
+        results[i] = failed.has(k) ? { id: mutations[i].id, status: "rejected", reason: failed.get(k) } : { id: mutations[i].id, status: "applied" };
+      });
     }
 
     return {
-      results,
+      results: results.map((r, i) => r ?? { id: mutations[i].id, status: "rejected", reason: "Not processed" }),
       syncedAt: new Date().toISOString(),
     };
   }

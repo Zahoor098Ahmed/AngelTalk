@@ -72,7 +72,7 @@ async function bootstrap() {
       if (atlasConnected) return;
       try {
         const testConn = await mongoose
-          .createConnection(env.MONGO_URI, { serverSelectionTimeoutMS: 4000 })
+          .createConnection(env.MONGO_URI, { serverSelectionTimeoutMS: 15000 })
           .asPromise();
         if (testConn.readyState === 1) {
           logger.info("Connected to live MongoDB Atlas! Switching over...");

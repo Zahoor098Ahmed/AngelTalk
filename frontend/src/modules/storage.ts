@@ -176,6 +176,7 @@ export function saveChildren(children: ChildProfile[]): void {
 export function addChild(child: ChildProfile): void {
   saveChildren([...childrenCache, child]);
   import("./backendSync").then((m) => m.syncChildBioData(child)).catch(() => {});
+  import("./cloudConnect").then((m) => m.syncNow()).catch(() => {});
 }
 
 export function updateChild(updated: ChildProfile): void {
@@ -185,10 +186,12 @@ export function updateChild(updated: ChildProfile): void {
   next[idx] = updated;
   saveChildren(next);
   import("./backendSync").then((m) => m.syncChildBioData(updated)).catch(() => {});
+  import("./cloudConnect").then((m) => m.syncNow()).catch(() => {});
 }
 
 export function deleteChild(id: string): void {
   saveChildren(childrenCache.filter((c) => c.id !== id));
+  import("./cloudConnect").then((m) => m.syncNow()).catch(() => {});
 }
 
 export function loadSettings(): AppSettings {

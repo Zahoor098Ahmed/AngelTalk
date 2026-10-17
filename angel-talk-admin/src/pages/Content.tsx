@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Database, Search, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { api } from "../api/client";
 import { errorMessage } from "../api/errors";
@@ -39,13 +40,25 @@ const picture = (it: Item) => (typeof it.url === "string" ? it.url : typeof it.i
 export const ContentPage: React.FC = () => {
   const [collections, setCollections] = useState<{ name: string; count: number }[]>([]);
   const [syncedAt, setSyncedAt] = useState<string | null>(null);
-  const [active, setActive] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  const [active, setActive] = useState<string | null>(() => params.get("c"));
   const [items, setItems] = useState<Item[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
+  const [search, setSearch] = useState(() => params.get("search") ?? "");
+  const [query, setQuery] = useState(() => params.get("search") ?? "");
+  // ?c=<collection>&search=… from the global search box
+  useEffect(() => {
+    const c = params.get("c");
+    const s = params.get("search");
+    if (c) setActive(c);
+    if (s !== null) {
+      setSearch(s);
+      setQuery(s);
+    }
+    setPage(1);
+  }, [params]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [detail, setDetail] = useState<Item | null>(null);

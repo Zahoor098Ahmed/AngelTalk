@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ShieldAlert, Search, RefreshCw, Eye } from "lucide-react";
 import { api } from "../api/client";
+import { keep, peek } from "../api/cache";
 import { AuditLog } from "../types";
 import { Badge } from "../components/common/Badge";
 import { Modal } from "../components/common/Modal";
@@ -8,19 +9,19 @@ import { ErrorNotice } from "../components/common/ErrorNotice";
 import { errorMessage } from "../api/errors";
 
 export const AuditLogsPage: React.FC = () => {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [logs, setLogs] = useState<AuditLog[]>(() => peek<AuditLog[]>("audit") ?? []);
+  const [loading, setLoading] = useState(() => !peek("audit"));
   const [search, setSearch] = useState("");
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchLogs = async () => {
-    setLoading(true);
+    if (!peek("audit")) setLoading(true);
     setError(null);
     try {
       const response = await api.get("/admin/audit-logs");
       if (response.data?.data) {
-        setLogs(response.data.data.logs || response.data.data);
+        setLogs(keep("audit", response.data.data.logs || response.data.data));
       }
     } catch (err) {
       setError(errorMessage(err));

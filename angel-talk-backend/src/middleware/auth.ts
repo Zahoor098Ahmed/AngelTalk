@@ -17,6 +17,26 @@ export interface AuthenticatedRequest extends Request {
   user: AuthenticatedUser;
 }
 
+// Each request checks the account (suspended? token revoked?). The answer is kept for a few seconds so
+// a page that sends several requests does not wait on the database for every one of them.
+type CachedAccount = { _id: string; email: string; role: UserRole; status: string; tokenVersion: number };
+const ACCOUNT_TTL_MS = 15000;
+const accountCache = new Map<string, { at: number; user: CachedAccount | null }>();
+
+/** Call after suspending a user, changing a role or revoking sessions, so it applies at once. */
+export function forgetCachedAccount(userId: string): void {
+  accountCache.delete(userId);
+}
+
+async function loadAccount(id: string): Promise<CachedAccount | null> {
+  const hit = accountCache.get(id);
+  if (hit && Date.now() - hit.at < ACCOUNT_TTL_MS) return hit.user;
+  const user = (await User.findById(id).select("email role status tokenVersion").lean()) as CachedAccount | null;
+  accountCache.set(id, { at: Date.now(), user });
+  if (accountCache.size > 5000) accountCache.clear();
+  return user;
+}
+
 export async function authenticate(req: Request, _res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -28,7 +48,7 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
   try {
     const payload = TokenService.verifyAccessToken(token);
 
-    const user = await User.findById(payload.id);
+    const user = await loadAccount(payload.id);
     if (!user || user.status === "suspended") {
       next(new UnauthorizedError("User account not found or suspended"));
       return;

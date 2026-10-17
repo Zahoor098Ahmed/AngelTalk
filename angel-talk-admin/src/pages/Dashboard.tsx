@@ -22,21 +22,22 @@ import {
   CartesianGrid,
 } from "recharts";
 import { api } from "../api/client";
+import { keep, peek } from "../api/cache";
 import { DashboardStats } from "../types";
 import { ErrorNotice, EmptyState } from "../components/common/ErrorNotice";
 import { errorMessage } from "../api/errors";
 
 export const Dashboard: React.FC = () => {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats | null>(() => peek<DashboardStats>("stats") ?? null);
+  const [loading, setLoading] = useState(() => !peek("stats"));
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    if (!peek("stats")) setLoading(true);
     setError(null);
     try {
       const response = await api.get("/admin/stats");
-      setStats(response.data?.data ?? null);
+      setStats(keep("stats", response.data?.data ?? null));
     } catch (err) {
       setError(errorMessage(err));
     } finally {

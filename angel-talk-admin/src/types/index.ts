@@ -104,7 +104,11 @@ export interface SeedTemplate {
   color?: string;
   source?: string;
   editedByAdmin?: boolean;
-  words: SeedWord[];
+  /** full folder only (GET /admin/templates/:id) */
+  words?: SeedWord[];
+  /** folder list only */
+  wordCount?: number;
+  wordLabels?: string[];
   targetDiagnosis?: string;
   shelves?: SeedShelf[];
   createdAt: string;

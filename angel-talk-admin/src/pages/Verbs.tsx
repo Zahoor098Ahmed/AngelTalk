@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Plus, Search, Trash2, Edit2, Globe2 } from "lucide-react";
 import { api } from "../api/client";
+import { keep, peek } from "../api/cache";
 import { verbFromApi, verbToApi } from "../api/adapters";
 import { ErrorNotice } from "../components/common/ErrorNotice";
 import { errorMessage } from "../api/errors";
@@ -20,9 +22,14 @@ function suggestForms(raw: string) {
 }
 
 export const VerbsPage: React.FC = () => {
-  const [verbs, setVerbs] = useState<VerbGroup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [verbs, setVerbs] = useState<VerbGroup[]>(() => peek<VerbGroup[]>("verbs") ?? []);
+  const [loading, setLoading] = useState(() => !peek("verbs"));
+  const [params] = useSearchParams();
+  const [search, setSearch] = useState(() => params.get("search") ?? "");
+  useEffect(() => {
+    const fromUrl = params.get("search");
+    if (fromUrl !== null) setSearch(fromUrl);
+  }, [params]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -52,12 +59,12 @@ export const VerbsPage: React.FC = () => {
   const [formFourthAr, setFormFourthAr] = useState("");
 
   const fetchVerbs = async () => {
-    setLoading(true);
+    if (!peek("verbs")) setLoading(true);
     setLoadError(null);
     try {
       const response = await api.get("/admin/verbs");
       if (response.data?.data) {
-        setVerbs((response.data.data as Parameters<typeof verbFromApi>[0][]).map(verbFromApi));
+        setVerbs(keep("verbs", (response.data.data as Parameters<typeof verbFromApi>[0][]).map(verbFromApi)));
       }
     } catch (err) {
       setLoadError(errorMessage(err));
