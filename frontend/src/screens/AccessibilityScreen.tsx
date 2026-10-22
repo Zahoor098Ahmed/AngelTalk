@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Share, TextInput,
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/SettingsContext";
 import { LANGUAGES, t, applyLanguageDirection } from "../modules/i18n";
-import { ALL_VERB_FORMS, type LanguageCode, type VerbFormKey } from "../types";
+import { ALL_VERB_FORMS, ALL_NOUN_FORMS, type LanguageCode, type NounFormKey, type VerbFormKey } from "../types";
 import { loadPasscode, hasPasscode, setPasscode, clearPasscode, checkPasscode } from "../modules/passcode";
 import { buildBackup, ensureCategoriesLoaded, restoreBackup, retranslateSeedBoard, setSeedLanguage } from "../modules/customCategories";
 import { playWord } from "../modules/audio";
@@ -189,6 +189,51 @@ export default function AccessibilityScreen({ onBack }: Props) {
                       return;
                     }
                     update({ visibleVerbForms: ALL_VERB_FORMS.filter((k) => next.includes(k)) });
+                  }}
+                  style={[styles.seg, on && styles.segOn, { minWidth: 96 }]}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on }}
+                >
+                  <Text style={[styles.segText, on && { color: "white" }]}>
+                    {on ? "✓ " : ""}
+                    {f.label}
+                  </Text>
+                  <Text style={[{ fontSize: 11, fontWeight: "600", color: colors.textLight }, on && { color: "rgba(255,255,255,0.85)" }]}>{f.example}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* ---- noun forms ---- */}
+          <Text style={styles.sectionTitle}>
+            {lang === "ar-SA" ? "صيغ الأسماء المعروضة" : lang === "ur-PK" ? "دکھائی جانے والی اسم کی فارمز" : "Noun forms to show"}
+          </Text>
+          <Text style={styles.subLabel}>
+            {lang === "ar-SA"
+              ? "عند لمس اسم تظهر صيغه. اختر الصيغ المعروضة."
+              : lang === "ur-PK"
+                ? "اسم پر ٹیپ کرنے سے اس کی فارمز کھلتی ہیں۔ جو دکھانی ہیں وہ چنیں۔"
+                : "Tapping a noun opens its forms. Pick the forms the popup shows."}
+          </Text>
+          <View style={[styles.segRow, { flexWrap: "wrap" }]}>
+            {([
+              { key: "one", label: lang === "ar-SA" ? "مفرد" : "One", example: "Apple" },
+              { key: "many", label: lang === "ar-SA" ? "جمع" : "Many", example: "Apples" },
+              { key: "ones", label: "'s", example: "Apple's" },
+              { key: "manys", label: "s'", example: "Apples'" },
+            ] as { key: NounFormKey; label: string; example: string }[]).map((f) => {
+              const shown = settings.visibleNounForms?.length ? settings.visibleNounForms : ALL_NOUN_FORMS;
+              const on = shown.includes(f.key);
+              return (
+                <Pressable
+                  key={f.key}
+                  onPress={() => {
+                    const next = on ? shown.filter((k) => k !== f.key) : [...shown, f.key];
+                    if (next.length === 0) {
+                      Alert.alert("", lang === "ar-SA" ? "اختر صيغة واحدة على الأقل." : lang === "ur-PK" ? "کم از کم ایک فارم چنیں۔" : "Keep at least one form.");
+                      return;
+                    }
+                    update({ visibleNounForms: ALL_NOUN_FORMS.filter((k) => next.includes(k)) });
                   }}
                   style={[styles.seg, on && styles.segOn, { minWidth: 96 }]}
                   accessibilityRole="checkbox"

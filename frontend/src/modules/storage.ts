@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   simpleMode: true,
   userRole: "parent",
   visibleVerbForms: ["1st", "s", "2nd", "3rd", "4th"],
+  visibleNounForms: ["one", "many", "ones", "manys"],
 };
 
 export const defaultTags: ContentTag[] = ["colors", "numbers", "shapes", "animals", "music", "stories", "art", "nature"];

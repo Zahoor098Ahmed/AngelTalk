@@ -16,7 +16,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Speech from "expo-speech";
-import { ALL_VERB_FORMS, type ChildProfile, type CustomCategory, type CustomWord, type TabScreen } from "../types";
+import { ALL_VERB_FORMS, ALL_NOUN_FORMS, type NounFormKey, type ChildProfile, type CustomCategory, type CustomWord, type TabScreen } from "../types";
+import { nounFormsOf } from "../modules/nounForms";
 import { useSettings } from "../context/SettingsContext";
 import {
   ensureCategoriesLoaded,
@@ -185,6 +186,17 @@ function CardPic({
     );
   }
   return <Text style={{ fontSize: Math.max(18, Math.round(size * 0.72)) }}>{emoji || "🔹"}</Text>;
+}
+
+/** Shelves whose tiles are not nouns (no Apple / Apples / Apple's / Apples' popup). */
+const NOT_NOUN_SHELVES = new Set([
+  "core", "say it for me", "subjects", "sentence starters & phrases", "attributes", "feelings", "alphabet & numerals",
+  "verbs", "actions", "songs & stories", "red", "calendar",
+]);
+
+function nounFormBadgeTitle(key: NounFormKey, lang: string): string {
+  if (lang === "ar-SA") return key === "one" ? "مفرد" : key === "many" ? "جمع" : key === "ones" ? "ملكية المفرد" : "ملكية الجمع";
+  return key === "one" ? "One" : key === "many" ? "Many" : key === "ones" ? "One's ('s)" : "Many's (s')";
 }
 
 function verbFormBadgeTitle(badge: string, lang: string): string {
@@ -432,6 +444,37 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
         // reuse the real tile for that form (keeps its own picture/recording); otherwise speak the form text
         tile: tiles.find((t) => (canonicalWordEn(t.label) || t.label).toLowerCase() === r.text.toLowerCase()),
       }));
+  }
+
+  // Nouns: one box; tapping it opens Apple · Apples · Apple's · Apples' (Settings > "Noun forms to show")
+  const isNounCategory = useMemo(() => {
+    if (!current || isActionsCategory) return false;
+    const root = current.parentCategoryId ? getCategory(current.parentCategoryId) ?? current : current;
+    const en = (canonicalWordEn(root.name) || root.name).trim().toLowerCase();
+    return !NOT_NOUN_SHELVES.has(en);
+  }, [current, isActionsCategory]);
+  const visibleNounForms = useMemo(
+    () => new Set<string>(settings.visibleNounForms?.length ? settings.visibleNounForms : ALL_NOUN_FORMS),
+    [settings.visibleNounForms],
+  );
+  function nounRowsFor(w: CustomWord) {
+    if (!isNounCategory || w.verbFormTag) return [];
+    const forms = nounFormsOf(canonicalWordEn(w.label) || w.label);
+    if (!forms) return [];
+    const seen = new Set<string>();
+    return forms.filter((r) => {
+      if (!visibleNounForms.has(r.key) || seen.has(r.text.toLowerCase())) return false;
+      seen.add(r.text.toLowerCase());
+      return true;
+    });
+  }
+  const [nounOpen, setNounOpen] = useState<CustomWord | null>(null);
+  useEffect(() => setNounOpen(null), [currentId]);
+  function tapNounForm(w: CustomWord, key: NounFormKey, text: string) {
+    setNounOpen(null);
+    // the word itself keeps its own recording; the other forms are spoken
+    if (key === "one" && text.toLowerCase() === (canonicalWordEn(w.label) || w.label).toLowerCase()) return tapWord(w);
+    tapWord({ ...w, label: text, phrase: text, audioUri: undefined, useTextToSpeech: true });
   }
 
   function tapVerbForm(key: string, text: string, tile: CustomWord | undefined) {
@@ -1090,7 +1133,14 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                           if (rows.length === 1) return tapVerbForm(verbKey, rows[0].text, rows[0].tile);
                           selectFeedback();
                           setVerbOpen(verbKey);
-                        } else tapWord(w);
+                          return;
+                        }
+                        const nRows = nounRowsFor(w);
+                        if (nRows.length > 1) {
+                          selectFeedback();
+                          setNounOpen(w);
+                        } else if (nRows.length === 1) tapNounForm(w, nRows[0].key, nRows[0].text);
+                        else tapWord(w);
                       }}
                       style={({ pressed }) => [
                         styles.tile,
@@ -1098,7 +1148,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                         pressed && styles.tilePressed,
                       ]}
                     >
-                      {verbKey && visibleForms.size > 1 && (
+                      {((verbKey && visibleForms.size > 1) || (!verbKey && nounRowsFor(w).length > 1)) && (
                         <View style={[styles.verbFormBadge, styles.verbFormBadge1st, styles.verbFormsPill]}>
                           <Ionicons name="layers" size={11} color="#047857" />
                           <Text style={[styles.verbFormBadgeText, styles.verbFormBadgeText1st]}>
@@ -1146,7 +1196,14 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       </View>
                       <View style={styles.wordLabelBar}>
                         <Text style={styles.wordLabelText} numberOfLines={1}>
-                          {wordLabel(verbKey && !visibleForms.has("1st") ? formRowsFor(verbKey)[0]?.text ?? w.label : w.label, lang)}
+                          {wordLabel(
+                            verbKey && !visibleForms.has("1st")
+                              ? formRowsFor(verbKey)[0]?.text ?? w.label
+                              : !verbKey && !visibleNounForms.has("one") && nounRowsFor(w).length
+                                ? nounRowsFor(w)[0].text
+                                : w.label,
+                            lang,
+                          )}
                         </Text>
                         {bilingual && (() => {
                           // Settings > Bilingual cards: the word in the other language underneath
@@ -1260,6 +1317,74 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                     </Pressable>
                   );
                 })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Noun forms popup: Apple · Apples · Apple's · Apples' — each its own picture box */}
+      <Modal visible={!!nounOpen} transparent animationType="fade" onRequestClose={() => setNounOpen(null)}>
+        <Pressable style={styles.verbModalBackdrop} onPress={() => setNounOpen(null)}>
+          <Pressable
+            style={[styles.verbModalCard, { maxWidth: modalMaxWidth, width: verbPopupWidth(nounOpen ? nounRowsFor(nounOpen).length : verbCols) }]}
+            onPress={() => {}}
+          >
+            <View style={styles.verbModalHeader}>
+              <Text style={styles.verbModalTitle} numberOfLines={1}>
+                {nounOpen ? wordLabel(nounOpen.label, lang) : ""}
+              </Text>
+              <Pressable onPress={() => setNounOpen(null)} hitSlop={10} accessibilityLabel="Close">
+                <Ionicons name="close-circle" size={30} color="#94a3b8" />
+              </Pressable>
+            </View>
+            <ScrollView
+              contentContainerStyle={[styles.verbModalGrid, { gap: colGap, flexWrap: isDesktop ? "nowrap" : "wrap" }]}
+              showsVerticalScrollIndicator={false}
+              showsHorizontalScrollIndicator={false}
+              bounces={false}
+            >
+              {nounOpen &&
+                nounRowsFor(nounOpen).map((r) => (
+                  <Pressable
+                    key={r.key}
+                    onPress={() => tapNounForm(nounOpen, r.key, r.text)}
+                    style={({ pressed }) => [styles.verbModalTile, { width: verbTileW, minHeight: Math.round(verbTileW * 1.1) }, pressed && styles.tilePressed]}
+                  >
+                    <View
+                      style={[
+                        styles.verbModalTileBadge,
+                        r.key === "one" && styles.verbFormBadge1st,
+                        r.key === "many" && styles.verbFormBadgeS,
+                        r.key === "ones" && styles.verbFormBadge2nd,
+                        r.key === "manys" && styles.verbFormBadge3rd,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.verbModalTileBadgeText,
+                          r.key === "one" && styles.verbFormBadgeText1st,
+                          r.key === "many" && styles.verbFormBadgeTextS,
+                          r.key === "ones" && styles.verbFormBadgeText2nd,
+                          r.key === "manys" && styles.verbFormBadgeText3rd,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {nounFormBadgeTitle(r.key, lang)}
+                      </Text>
+                    </View>
+                    <View style={styles.verbModalTilePicWrap}>
+                      <CardPic label={nounOpen.label} imageUri={nounOpen.imageUri} emoji={nounOpen.emoji} size={Math.round(Math.min(verbTileW * 0.62, 110))} />
+                    </View>
+                    <View style={styles.verbModalTileLabelBar}>
+                      <Text
+                        style={[styles.verbModalTileLabelText, { fontSize: Math.round(Math.min(18, Math.max(13, verbTileW * 0.095))) }]}
+                        numberOfLines={1}
+                      >
+                        {r.key === "one" ? wordLabel(nounOpen.label, lang) : lang === "en-US" ? r.text : wordLabel(r.text, lang)}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
             </ScrollView>
           </Pressable>
         </Pressable>

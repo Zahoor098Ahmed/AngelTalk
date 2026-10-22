@@ -206,12 +206,18 @@ export interface AppSettings {
   userRole: UserRole;
   /** Verb forms shown in the app (Talk board verb boxes); the others are hidden. Default: all five. */
   visibleVerbForms?: VerbFormKey[];
+  /** Noun forms shown in the noun popup (Apple / Apples / Apple's / Apples'). Default: all four. */
+  visibleNounForms?: NounFormKey[];
   /** Talk board tiles per row; 0 = automatic (fits the screen). */
   tilesPerRow?: number;
 }
 
 export type VerbFormKey = "1st" | "s" | "2nd" | "3rd" | "4th";
 export const ALL_VERB_FORMS: VerbFormKey[] = ["1st", "s", "2nd", "3rd", "4th"];
+
+/** Noun forms: Apple (one), Apples (many), Apple's (of one), Apples' (of many). */
+export type NounFormKey = "one" | "many" | "ones" | "manys";
+export const ALL_NOUN_FORMS: NounFormKey[] = ["one", "many", "ones", "manys"];
 
 export type AppScreen =
   | 'landing'
