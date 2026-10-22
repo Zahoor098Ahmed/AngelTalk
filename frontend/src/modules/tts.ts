@@ -17,7 +17,8 @@ export const VOICE_PROFILES: Record<VoiceType, VoiceProfile> = {
 };
 
 import { Platform } from "react-native";
-import { stopSentence, playOnlineTTS } from "./audio";
+import { stopSentence, playOnlineTTS, setSpeechSpeed } from "./audio";
+import { loadSettings } from "./storage";
 
 let currentTtsWebAudio: any = null;
 
@@ -29,12 +30,15 @@ export function speak(
   text: string,
   lang: LanguageCode | string,
   enabled: boolean,
-  rate: number = 0.88,
+  rate?: number,
   voiceType: VoiceType = "boy"
 ): void {
   if (!enabled || !text?.trim()) return;
+  // no speed given: the one chosen in Settings
+  rate = rate ?? loadSettings().speechRate ?? 0.9;
   try {
     stopSpeech();
+    setSpeechSpeed(rate);
     const profile = VOICE_PROFILES[voiceType] || VOICE_PROFILES.boy;
     const finalRate = Math.max(0.5, Math.min(1.5, rate * profile.rateMultiplier));
 

@@ -204,7 +204,14 @@ export interface AppSettings {
   bilingualDisplay: boolean;
   simpleMode: boolean;
   userRole: UserRole;
+  /** Verb forms shown in the app (Talk board verb boxes); the others are hidden. Default: all five. */
+  visibleVerbForms?: VerbFormKey[];
+  /** Talk board tiles per row; 0 = automatic (fits the screen). */
+  tilesPerRow?: number;
 }
+
+export type VerbFormKey = "1st" | "s" | "2nd" | "3rd" | "4th";
+export const ALL_VERB_FORMS: VerbFormKey[] = ["1st", "s", "2nd", "3rd", "4th"];
 
 export type AppScreen =
   | 'landing'

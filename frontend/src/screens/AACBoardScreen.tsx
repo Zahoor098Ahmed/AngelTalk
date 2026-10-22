@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Speech from "expo-speech";
-import type { ChildProfile, CustomCategory, CustomWord, TabScreen } from "../types";
+import { ALL_VERB_FORMS, type ChildProfile, type CustomCategory, type CustomWord, type TabScreen } from "../types";
 import { useSettings } from "../context/SettingsContext";
 import {
   ensureCategoriesLoaded,
@@ -223,12 +223,14 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       if (child.buttonDensity <= 28) return 6;
       return 7;
     }
+    // Settings > Tiles per row (0 = automatic); a small phone never gets more than 4
+    if (settings.tilesPerRow && settings.tilesPerRow > 0) return width < 480 ? Math.min(4, settings.tilesPerRow) : settings.tilesPerRow;
     // Fewer, bigger tiles so pictures stay clear for the child
     if (width >= 1100) return 6;
     if (width >= 820) return 5;
     if (width >= 560) return 4;
     return Math.min(4, Math.max(3, settings.boardColumns || 4));
-  }, [width, settings.boardColumns, child.buttonDensity]);
+  }, [width, settings.boardColumns, settings.tilesPerRow, child.buttonDensity]);
 
   // Scale the picture to the tile's actual box size instead of a fixed
   // constant — on wide screens with few columns a hardcoded small icon was
@@ -331,15 +333,20 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     return false;
   }, [current]);
 
+  // Settings > "Verb forms to show": the other forms are hidden everywhere on the board
+  const visibleForms = useMemo(
+    () => new Set<string>(settings.visibleVerbForms?.length ? settings.visibleVerbForms : ALL_VERB_FORMS),
+    [settings.visibleVerbForms],
+  );
   const words: CustomWord[] = useMemo(() => {
     // If current shelf has child subcategories/folders, loose words belong strictly INSIDE those folders
     if (folders.length > 0) return [];
-    let list = rawWords;
+    let list = rawWords.filter((w) => !w.verbFormTag || visibleForms.has(w.verbFormTag));
     if (child.buttonDensity && child.buttonDensity > 0) {
       list = rawWords.slice(0, child.buttonDensity);
     }
     return list;
-  }, [rawWords, folders.length, child.buttonDensity]);
+  }, [rawWords, folders.length, child.buttonDensity, visibleForms]);
 
   // In verb folders each verb shows as ONE box; tapping it opens its forms (1st, s/es, 2nd, 3rd, 4th)
   const verbGroups = useMemo(() => {
@@ -387,6 +394,11 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   const availableW = modalMaxWidth - cardPadding - (verbCols - 1) * colGap;
   const verbTileW = Math.floor(Math.min(210, Math.max(90, availableW / verbCols)));
   useEffect(() => setVerbOpen(null), [currentId]);
+  // the popup is as wide as the boxes it shows (2 forms -> a small card, 5 forms -> a wide one)
+  const verbPopupWidth = (count: number) => {
+    const cols = Math.max(1, Math.min(count, verbCols));
+    return Math.min(modalMaxWidth, Math.max(300, cols * verbTileW + (cols - 1) * colGap + 32 + 8));
+  };
   function formRowsFor(key: string) {
     const g = verbGroups.get(key);
     if (!g) return [];
@@ -399,11 +411,13 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       { badge: "3rd", text: cap(forms.participle) },
       { badge: "4th", text: cap(forms.continuous) },
     ];
-    return rows.map((r) => ({
-      ...r,
-      // reuse the real tile for that form (keeps its own picture/recording); otherwise speak the form text
-      tile: tiles.find((t) => (canonicalWordEn(t.label) || t.label).toLowerCase() === r.text.toLowerCase()),
-    }));
+    return rows
+      .filter((r) => visibleForms.has(r.badge))
+      .map((r) => ({
+        ...r,
+        // reuse the real tile for that form (keeps its own picture/recording); otherwise speak the form text
+        tile: tiles.find((t) => (canonicalWordEn(t.label) || t.label).toLowerCase() === r.text.toLowerCase()),
+      }));
   }
 
   function tapVerbForm(key: string, text: string, tile: CustomWord | undefined) {
@@ -1052,6 +1066,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                     <Pressable
                       onPress={() => {
                         if (verbKey) {
+                          const rows = formRowsFor(verbKey);
+                          if (rows.length === 1) return tapVerbForm(verbKey, rows[0].text, rows[0].tile);
                           selectFeedback();
                           setVerbOpen(verbKey);
                         } else tapWord(w);
@@ -1062,7 +1078,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                         pressed && styles.tilePressed,
                       ]}
                     >
-                      {verbKey && (
+                      {verbKey && visibleForms.size > 1 && (
                         <View style={[styles.verbFormBadge, styles.verbFormBadge1st, styles.verbFormsPill]}>
                           <Ionicons name="layers" size={11} color="#047857" />
                           <Text style={[styles.verbFormBadgeText, styles.verbFormBadgeText1st]}>
@@ -1110,8 +1126,19 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       </View>
                       <View style={styles.wordLabelBar}>
                         <Text style={styles.wordLabelText} numberOfLines={1}>
-                          {wordLabel(w.label, lang)}
+                          {wordLabel(verbKey && !visibleForms.has("1st") ? formRowsFor(verbKey)[0]?.text ?? w.label : w.label, lang)}
                         </Text>
+                        {bilingual && (() => {
+                          // Settings > Bilingual cards: the word in the other language underneath
+                          const shown = verbKey && !visibleForms.has("1st") ? formRowsFor(verbKey)[0]?.text ?? w.label : w.label;
+                          const main = wordLabel(shown, lang);
+                          const other = lang === "ar-SA" ? canonicalWordEn(shown) : wordLabel(shown, "ar-SA");
+                          return other && other.toLowerCase() !== main.toLowerCase() ? (
+                            <Text style={styles.wordLabelSecond} numberOfLines={1}>
+                              {other}
+                            </Text>
+                          ) : null;
+                        })()}
                       </View>
                     </Pressable>
                   </View>
@@ -1132,7 +1159,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       {/* Verb forms popup: 1st, s/es, 2nd, 3rd, 4th — each its own picture box */}
       <Modal visible={!!verbOpen && verbGroups.has(verbOpen)} transparent animationType="fade" onRequestClose={() => setVerbOpen(null)}>
         <Pressable style={styles.verbModalBackdrop} onPress={() => setVerbOpen(null)}>
-          <Pressable style={[styles.verbModalCard, { maxWidth: modalMaxWidth }]} onPress={() => {}}>
+          <Pressable
+            style={[styles.verbModalCard, { maxWidth: modalMaxWidth, width: verbPopupWidth(verbOpen ? formRowsFor(verbOpen).length : verbCols) }]}
+            onPress={() => {}}
+          >
             <View style={styles.verbModalHeader}>
               <Text style={styles.verbModalTitle} numberOfLines={1}>
                 {verbOpen ? wordLabel(formRowsFor(verbOpen)[0]?.text ?? "", lang) : ""}
@@ -1632,6 +1662,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#f1f5f9",
   },
+  wordLabelSecond: { color: "#475569", fontWeight: "700", fontSize: 12, textAlign: "center", marginTop: 1 },
   wordLabelText: {
     color: "#0f172a",
     fontWeight: "800",

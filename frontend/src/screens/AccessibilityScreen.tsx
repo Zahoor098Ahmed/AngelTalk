@@ -1,102 +1,93 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Share, TextInput, Modal } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Share, TextInput, Modal, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/SettingsContext";
 import { LANGUAGES, t, applyLanguageDirection } from "../modules/i18n";
-import type { LanguageCode } from "../types";
-import { loadPasscode, hasPasscode, setPasscode, clearPasscode } from "../modules/passcode";
-import { loadPixabayKey, hasPixabayKey, setPixabayKey } from "../modules/imageSearch";
+import { ALL_VERB_FORMS, type LanguageCode, type VerbFormKey } from "../types";
+import { loadPasscode, hasPasscode, setPasscode, clearPasscode, checkPasscode } from "../modules/passcode";
 import { buildBackup, ensureCategoriesLoaded, restoreBackup, retranslateSeedBoard, setSeedLanguage } from "../modules/customCategories";
-import { loadChildren } from "../modules/storage";import { ensureVoicePracticeLoaded, getStorageFootprintBytes, getClipsForChild } from "../learning/voicePractice";
-import { previewVoice } from "../modules/tts";
+import { playWord } from "../modules/audio";
 import { colors, radius } from "../theme";
 
 interface Props {
   onBack: () => void;
 }
 
-type FontSize = "small" | "medium" | "large" | "xlarge";
-const FONT_SIZES: FontSize[] = ["small", "medium", "large", "xlarge"];
+/** Settings offers the two languages the app is made for. */
+const SETTINGS_LANGUAGES = LANGUAGES.filter((l) => l.code === "en-US" || l.code === "ar-SA");
+/** 0 = automatic (fits the screen). */
+const TILES_PER_ROW = [0, 3, 4, 5, 6, 7];
 const RATES: { key: "setSlow" | "setNormal" | "setFast"; value: number }[] = [
-  { key: "setSlow", value: 0.65 },
+  { key: "setSlow", value: 0.6 },
   { key: "setNormal", value: 0.9 },
-  { key: "setFast", value: 1.0 },
+  { key: "setFast", value: 1.3 },
 ];
-
-function ToggleRow({ label, emoji, value, onChange }: { label: string; emoji: string; value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <View style={styles.toggleRow}>
-      <Text style={{ fontSize: 22 }}>{emoji}</Text>
-      <Text style={styles.toggleLabel}>{label}</Text>
-      <Pressable onPress={() => onChange(!value)} style={[styles.switch, { backgroundColor: value ? colors.greenDeep : colors.border }]}>
-        <View style={[styles.knob, { left: value ? 29 : 3 }]} />
-      </Pressable>
-    </View>
-  );
-}
 
 export default function AccessibilityScreen({ onBack }: Props) {
   const { settings, update } = useSettings();
   const lang = settings.language;
+  const closestRate = RATES.reduce((best, r) => (Math.abs(r.value - settings.speechRate) < Math.abs(best - settings.speechRate) ? r.value : best), RATES[1].value);
 
   const [pinSet, setPinSet] = useState(false);
   const [pinModal, setPinModal] = useState(false);
   const [pinValue, setPinValue] = useState("");
-  const [keyModal, setKeyModal] = useState(false);
-  const [keyValue, setKeyValue] = useState("");
-  const [keySet, setKeySet] = useState(false);
+  const [pinCurrent, setPinCurrent] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
+  const [pinError, setPinError] = useState<string | null>(null);
+  const ar = lang === "ar-SA";
   const [importModal, setImportModal] = useState(false);
   const [importText, setImportText] = useState("");
-  const [voiceStorageBytes, setVoiceStorageBytes] = useState<number | null>(null);
-  const [voiceClipCount, setVoiceClipCount] = useState(0);
   const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
 
   useEffect(() => {
-    ensureVoicePracticeLoaded().then(async () => {
-      const children = loadChildren();
-      let totalBytes = 0;
-      let totalClips = 0;
-      for (const c of children) {
-        totalBytes += await getStorageFootprintBytes(c.id);
-        totalClips += getClipsForChild(c.id).length;
-      }
-      setVoiceStorageBytes(totalBytes);
-      setVoiceClipCount(totalClips);
-    });
-  }, []);
-
-  useEffect(() => {
     loadPasscode().then(() => setPinSet(hasPasscode()));
-    loadPixabayKey().then(() => setKeySet(hasPixabayKey()));
   }, []);
 
-  async function savePin() {
-    if (pinValue === "") {
-      await clearPasscode();
-      setPinSet(false);
-      setPinModal(false);
-      return;
-    }
-    const ok = await setPasscode(pinValue);
-    if (!ok) return setNotice({ title: "PIN Error", message: t("accPasscodeInvalid", lang) });
-    setPinSet(true);
-    setPinModal(false);
+  function openPin() {
+    setPinCurrent("");
     setPinValue("");
+    setPinConfirm("");
+    setPinError(null);
+    setPinModal(true);
   }
 
-  async function saveKey() {
-    await setPixabayKey(keyValue);
-    setKeySet(hasPixabayKey());
-    setKeyModal(false);
-    setKeyValue("");
+  /** Changing the parent password needs the current one first, then the new one twice. */
+  async function savePin() {
+    if (pinSet && !checkPasscode(pinCurrent)) return setPinError(ar ? "كلمة المرور الحالية غير صحيحة." : "The current password is not correct.");
+    if (!/^\d{4}$/.test(pinValue)) return setPinError(t("accPasscodeInvalid", lang));
+    if (pinValue !== pinConfirm) return setPinError(ar ? "كلمتا المرور الجديدتان غير متطابقتين." : "The two new passwords do not match.");
+    await setPasscode(pinValue);
+    setPinSet(true);
+    setPinModal(false);
+    setNotice({ title: t("accPasscodeModalTitle", lang), message: ar ? "تم حفظ كلمة المرور الجديدة." : "The new password is saved." });
+  }
+
+  async function removePin() {
+    if (!checkPasscode(pinCurrent)) return setPinError(ar ? "أدخل كلمة المرور الحالية أولاً." : "Enter the current password first.");
+    await clearPasscode();
+    setPinSet(false);
+    setPinModal(false);
+    setNotice({ title: t("accPasscodeModalTitle", lang), message: ar ? "تمت إزالة كلمة المرور." : "The password is removed. Settings open without a password now." });
   }
 
   async function exportBoard() {
     await ensureCategoriesLoaded();
     const b = buildBackup();
     if (b.categoryCount === 0) return setNotice({ title: "Backup", message: t("accNothingToBackup", lang) });
+    const json = JSON.stringify(b);
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `angel-talk-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      return;
+    }
     try {
-      await Share.share({ title: "Angel Talk board backup", message: JSON.stringify(b) });
+      await Share.share({ title: "Angel Talk board backup", message: json });
     } catch {
       /* dismissed */
     }
@@ -135,175 +126,91 @@ export default function AccessibilityScreen({ onBack }: Props) {
 
         <ScrollView contentContainerStyle={styles.body}>
           {/* ---- speech & natural voices ---- */}
-          <Text style={styles.sectionTitle}>Child Voice & Speech Style</Text>
-          <ToggleRow label={t("sound", lang)} emoji="🔊" value={settings.soundEnabled} onChange={(v) => update({ soundEnabled: v })} />
+          <Text style={styles.sectionTitle}>{lang === "ar-SA" ? "الصوت" : "Voice"}</Text>
           
-          <Text style={styles.subLabel}>Natural Child Voice</Text>
-          <View style={styles.segRow}>
-            {(
-              [
-                { key: "boy", label: "Boy", icon: "👦" },
-                { key: "girl", label: "Girl", icon: "👧" },
-                { key: "woman", label: "Woman", icon: "👩" },
-                { key: "man", label: "Man", icon: "👨" },
-              ] as const
-            ).map((v) => {
-              const active = (settings.voiceType || "boy") === v.key;
-              return (
-                <Pressable
-                  key={v.key}
-                  onPress={() => {
-                    update({ voiceType: v.key });
-                    previewVoice(v.key, lang);
-                  }}
-                  style={[styles.seg, active && styles.segOn]}
-                >
-                  <Text style={[styles.segText, active && { color: "white" }]}>
-                    {v.icon} {v.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
           <Text style={styles.subLabel}>{t("setSpeakingSpeed", lang)}</Text>
           <View style={styles.segRow}>
             {RATES.map((r) => (
               <Pressable
                 key={r.key}
-                onPress={() => update({ speechRate: r.value })}
-                style={[styles.seg, Math.abs(settings.speechRate - r.value) < 0.03 && styles.segOn]}
+                onPress={() => {
+                  update({ speechRate: r.value });
+                  void playWord({ label: lang === "ar-SA" ? "أريد أن ألعب" : "I want to play", useTextToSpeech: true }, lang, r.value, settings.voiceType || "boy");
+                }}
+                style={[styles.seg, closestRate === r.value && styles.segOn]}
               >
-                <Text style={[styles.segText, Math.abs(settings.speechRate - r.value) < 0.03 && { color: "white" }]}>{t(r.key, lang)}</Text>
+                <Text style={[styles.segText, closestRate === r.value && { color: "white" }]}>{t(r.key, lang)}</Text>
               </Pressable>
             ))}
           </View>
 
           {/* ---- board & GLP mode ---- */}
-          <Text style={styles.sectionTitle}>Communication & Board Mode</Text>
-          <Text style={styles.subLabel}>Tapping Behavior (Gestalt Language / Whole Phrases)</Text>
+          <Text style={styles.sectionTitle}>{lang === "ar-SA" ? "لوحة الكلام" : "Talk board"}</Text>
+          <Text style={styles.subLabel}>{t("setTilesPerRow", lang)}</Text>
           <View style={styles.segRow}>
-            {(
-              [
-                { key: "phrase", label: "⚡ Tap-to-Talk (Whole Phrases)" },
-                { key: "sentence", label: "🧩 Sentence Builder Strip" },
-              ] as const
-            ).map((m) => {
-              const active = (settings.boardMode || "phrase") === m.key;
+            {TILES_PER_ROW.map((n) => {
+              const on = (settings.tilesPerRow ?? 0) === n;
               return (
-                <Pressable
-                  key={m.key}
-                  onPress={() => update({ boardMode: m.key })}
-                  style={[styles.seg, active && styles.segOn, { flex: 1 }]}
-                >
-                  <Text style={[styles.segText, active && { color: "white" }]}>{m.label}</Text>
+                <Pressable key={n} onPress={() => update({ tilesPerRow: n })} style={[styles.seg, on && styles.segOn]}>
+                  <Text style={[styles.segText, on && { color: "white" }]}>{n === 0 ? (lang === "ar-SA" ? "تلقائي" : "Auto") : n}</Text>
                 </Pressable>
               );
             })}
           </View>
 
-          <ToggleRow
-            label="Bilingual Dual-Language Cards (English + Arabic)"
-            emoji="🌐"
-            value={settings.bilingualDisplay}
-            onChange={(v) => update({ bilingualDisplay: v })}
-          />
-
-          <ToggleRow
-            label="Family-First Simple Mode (Clean, uncluttered)"
-            emoji="🧸"
-            value={settings.simpleMode}
-            onChange={(v) => update({ simpleMode: v })}
-          />
-
-          <ToggleRow label={t("setHaptics", lang)} emoji="📳" value={settings.hapticsEnabled} onChange={(v) => update({ hapticsEnabled: v })} />
-          <Text style={styles.subLabel}>{t("setTilesPerRow", lang)}</Text>
-          <View style={styles.segRow}>
-            {[2, 3, 4, 5].map((n) => (
-              <Pressable key={n} onPress={() => update({ boardColumns: n })} style={[styles.seg, settings.boardColumns === n && styles.segOn]}>
-                <Text style={[styles.segText, settings.boardColumns === n && { color: "white" }]}>{n}</Text>
-              </Pressable>
-            ))}
+          {/* ---- verb forms ---- */}
+          <Text style={styles.sectionTitle}>
+            {lang === "ar-SA" ? "تصريفات الأفعال المعروضة" : lang === "ur-PK" ? "دکھائی جانے والی فعل کی فارمز" : "Verb forms to show"}
+          </Text>
+          <Text style={styles.subLabel}>
+            {lang === "ar-SA"
+              ? "اختر التصريفات التي تظهر في التطبيق. الباقي يُخفى."
+              : lang === "ur-PK"
+                ? "جو فارمز ایپ میں دکھانی ہیں وہ چنیں، باقی چھپ جائیں گی۔"
+                : "Pick the forms the app shows. The others are hidden everywhere on the Talk board."}
+          </Text>
+          <View style={[styles.segRow, { flexWrap: "wrap" }]}>
+            {([
+              { key: "1st", label: "1st", example: "Agree" },
+              { key: "s", label: "s / es", example: "Agrees" },
+              { key: "2nd", label: "2nd", example: "Agreed" },
+              { key: "3rd", label: "3rd", example: "Agreed" },
+              { key: "4th", label: "4th", example: "Agreeing" },
+            ] as { key: VerbFormKey; label: string; example: string }[]).map((f) => {
+              const shown = settings.visibleVerbForms?.length ? settings.visibleVerbForms : ALL_VERB_FORMS;
+              const on = shown.includes(f.key);
+              return (
+                <Pressable
+                  key={f.key}
+                  onPress={() => {
+                    const next = on ? shown.filter((k) => k !== f.key) : [...shown, f.key];
+                    if (next.length === 0) {
+                      Alert.alert("", lang === "ar-SA" ? "اختر تصريفاً واحداً على الأقل." : lang === "ur-PK" ? "کم از کم ایک فارم چنیں۔" : "Keep at least one form.");
+                      return;
+                    }
+                    update({ visibleVerbForms: ALL_VERB_FORMS.filter((k) => next.includes(k)) });
+                  }}
+                  style={[styles.seg, on && styles.segOn, { minWidth: 96 }]}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on }}
+                >
+                  <Text style={[styles.segText, on && { color: "white" }]}>
+                    {on ? "✓ " : ""}
+                    {f.label}
+                  </Text>
+                  <Text style={[{ fontSize: 11, fontWeight: "600", color: colors.textLight }, on && { color: "rgba(255,255,255,0.85)" }]}>{f.example}</Text>
+                </Pressable>
+              );
+            })}
           </View>
-
-          {/* ---- accessibility ---- */}
-          <Text style={styles.sectionTitle}>{t("setAccessibility", lang)}</Text>
-          <Text style={styles.subLabel}>{t("fontSize", lang)}</Text>
-          <View style={styles.segRow}>
-            {FONT_SIZES.map((s, i) => (
-              <Pressable key={s} onPress={() => update({ fontSize: s })} style={[styles.seg, settings.fontSize === s && styles.segOn]}>
-                <Text style={[styles.segText, { fontSize: 14 + i * 3 }, settings.fontSize === s && { color: "white" }]}>A</Text>
-              </Pressable>
-            ))}
-          </View>
-          <ToggleRow label={t("highContrast", lang)} emoji="🌗" value={settings.highContrast} onChange={(v) => update({ highContrast: v })} />
-          <ToggleRow label={t("reduceMotion", lang)} emoji="🐢" value={settings.reduceMotion} onChange={(v) => update({ reduceMotion: v })} />
-
-          {/* ---- kiosk ---- */}
-          <Text style={styles.sectionTitle}>{t("setKiosk", lang)}</Text>
-          <ToggleRow label={t("setLockOpen", lang)} emoji="🔒" value={settings.kioskMode} onChange={(v) => update({ kioskMode: v })} />
-          <View style={styles.infoBox}>
-            <Text style={styles.infoText}>{t("setKioskInfo", lang)}</Text>
-          </View>
-          <View style={[styles.infoBox, { borderColor: colors.forest + "60", backgroundColor: colors.forest + "0f" }]}>
-            <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 8 }]}>{t("accKioskOption2Title", lang)}</Text>
-            <Text style={[styles.infoText, { fontWeight: "700", color: colors.textDark, marginBottom: 6 }]}>{t("accBestEffortLock", lang)}</Text>
-            <Text style={styles.infoBullet}>{t("accBackDisabled", lang)}</Text>
-            <Text style={styles.infoBullet}>{t("accScreenAwake", lang)}</Text>
-            <Text style={styles.infoBullet}>
-              {t("accExitTempBullet", lang)}
-            </Text>
-            <Text style={[styles.infoText, { fontWeight: "700", color: colors.textDark, marginTop: 12, marginBottom: 6 }]}>
-              {t("accAndroidHardenedTitle", lang)}
-            </Text>
-            <Text style={styles.infoBullet}>
-              {t("accInstallApkBullet", lang)}
-            </Text>
-            <Text style={[styles.infoBullet, { fontFamily: "monospace", fontSize: 12 }]}>
-              adb shell dpm set-device-owner com.kiddocare.app/.DeviceAdminReceiver
-            </Text>
-            <Text style={styles.infoBullet}>
-              {t("accToggleKioskBullet", lang)}
-            </Text>
-            <Text style={styles.infoBullet}>{t("accFactoryResetBullet", lang)}</Text>
-            <Text style={[styles.infoText, { fontWeight: "700", color: colors.textDark, marginTop: 12, marginBottom: 6 }]}>{t("accIosGuidedTitle", lang)}</Text>
-            <Text style={styles.infoBullet}>{t("accIosSettingsBullet", lang)}</Text>
-            <Text style={styles.infoBullet}>{t("accIosPasscodeBullet", lang)}</Text>
-            <Text style={styles.infoBullet}>{t("accIosLaunchBullet", lang)}</Text>
-            <Text style={styles.infoBullet}>{t("accIosExitBullet", lang)}</Text>
-          </View>
-          <View style={{ height: 2 }} />
 
           {/* ---- admin ---- */}
           <Text style={styles.sectionTitle}>{t("setParentControls", lang)}</Text>
-          <Pressable onPress={() => setPinModal(true)} style={styles.actionRow}>
+          <Pressable onPress={openPin} style={styles.actionRow}>
             <Text style={{ fontSize: 20 }}>🔑</Text>
             <Text style={styles.actionLabel}>{pinSet ? t("setChangePasscode", lang) : t("setSetPasscode", lang)}</Text>
             <Text style={styles.actionState}>{pinSet ? t("setState", lang) : t("setNotSet", lang)}</Text>
           </Pressable>
-          <Pressable onPress={() => setKeyModal(true)} style={styles.actionRow}>
-            <Text style={{ fontSize: 20 }}>🖼️</Text>
-            <Text style={styles.actionLabel}>{t("setPixabay", lang)}</Text>
-            <Text style={styles.actionState}>{keySet ? t("setState", lang) : t("setNotSet", lang)}</Text>
-          </Pressable>
-
-          {/* ---- voice practice storage footprint (Feature 4) ---- */}
-          {voiceStorageBytes !== null && voiceClipCount > 0 && (
-            <View style={styles.actionRow}>
-              <Text style={{ fontSize: 20 }}>🎙️</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.actionLabel}>{t("setVoiceStorageLabel", lang)}</Text>
-                <Text style={styles.actionState}>{t("setVoiceStorageManageHint", lang)}</Text>
-              </View>
-              <Text style={styles.actionState}>
-                {voiceStorageBytes < 1024 * 1024
-                  ? `${(voiceStorageBytes / 1024).toFixed(1)} KB`
-                  : `${(voiceStorageBytes / (1024 * 1024)).toFixed(1)} MB`}{" "}
-                · {voiceClipCount}
-              </Text>
-            </View>
-          )}
-
           {/* ---- backup ---- */}
           <Text style={styles.sectionTitle}>{t("setBackup", lang)}</Text>
           <View style={styles.segRow}>
@@ -318,7 +225,7 @@ export default function AccessibilityScreen({ onBack }: Props) {
           {/* ---- language ---- */}
           <Text style={styles.sectionTitle}>{t("language", lang)}</Text>
           <View style={styles.langGrid}>
-            {LANGUAGES.map((l) => {
+            {SETTINGS_LANGUAGES.map((l) => {
               const active = settings.language === l.code;
               return (
                 <Pressable
@@ -351,6 +258,21 @@ export default function AccessibilityScreen({ onBack }: Props) {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{t("accPasscodeModalTitle", lang)}</Text>
             <Text style={styles.modalBody}>{t("accPasscodeModalBody", lang)}</Text>
+            {pinSet && (
+              <>
+                <Text style={styles.pinLabel}>{ar ? "كلمة المرور الحالية" : "Current password"}</Text>
+                <TextInput
+                  value={pinCurrent}
+                  onChangeText={(v) => setPinCurrent(v.replace(/\D/g, "").slice(0, 4))}
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  placeholder={t("accPasscodePlaceholder", lang)}
+                  placeholderTextColor={colors.textLight}
+                  style={styles.modalInput}
+                />
+              </>
+            )}
+            <Text style={styles.pinLabel}>{ar ? "كلمة المرور الجديدة" : "New password"}</Text>
             <TextInput
               value={pinValue}
               onChangeText={(v) => setPinValue(v.replace(/\D/g, "").slice(0, 4))}
@@ -360,6 +282,17 @@ export default function AccessibilityScreen({ onBack }: Props) {
               placeholderTextColor={colors.textLight}
               style={styles.modalInput}
             />
+            <Text style={styles.pinLabel}>{ar ? "أعد كتابة كلمة المرور الجديدة" : "Type the new password again"}</Text>
+            <TextInput
+              value={pinConfirm}
+              onChangeText={(v) => setPinConfirm(v.replace(/\D/g, "").slice(0, 4))}
+              keyboardType="number-pad"
+              secureTextEntry
+              placeholder={t("accPasscodePlaceholder", lang)}
+              placeholderTextColor={colors.textLight}
+              style={styles.modalInput}
+            />
+            {pinError && <Text style={styles.pinError}>{pinError}</Text>}
             <View style={styles.modalRow}>
               <Pressable onPress={() => setPinModal(false)} style={[styles.modalBtn, { backgroundColor: colors.cardMuted }]}>
                 <Text style={{ color: colors.textMid, fontWeight: "700" }}>{t("cancel", lang)}</Text>
@@ -368,34 +301,11 @@ export default function AccessibilityScreen({ onBack }: Props) {
                 <Text style={{ color: "white", fontWeight: "700" }}>{t("save", lang)}</Text>
               </Pressable>
             </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* pixabay key modal */}
-      <Modal visible={keyModal} transparent animationType="fade" onRequestClose={() => setKeyModal(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>{t("accPixabayModalTitle", lang)}</Text>
-            <Text style={styles.modalBody}>
-              {t("accPixabayModalBody", lang)}
-            </Text>
-            <TextInput
-              value={keyValue}
-              onChangeText={setKeyValue}
-              autoCapitalize="none"
-              placeholder={t("accPixabayPlaceholder", lang)}
-              placeholderTextColor={colors.textLight}
-              style={styles.modalInput}
-            />
-            <View style={styles.modalRow}>
-              <Pressable onPress={() => setKeyModal(false)} style={[styles.modalBtn, { backgroundColor: colors.cardMuted }]}>
-                <Text style={{ color: colors.textMid, fontWeight: "700" }}>{t("cancel", lang)}</Text>
+            {pinSet && (
+              <Pressable onPress={removePin} style={{ marginTop: 12, alignSelf: "center" }}>
+                <Text style={{ color: "#b91c1c", fontWeight: "700", fontSize: 13 }}>{ar ? "إزالة كلمة المرور" : "Remove password"}</Text>
               </Pressable>
-              <Pressable onPress={saveKey} style={[styles.modalBtn, { backgroundColor: colors.forest }]}>
-                <Text style={{ color: "white", fontWeight: "700" }}>{t("save", lang)}</Text>
-              </Pressable>
-            </View>
+            )}
           </View>
         </View>
       </Modal>
@@ -454,10 +364,6 @@ const styles = StyleSheet.create({
   seg: { flex: 1, paddingVertical: 12, borderRadius: radius, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: "center" },
   segOn: { backgroundColor: colors.forest, borderColor: colors.forest },
   segText: { fontWeight: "800", fontSize: 14, color: colors.textMid },
-  toggleRow: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.card, borderRadius: radius, paddingVertical: 15, paddingHorizontal: 18, borderWidth: 1, borderColor: colors.border },
-  toggleLabel: { flex: 1, fontWeight: "600", fontSize: 15, color: colors.textDark },
-  switch: { width: 56, height: 30, borderRadius: 15 },
-  knob: { position: "absolute", width: 24, height: 24, borderRadius: 12, backgroundColor: "white", top: 3 },
   actionRow: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.card, borderRadius: radius, paddingVertical: 15, paddingHorizontal: 18, borderWidth: 1, borderColor: colors.border },
   actionLabel: { flex: 1, fontWeight: "600", fontSize: 15, color: colors.textDark },
   actionState: { fontSize: 12, fontWeight: "700", color: colors.forest },
@@ -475,6 +381,8 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 17, fontWeight: "800", color: colors.textDark, marginBottom: 6 },
   modalBody: { fontSize: 12.5, color: colors.textMid, lineHeight: 18, marginBottom: 12 },
   modalInput: { backgroundColor: colors.card, borderWidth: 2, borderColor: colors.border, borderRadius: radius, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: colors.textDark, letterSpacing: 2 },
+  pinLabel: { fontSize: 13, fontWeight: "700", color: colors.textMid, marginTop: 10, marginBottom: 4 },
+  pinError: { color: "#b91c1c", fontWeight: "700", fontSize: 13, marginTop: 10 },
   modalRow: { flexDirection: "row", gap: 10, marginTop: 14 },
   modalBtn: { flex: 1, borderRadius: radius, paddingVertical: 12, alignItems: "center" },
 });

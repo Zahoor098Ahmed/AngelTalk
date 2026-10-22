@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile, TabScreen } from "../types";
 import { useSettings } from "../context/SettingsContext";
-import { t, type TKey } from "../modules/i18n";
+import { t } from "../modules/i18n";
 import { getUsage, getChild, awardChildStars } from "../modules/storage";
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { tapFeedback } from "../modules/haptics";
@@ -14,7 +14,7 @@ import LangBadge from "../components/LangBadge";
 import Mascot from "../components/Mascot";
 import SoftBackdrop from "../components/SoftBackdrop";
 import TabBar from "../components/TabBar";
-import { colors, radiusLg } from "../theme";
+import { colors } from "../theme";
 
 interface Props {
   child: ChildProfile;
@@ -25,38 +25,6 @@ interface Props {
   labels: Record<TabScreen, string>;
   onUpdateChild?: (child: ChildProfile) => void;
 }
-
-type QuickItem = {
-  labelKey: TKey;
-  /** ARASAAC word used as the tile's picture */
-  picture: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  bg: string;
-  iconColor: string;
-  desc: string;
-  go: (p: Props) => void;
-};
-
-const QUICK_ACCESS: QuickItem[] = [
-  {
-    labelKey: "qActivities",
-    picture: "play",
-    icon: "game-controller",
-    bg: colors.green,
-    iconColor: colors.greenDeep,
-    desc: "Play speech, emotion & puzzle games",
-    go: (p) => p.onTabChange("games"),
-  },
-  {
-    labelKey: "pOverview",
-    picture: "graph",
-    icon: "stats-chart",
-    bg: colors.purple,
-    iconColor: colors.purpleDeep,
-    desc: "Word counts, weekly reports & doctor IEP",
-    go: (p) => p.onTabChange("progress"),
-  },
-];
 
 export default function HomeScreen(props: Props) {
   const { child: propChild, tab, onTabChange, onOpenMore, labels, onUpdateChild } = props;
@@ -183,29 +151,6 @@ export default function HomeScreen(props: Props) {
             ))}
           </View>
 
-          {/* Quick Access */}
-          <Text style={styles.sectionTitle}>{t("quickAccess", lang)}</Text>
-          <View style={styles.quickGrid}>
-            {QUICK_ACCESS.map((q) => (
-              <Pressable
-                key={q.labelKey}
-                onPress={() => q.go(props)}
-                style={({ pressed }) => [styles.quickTile, pressed && { transform: [{ scale: 0.98 }] }]}
-              >
-                <Ionicons name="chevron-forward" size={16} color="#b6bec8" style={styles.quickChevron} />
-                <View style={[styles.quickIconBadge, { backgroundColor: q.bg }]}>
-                  {getPictogramUrl(q.picture) ? (
-                    <SmartImage source={{ uri: getPictogramUrl(q.picture)! }} style={styles.quickPic} />
-                  ) : (
-                    <Ionicons name={q.icon} size={isTablet ? 34 : 30} color={q.iconColor} />
-                  )}
-                </View>
-                <Text style={[styles.quickLabel, isTablet && { fontSize: 16 }]} numberOfLines={1}>{t(q.labelKey, lang)}</Text>
-                <Text style={styles.quickDesc} numberOfLines={2}>{q.desc}</Text>
-              </Pressable>
-            ))}
-          </View>
-
           <View style={{ height: 20 }} />
         </ScrollView>
       </SafeAreaView>
@@ -262,37 +207,6 @@ const styles = StyleSheet.create({
 
   body: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 14 },
   bodyTablet: { maxWidth: 860, alignSelf: "center", width: "100%", paddingHorizontal: 28 },
-
-  /* Quick Access */
-  sectionTitle: { fontSize: 17, fontWeight: "900", color: colors.textDark, marginTop: 6 },
-  quickGrid: { flexDirection: "row", gap: 12 },
-  quickTile: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-    borderRadius: radiusLg,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    gap: 4,
-    borderWidth: 1,
-    borderColor: "#e8edf2",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  quickChevron: { position: "absolute", top: 12, right: 10 },
-  quickIconBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  quickLabel: { fontSize: 15, fontWeight: "800", color: colors.textDark },
-  quickDesc: { fontSize: 12, color: colors.textMid, lineHeight: 16 },
-  quickPic: { width: 44, height: 44 },
 
   /* Start Talking card */
   heroCard: {

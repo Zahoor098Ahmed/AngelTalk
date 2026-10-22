@@ -263,7 +263,13 @@ export async function deleteClip(uri?: string) {
 
 let currentPlayingWebAudio: any = null;
 
-function playClip(uri: string): Promise<void> {
+// Speaking speed for spoken audio clips (online Arabic/Urdu voice). 1 = normal (Settings "Normal" = 0.9).
+let ttsPlaybackRate = 1;
+export function setSpeechSpeed(rate: number): void {
+  ttsPlaybackRate = Math.max(0.5, Math.min(2, (rate || 0.9) / 0.9));
+}
+
+function playClip(uri: string, rate = 1): Promise<void> {
   return new Promise((resolve) => {
     let done = false;
     const finish = () => {
@@ -284,6 +290,7 @@ function playClip(uri: string): Promise<void> {
           currentPlayingWebAudio = null;
         }
         const audio = new Audio(uri);
+        audio.playbackRate = rate;
         currentPlayingWebAudio = audio;
         audio.onended = () => {
           if (currentPlayingWebAudio === audio) currentPlayingWebAudio = null;
@@ -303,6 +310,11 @@ function playClip(uri: string): Promise<void> {
     }
 
     const player = createAudioPlayer(uri);
+    try {
+      if (rate !== 1) (player as unknown as { setPlaybackRate?: (r: number) => void }).setPlaybackRate?.(rate);
+    } catch {
+      /* speed is a nicety */
+    }
     const sub = player.addListener("playbackStatusUpdate", (s: AudioStatus) => {
       if (s.didJustFinish) {
         sub?.remove?.();
@@ -384,6 +396,7 @@ export function playOnlineTTS(text: string, langCode: "ar" | "ur"): Promise<bool
           }
         }
 
+        audio.playbackRate = ttsPlaybackRate;
         currentPlayingWebAudio = audio;
         audio.onended = () => {
           if (currentPlayingWebAudio === audio) currentPlayingWebAudio = null;
@@ -395,6 +408,7 @@ export function playOnlineTTS(text: string, langCode: "ar" | "ur"): Promise<bool
         const tryFallback = () => {
           try {
             const altBackend = new Audio(backendProxyUrl);
+            altBackend.playbackRate = ttsPlaybackRate;
             currentPlayingWebAudio = altBackend;
             altBackend.onended = () => {
               if (currentPlayingWebAudio === altBackend) currentPlayingWebAudio = null;
@@ -403,6 +417,7 @@ export function playOnlineTTS(text: string, langCode: "ar" | "ur"): Promise<bool
             altBackend.onerror = () => {
               try {
                 const direct = new Audio(directUrl);
+                direct.playbackRate = ttsPlaybackRate;
                 currentPlayingWebAudio = direct;
                 direct.onended = () => {
                   if (currentPlayingWebAudio === direct) currentPlayingWebAudio = null;
@@ -420,6 +435,7 @@ export function playOnlineTTS(text: string, langCode: "ar" | "ur"): Promise<bool
             altBackend.play().catch(() => {
               try {
                 const direct = new Audio(directUrl);
+                direct.playbackRate = ttsPlaybackRate;
                 currentPlayingWebAudio = direct;
                 direct.onended = () => {
                   if (currentPlayingWebAudio === direct) currentPlayingWebAudio = null;
@@ -446,8 +462,8 @@ export function playOnlineTTS(text: string, langCode: "ar" | "ur"): Promise<bool
         return;
       }
 
-      playClip(proxyUrl).then(() => resolve(true)).catch(() => {
-        playClip(directUrl).then(() => resolve(true)).catch(() => resolve(false));
+      playClip(proxyUrl, ttsPlaybackRate).then(() => resolve(true)).catch(() => {
+        playClip(directUrl, ttsPlaybackRate).then(() => resolve(true)).catch(() => resolve(false));
       });
     } catch {
       resolve(false);
@@ -458,6 +474,7 @@ export function playOnlineTTS(text: string, langCode: "ar" | "ur"): Promise<bool
 async function speakWord(text: string, lang: LanguageCode, rate: number, voiceType: import("../types").VoiceType = "boy"): Promise<void> {
   let textToSpeak = (text || "").trim();
   if (!textToSpeak) return;
+  setSpeechSpeed(rate);
 
   // If language is Arabic or Urdu, ensure text is translated to the target script before speaking
   if (lang === "ar-SA" && !/[\u0600-\u06FF]/.test(textToSpeak)) {

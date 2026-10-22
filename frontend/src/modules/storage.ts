@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   bilingualDisplay: false,
   simpleMode: true,
   userRole: "parent",
+  visibleVerbForms: ["1st", "s", "2nd", "3rd", "4th"],
 };
 
 export const defaultTags: ContentTag[] = ["colors", "numbers", "shapes", "animals", "music", "stories", "art", "nature"];
@@ -74,6 +75,9 @@ export async function hydrateStorage(): Promise<void> {
     ]);
     childrenCache = rawChildren ? JSON.parse(rawChildren) : [];
     settingsCache = rawSettings ? { ...DEFAULT_SETTINGS, ...JSON.parse(rawSettings) } : DEFAULT_SETTINGS;
+    // the Sound switch was removed from Settings: sounds are always on (it could have been left off)
+    // these switches were removed from Settings too: keep the app on its standard behaviour
+    settingsCache = { ...settingsCache, soundEnabled: true, boardMode: "phrase", bilingualDisplay: false, hapticsEnabled: true, reduceMotion: false };
     usageCache = rawUsage ? migrateUsage(JSON.parse(rawUsage)) : {};
 
     // Auto-heal baseline stars if a child has already played games before
