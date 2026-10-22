@@ -6,6 +6,16 @@
 
 import { dictUrl } from "./imageLibrary";
 import { getVerbForms } from "./verbForms";
+import PECS_PICTURES from "./pecsPictograms.json";
+import PICTURE_FIXES from "./pictureFixes.json";
+import SYMBOL_PICTURES from "./symbolPictures.json";
+
+/** Pictures picked from ARASAAC for the PECS words that have no exact dictionary entry. */
+const pecsPictures: Record<string, number> = PECS_PICTURES as Record<string, number>;
+/** Pictures replaced after checking every board picture by eye (0 = no picture fits). */
+const pictureFixes: Record<string, number> = PICTURE_FIXES as Record<string, number>;
+/** Exact pictures from other AAC symbol sets on Global Symbols, for words ARASAAC has no picture of. */
+const symbolPictures: Record<string, string> = SYMBOL_PICTURES as Record<string, string>;
 
 function arasaac(id: number): string {
   return `https://static.arasaac.org/pictograms/${id}/${id}_500.png`;
@@ -255,12 +265,48 @@ export const AAC_PICTOGRAM_MAP: Record<string, string> = {
 };
 
 /**
+ * The checked picture for a word: a URL, `null` when no picture fits (the tile shows its emoji),
+ * or `undefined` when the word needs no fix.
+ */
+export function pictureFixFor(label: string): string | null | undefined {
+  const id = pictureFixes[label.toLowerCase().trim()];
+  if (id === undefined) return undefined;
+  return id ? arasaac(id) : null;
+}
+
+/** True when another AAC symbol set has a picture of exactly this word. */
+export function hasSymbolPicture(label: string): boolean {
+  return !!symbolPictures[label.toLowerCase().trim()];
+}
+
+/** Words whose dictionary picture is a different meaning from the one they have inside a phrase. */
+const MISLEADING_IN_PHRASE = new Set([
+  "blades", "blade", "beam", "stroke", "pool", "tube", "through", "top", "pick", "says", "works", "course", "bag", "pose",
+  "the", "and", "with", "day",
+]);
+
+/**
+ * True when `uri` is the picture of just one word of a longer label ("blue" for "blue whale"),
+ * i.e. an automatic guess that a better picture may replace.
+ */
+export function isOneWordGuess(label: string, uri: string): boolean {
+  const lower = label.toLowerCase().trim();
+  if (!uri || !/\s/.test(lower) || AAC_PICTOGRAM_MAP[lower] === uri || dictUrl(lower) === uri) return false;
+  return lower.split(/[\s,·\-_]+/).some((w) => w.length > 2 && (AAC_PICTOGRAM_MAP[w] === uri || dictUrl(w) === uri));
+}
+
+/**
  * Get authentic vector pictogram URL for any AAC card, button or category.
  * Prioritizes high-definition ARASAAC pictograms, falls back to dictionary or word extraction.
  */
 export function getPictogramUrl(label: string): string | null {
   if (!label) return null;
   const lower = label.toLowerCase().trim();
+
+  // 0. Words checked by eye whose usual picture shows another meaning ("sink" -> a sinking ship)
+  const fix = pictureFixFor(lower);
+  if (fix) return fix;
+  if (fix === null) return symbolPictures[lower] ?? null;
 
   // 1. Direct match in curated AAC pictogram map
   if (AAC_PICTOGRAM_MAP[lower]) return AAC_PICTOGRAM_MAP[lower];
@@ -269,6 +315,12 @@ export function getPictogramUrl(label: string): string | null {
   const dictHit = dictUrl(lower);
   if (dictHit) return dictHit;
 
+  // 2b. A picture picked for this exact word ("blue whale", "brush teeth")
+  if (pecsPictures[lower]) return arasaac(pecsPictures[lower]);
+
+  // 2c. The exact word from another AAC symbol set (Global Symbols: "gerbil", "wombat", "spring roll")
+  if (symbolPictures[lower]) return symbolPictures[lower];
+
   // 3. Try verb forms base root (e.g. "went" -> "go", "drank" -> "drink", "asking" -> "ask")
   const v = getVerbForms(lower);
   if (v) {
@@ -276,10 +328,13 @@ export function getPictogramUrl(label: string): string | null {
     if (AAC_PICTOGRAM_MAP[baseLower]) return AAC_PICTOGRAM_MAP[baseLower];
     const baseHit = dictUrl(baseLower);
     if (baseHit) return baseHit;
+    if (pecsPictures[baseLower]) return arasaac(pecsPictures[baseLower]);
   }
 
-  // 4. Try individual meaningful words from a multi-word phrase
-  const words = lower.split(/[\s,·\-_]+/).filter((w) => w.length > 2);
+  // 4. Try individual meaningful words from a multi-word phrase, the last one first: it names
+  //    the thing ("blue whale" -> whale, not the color; "baked beans" -> beans, not baking).
+  //    Words whose picture means something else in a phrase are skipped ("roller blades").
+  const words = lower.split(/[\s,·\-_]+/).filter((w) => w.length > 2 && !MISLEADING_IN_PHRASE.has(w)).reverse();
   for (const w of words) {
     if (AAC_PICTOGRAM_MAP[w]) return AAC_PICTOGRAM_MAP[w];
     const hit = dictUrl(w);

@@ -27,6 +27,7 @@ import {
   createBlankCategory,
   bottomTabCategories,
   verbFolderLetter,
+  folderPictureFor,
   coreWords,
   setSeedLanguage,
   retranslateSeedBoard,
@@ -35,7 +36,7 @@ import {
 } from "../modules/customCategories";
 import { playWord, playSentence, stopSentence, preloadTTS, type SpokenWord } from "../modules/audio";
 import { dictUrl } from "../modules/imageLibrary";
-import { getPictogramUrl } from "../modules/aacPictograms";
+import { getPictogramUrl, pictureFixFor } from "../modules/aacPictograms";
 import { recordWordUsage, recordSentencePlayed, recordCorrectionUsed } from "../modules/storage";
 import { ensurePredictionLoaded, learnSentence, predictNext, predictPhrases, searchWords, suggestionTiles, tileForText } from "../modules/wordPrediction";
 import { tapFeedback, selectFeedback } from "../modules/haptics";
@@ -152,14 +153,19 @@ function CardPic({
 }) {
   const [imgError, setImgError] = useState(false);
   const enLabel = canonicalWordEn(label) || label;
+  // a tile in the Lower Case / Upper Case folders shows its letter, not the pronoun "I"
+  const isLetterTile = /^[a-z]$/i.test(label.trim()) && (emoji === "🔡" || emoji === "🔠");
   const uri = useMemo(() => {
+    if (isLetterTile) return null;
+    // a word whose usual picture is wrong ("sink") never falls back to it
+    if (pictureFixFor(enLabel) === null && !imageUri) return getPictogramUrl(enLabel);
     return (
       imageUri ||
       getPictogramUrl(enLabel) ||
       getPictogramUrl(label) ||
       (!imgError ? dictUrl(enLabel) || dictUrl(label) : null)
     );
-  }, [imageUri, label, enLabel, imgError]);
+  }, [imageUri, label, enLabel, imgError, isLetterTile]);
 
   if (uri && !imgError) {
     return (
@@ -168,6 +174,14 @@ function CardPic({
         style={{ width: size, height: size }}
         onError={() => setImgError(true)}
       />
+    );
+  }
+  // a letter or a number is its own picture ("a", "B", "7", "10")
+  if (/^([a-z]|\d{1,2})$/i.test(label.trim())) {
+    return (
+      <Text style={{ fontSize: Math.round(size * 0.9), lineHeight: Math.round(size * 1.05), fontWeight: "800", color: "#2f5fb3" }}>
+        {label.trim()}
+      </Text>
     );
   }
   return <Text style={{ fontSize: Math.max(18, Math.round(size * 0.72)) }}>{emoji || "🔹"}</Text>;
@@ -1027,10 +1041,16 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                               {verbFolderLetter(f)}
                             </Text>
                           </View>
-                        ) : f.imageUri ? (
+                        ) : folderPictureFor(f).text ? (
+                          <View style={[styles.letterBadge, { width: folderPicSize, height: folderPicSize, borderRadius: folderPicSize * 0.24, borderColor: c }]}>
+                            <Text style={[styles.letterBadgeText, { color: c, fontSize: Math.round(folderPicSize * 0.36) }]}>
+                              {folderPictureFor(f).text}
+                            </Text>
+                          </View>
+                        ) : folderPictureFor(f).uri ? (
                           <CardPic
                             label={f.name}
-                            imageUri={f.imageUri}
+                            imageUri={folderPictureFor(f).uri}
                             emoji={f.icon ?? "📁"}
                             size={folderPicSize}
                           />

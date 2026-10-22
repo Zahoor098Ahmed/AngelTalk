@@ -923,8 +923,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
 
         let actualTargetCatId = targetCat.id;
         const isActionsShelf =
-          (canonicalWordEn(targetCat.name) || targetCat.name).toLowerCase().includes("action") ||
-          (canonicalWordEn(currentShelf?.name || "") || currentShelf?.name || "").toLowerCase().includes("action");
+          /action|verb/.test((canonicalWordEn(targetCat.name) || targetCat.name).toLowerCase()) ||
+          /action|verb/.test((canonicalWordEn(currentShelf?.name || "") || currentShelf?.name || "").toLowerCase());
 
         if (isActionsShelf) {
           const letter = (vForms.base[0] || "A").toUpperCase();
@@ -933,7 +933,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
           if (existingSub) {
             actualTargetCatId = existingSub.id;
           } else {
-            const actionsShelf = (canonicalWordEn(currentShelf?.name || "") || currentShelf?.name || "").toLowerCase().includes("action") ? currentShelf : targetCat;
+            const actionsShelf = /action|verb/.test((canonicalWordEn(currentShelf?.name || "") || currentShelf?.name || "").toLowerCase()) ? currentShelf : targetCat;
             const allSubs = childCategories(actionsShelf.id);
             const found = allSubs.find((sc) => sc.name.toLowerCase() === subName.toLowerCase());
             if (found) {

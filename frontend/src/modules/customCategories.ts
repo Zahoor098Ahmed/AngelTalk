@@ -1,8 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { CustomCategory, CustomWord, TileSize, LanguageCode } from "../types";
 import { starterLabel, wordLabel, canonicalWordEn, translateDynamic } from "./i18n";
-import { getPictogramUrl } from "./aacPictograms";
-import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, isContinuousForm, sFormOf, type VerbForms } from "./verbForms";
+import { getPictogramUrl, isOneWordGuess, pictureFixFor, hasSymbolPicture } from "./aacPictograms";
+import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, isContinuousForm, sFormOf, conjugateRegularVerb, KNOWN_REGULAR_VERBS, type VerbForms } from "./verbForms";
+import PECS_EMOJI from "./pecsEmoji.json";
+import { PECS_SHELVES, PECS_SUBS, PECS_VERBS, PECS_FOLDER_NAMES_AR, cleanPecsWord, capFirst } from "./pecsVocabulary";
 const SEED_WORD_EN: Record<string, string[]> = {
   Core: ["I", "am", "is", "are", "was", "I want", "More", "Help", "No", "Yes", "All done", "I need", "I feel", "I like", "Can I have", "Please", "Thank you", "Stop", "Go", "to", "the", "Look", "Where"],
   Food: ["Water", "Milk", "Juice", "Apple", "Banana", "Bread", "Cookie", "Rice", "Chicken", "Snack", "Pizza", "Sandwich", "Fruit"],
@@ -212,6 +214,48 @@ async function loadCategories(): Promise<void> {
   cleanAndDeduplicateCategories();
   retranslateSeedBoard(seedLang);
   refreshSayItForMeImages();
+  refreshGuessedPictures();
+}
+
+/** The word's own emoji, shown when it has no picture ("chipmunk" -> 🐿️). */
+function wordEmoji(label: string): string | undefined {
+  return (PECS_EMOJI as Record<string, string>)[label.trim().toLowerCase()];
+}
+
+/**
+ * Built-in words whose picture was guessed from one of their words ("blue whale" showing the
+ * color blue, "brush teeth" a hairbrush) get the picture picked for the whole word. Pictures a
+ * parent chose are never touched.
+ */
+function refreshGuessedPictures() {
+  let changed = false;
+  for (const c of cache) {
+    for (const w of c.words) {
+      // the folder's emoji on every word ("🐾" on each animal) -> the word's own emoji
+      if (!w.isCustom && w.emoji === c.icon) {
+        const own = wordEmoji(w.verbForms?.base || canonicalWordEn(w.label) || w.label);
+        if (own && own !== w.emoji) {
+          w.emoji = own;
+          changed = true;
+        }
+      }
+      if (w.isCustom || !w.imageUri || !w.imageUri.startsWith("https://static.arasaac.org/")) continue;
+      const en = (w.verbForms?.base || canonicalWordEn(w.label) || w.label).trim();
+      // a picture checked by eye replaces the automatic one ("sink", "see saw"), or removes it
+      // ... or the exact word from another symbol set; a guess from one of its words ("blue" for "blue whale") too
+      const exact = pictureFixFor(en) !== undefined || hasSymbolPicture(en);
+      if (!exact && !isOneWordGuess(en, w.imageUri) && !isOneWordGuess(w.label, w.imageUri)) continue;
+      const better = getPictogramUrl(en) ?? undefined;
+      if ((better || exact) && better !== w.imageUri) {
+        w.imageUri = better;
+        changed = true;
+      }
+    }
+  }
+  if (changed) {
+    cache = [...cache];
+    persist();
+  }
 }
 
 /**
@@ -475,6 +519,10 @@ const STARTER: { name: string; icon: string; color?: string; words: [string, str
     ],
   },
 ];
+// Shelves from the PECS word list (Alphabet, Animals, Calendar…)
+for (const shelf of PECS_SHELVES) {
+  if (!STARTER.some((x) => x.name === shelf.name)) STARTER.push({ ...shelf, words: [] });
+}
 
 // Helper to capitalize words
 function capWord(s: string): string {
@@ -681,6 +729,54 @@ const VERBS_A_TO_Z: Record<string, { base: string; past: string; participle: str
   ],
 };
 
+// Verbs from the PECS word list: the ones the app can conjugate ("brush", "brush teeth") join Verbs A–Z
+// with all 5 forms; the others ("back rub", "high five") go to Verbs / Other.
+const pecsVerbLeftovers: string[] = [];
+{
+  // nouns that are on the PDF's verb list
+  const NOT_VERBS = new Set(["party", "picnic", "haircut", "tantrum", "up", "piggyback", "backhand", "tubing", "sliced", "chopped"]);
+  // activities whose first word is not the verb ("back rub", not "backed rub")
+  const NOT_VERB_PHRASES = new Set(["back rub", "back stroke", "face painting", "hide and seek", "show and tell", "water play", "water ski"]);
+  // "deliver" -> delivered, not "deliverred"
+  const fixDoubling = (f: string) => f.replace(/([aeiou][^aeiou\s]*e)r(r)(ed|ing)\b/, "$1r$3");
+  const pecsSingles = new Set(
+    PECS_VERBS.split(",").map((w) => (cleanPecsWord(w) || "").toLowerCase()).filter((w) => w && !w.includes(" ") && !NOT_VERBS.has(w) && !/(ing|ed)$/.test(w)),
+  );
+  const isKnownVerb = (w: string) => {
+    const v = getVerbForms(w);
+    return (!!v && v.base.toLowerCase() === w) || KNOWN_REGULAR_VERBS.has(w) || pecsSingles.has(w);
+  };
+  for (const rawVerb of PECS_VERBS.split(",")) {
+    const phrase = cleanPecsWord(rawVerb);
+    if (!phrase) continue;
+    const lower = phrase.toLowerCase();
+    const parts = lower.split(/\s+/);
+    let vf: { base: string; past: string; participle: string; continuous: string; emoji?: string } | null = null;
+    if (parts.length === 1) {
+      if (NOT_VERBS.has(lower)) vf = null;
+      else if (isKnownVerb(lower)) vf = getVerbForms(lower)?.base.toLowerCase() === lower ? getVerbForms(lower) : conjugateRegularVerb(lower);
+      else {
+        const g = generateAllVerbForms(lower); // "cooking" -> cook
+        if (g && isKnownVerb(g.base.toLowerCase())) vf = g;
+      }
+    } else if (!NOT_VERB_PHRASES.has(lower) && isKnownVerb(parts[0])) {
+      const first = getVerbForms(parts[0]);
+      const v = first && first.base.toLowerCase() === parts[0] ? first : conjugateRegularVerb(parts[0]);
+      const rest = parts.slice(1).join(" ");
+      vf = { base: `${v.base} ${rest}`, past: `${fixDoubling(v.past)} ${rest}`, participle: `${fixDoubling(v.participle)} ${rest}`, continuous: `${fixDoubling(v.continuous)} ${rest}`, emoji: v.emoji };
+    }
+    if (!vf) {
+      pecsVerbLeftovers.push(phrase);
+      continue;
+    }
+    const base = vf.base.toLowerCase();
+    if (Object.values(VERBS_A_TO_Z).some((list) => list.some((v) => v.base === base))) continue;
+    const letter = base[0].toUpperCase();
+    if (!/[A-Z]/.test(letter)) continue;
+    (VERBS_A_TO_Z[letter] ||= []).push({ base, past: vf.past, participle: vf.participle, continuous: vf.continuous, emoji: vf.emoji || "⚡" });
+  }
+}
+
 /** Among duplicate matches, pick the copy the caregiver customised (their own picture/edits). */
 function preferCustomized(candidates: CustomWord[]): CustomWord | undefined {
   return candidates.find((w) => w.isCustom) ?? candidates[0];
@@ -729,6 +825,21 @@ function mergeIntoExistingWord(
 
 /** Returns the letter ("a".."z") if this category is a "Verbs X" sub-category, else null. */
 /** "A".."Z" for the Actions › Verbs A–Z folders, otherwise null. */
+export function folderPictureFor(c: CustomCategory): { text?: string; uri?: string } {
+  const enOf = (x: CustomCategory) =>
+    (x.seedName || FOLDER_EN_BY_LANG[(x.name || "").toLowerCase()] || canonicalWordEn(x.name) || x.name || "").trim();
+  const en = enOf(c).toLowerCase();
+  // letters and numbers show themselves
+  if (en === "lower case") return { text: "abc" };
+  if (en === "upper case") return { text: "ABC" };
+  if (en === "numerals") return { text: "123" };
+  if (c.imageUri) return { uri: c.imageUri };
+  // "General" looks like its shelf (Animals / General -> the animals picture)
+  const parent = c.parentCategoryId ? cache.find((x) => x.id === c.parentCategoryId) : undefined;
+  const name = en === "general" && parent ? enOf(parent) : enOf(c);
+  return { uri: getPictogramUrl(name) ?? undefined };
+}
+
 export function verbFolderLetter(c: CustomCategory): string | null {
   return verbSubLetter(c)?.toUpperCase() ?? null;
 }
@@ -1174,6 +1285,63 @@ export const STARTER_SUBCATEGORIES: {
     ...ACTION_VERB_SUBCATEGORIES,
   ];
 
+/** PECS verbs without verb forms ("high five") -> the letter of the Verbs folder that holds them. */
+const PECS_PLAIN_VERBS = new Map<string, string>();
+
+/** Folder names made while splitting long PECS lists ("General A–F"), for their Arabic names. */
+const pecsSplitNames: { en: string; base: string; range: string }[] = [];
+
+// Words from the PECS word list, as sub-categories of their shelves
+(() => {
+  const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}' ]+/gu, " ").replace(/\s+/g, " ").trim();
+  const seen = new Set<string>();
+  STARTER.forEach((shelf) => shelf.words.forEach(([label]) => seen.add(norm(label))));
+  STARTER_SUBCATEGORIES.forEach((sub) => sub.words.forEach(([label]) => seen.add(norm(label))));
+  Object.values(VERBS_A_TO_Z).forEach((list) =>
+    list.forEach((v) => [v.base, sFormOf(v.base), v.past, v.participle, v.continuous].forEach((f) => seen.add(norm(f)))),
+  );
+  // the board's clean-up takes verbs out of these shelves, so they are not put there in the first place
+  const guarded = new Set(["food", "places", "things", "people", "feelings"]);
+  const verbWords = new Set<string>();
+  VERB_FORMS_LIST.forEach((v) => [v.base, v.past, v.participle, v.continuous].forEach((f) => verbWords.add(f.toLowerCase().trim())));
+
+  // verbs the app cannot conjugate ("back rub", "high five") go in their letter's folder (Verbs B, Verbs H)
+  // as one tile; they come last, so a word keeps its place in a category first ("backhand" in Sports)
+  const letterSubs = pecsVerbLeftovers
+    .filter((p) => /^[a-z]/i.test(p))
+    .map((p) => ({ parent: "Actions", name: `Verbs ${p[0].toUpperCase()}`, icon: "⚡", words: p }));
+  const allSubs = [...PECS_SUBS, ...letterSubs];
+  for (const sub of allSubs) {
+    const words: string[] = [];
+    for (const rawWord of sub.words.split(",")) {
+      const cleaned = cleanPecsWord(rawWord, "keepNumbers" in sub ? !!sub.keepNumbers : false);
+      if (!cleaned) continue;
+      const keepCase = "keepCase" in sub && !!sub.keepCase;
+      const label = keepCase ? cleaned : capFirst(cleaned);
+      const key = norm(label);
+      if (!key) continue;
+      if (keepCase) {
+        // letters: a–z and A–Z are their own sub-categories (not compared with other words)
+        if (!words.includes(label)) words.push(label);
+        continue;
+      }
+      if (seen.has(key)) continue;
+      if (guarded.has(sub.parent.toLowerCase()) && verbWords.has(key)) continue;
+      seen.add(key);
+      words.push(label);
+      if (/^Verbs [A-Z]$/.test(sub.name)) PECS_PLAIN_VERBS.set(label.toLowerCase(), sub.name.slice(-1));
+    }
+    if (words.length === 0) continue;
+
+    const existing = STARTER_SUBCATEGORIES.find((x) => x.parentCategory === sub.parent && x.name === sub.name);
+    if (existing) {
+      existing.words.push(...words.map((w) => [w, wordEmoji(w) ?? sub.icon] as [string, string]));
+      continue;
+    }
+    STARTER_SUBCATEGORIES.push({ parentCategory: sub.parent, name: sub.name, icon: sub.icon, words: words.map((w) => [w, wordEmoji(w) ?? sub.icon] as [string, string]) });
+  }
+})();
+
 // Built-in folder names (starter board + bulk-build seed lists), by language.
 const FOLDER_NAMES: Partial<Record<LanguageCode, Record<string, string>>> = {
   "ar-SA": {
@@ -1234,6 +1402,15 @@ const FOLDER_NAMES: Partial<Record<LanguageCode, Record<string, string>>> = {
     ...Object.fromEntries("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((L) => [`Verbs ${L}`, `کام ${L}`])),
   },
 };
+// Arabic names for the PECS shelves / sub-categories (split folders keep their letter range)
+Object.assign((FOLDER_NAMES["ar-SA"] ||= {}), PECS_FOLDER_NAMES_AR);
+// the "Actions" shelf is called "Verbs" in English
+FOLDER_NAMES["en-US"] = { ...(FOLDER_NAMES["en-US"] ?? {}), Actions: "Verbs" };
+for (const split of pecsSplitNames) {
+  const ar = PECS_FOLDER_NAMES_AR[split.base];
+  if (ar) FOLDER_NAMES["ar-SA"]![split.en] = `${ar} ${split.range}`;
+}
+
 function folderName(en: string, lang: LanguageCode = seedLang) {
   return FOLDER_NAMES[lang]?.[en] ?? FOLDER_NAMES[seedLang]?.[en] ?? en;
 }
@@ -1383,7 +1560,8 @@ export function retranslateSeedBoard(lang: LanguageCode) {
     } else {
       const enRaw = canonicalWordEn(rawCatName) || FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || rawCatName;
       const enCat = FOLDER_ALIASES[enRaw.toLowerCase()] ?? enRaw;
-      const localizedName = FOLDER_NAMES[lang]?.[enCat] || wordLabel(enCat, lang);
+      const anchor = FOLDER_EN_BY_LANG[enCat.toLowerCase()] ?? enCat; // "Verbs" -> "Actions"
+      const localizedName = FOLDER_NAMES[lang]?.[enCat] || FOLDER_NAMES[lang]?.[anchor] || wordLabel(enCat, lang);
       if (localizedName && localizedName.toLowerCase() !== rawCatName.toLowerCase()) {
         cat.name = localizedName;
         changed = true;
@@ -1428,8 +1606,77 @@ export function retranslateSeedBoard(lang: LanguageCode) {
   }
 }
 
-function ensureAllStandardCategories() {
+/** Shelves made by the first version of the PECS list, later renamed to the PDF's own names. */
+const PECS_V1_SHELVES = new Set([
+  "alphabet", "describing words", "clothes & accessories", "electronics", "health", "celebrations", "home & kitchen",
+  "money", "nature", "phrases & questions", "tools", "transport", "activities",
+]);
+/** Sub-categories of that first version (and its "General A–F" style parts). */
+const PECS_V1_SUBS = new Set([
+  "lowercase", "uppercase", "numbers", "positions", "spreads & spices", "fruits & vegetables", "meat & fish", "more foods",
+  "toys", "other", "people & characters", "more places", "general", "travel",
+]);
+
+function replacePecsV1Folders(): boolean {
   let changed = false;
+  const shelfNames = new Set(STARTER.map((x) => x.name.toLowerCase()));
+  const enOf = (c: CustomCategory) => (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? canonicalWordEn(c.name) ?? c.name).trim().toLowerCase();
+  // whole shelves (their words are recreated under the new names)
+  for (const shelf of cache.filter((c) => !c.parentCategoryId && c.source === "seed")) {
+    const en = enOf(shelf);
+    if (!PECS_V1_SHELVES.has(en) || shelfNames.has(en)) continue;
+    const ids = new Set([shelf.id, ...cache.filter((c) => c.parentCategoryId === shelf.id).map((c) => c.id)]);
+    cache = cache.filter((c) => !ids.has(c.id));
+    changed = true;
+  }
+  // sub-categories under shelves that stay: the shelf's own words (and the caregiver's) go back to the shelf,
+  // which places them again; words that now live in another sub-category are not carried along
+  const keyOf = (parentEn: string, sub: string) => `${parentEn}::${sub.toLowerCase()}`;
+  const current = new Set(STARTER_SUBCATEGORIES.map((x) => keyOf(x.parentCategory.toLowerCase(), x.name)));
+  const homeOf = new Map<string, Set<string>>(); // word -> the sub-categories it belongs to
+  for (const x of STARTER_SUBCATEGORIES) {
+    for (const [label] of x.words) {
+      const k = label.toLowerCase();
+      if (!homeOf.has(k)) homeOf.set(k, new Set());
+      homeOf.get(k)!.add(keyOf(x.parentCategory.toLowerCase(), x.name));
+    }
+  }
+  const shelfWords = new Map(STARTER.map((x) => [x.name.toLowerCase(), new Set(x.words.map(([l]) => l.toLowerCase()))]));
+  for (const sub of cache.filter((c) => c.parentCategoryId && c.source === "seed" && c.seedName)) {
+    const parent = cache.find((c) => c.id === sub.parentCategoryId);
+    if (!parent) continue;
+    const seed = sub.seedName!.toLowerCase();
+    const base = seed.replace(/ [a-z](–[a-z])?$/, ""); // "general a–f" -> "general"
+    if (/^verbs [a-z]$/.test(seed) || !PECS_V1_SUBS.has(base)) continue;
+    const parentEn = enOf(parent);
+    if (base === seed && current.has(keyOf(parentEn, seed))) continue;
+    for (const w of sub.words) {
+      const k = (canonicalWordEn(w.label) || w.label).toLowerCase();
+      const keep = w.isCustom || !homeOf.has(k) || shelfWords.get(parentEn)?.has(k);
+      if (keep && !parent.words.some((pw) => pw.label.toLowerCase() === w.label.toLowerCase())) parent.words.push({ ...w, order: parent.words.length });
+    }
+    cache = cache.filter((c) => c.id !== sub.id);
+    changed = true;
+  }
+  // a seed word that moved to another sub-category (sweets from "Snacks & Sweets" to "Sweets") leaves its old place
+  for (const sub of cache.filter((c) => c.parentCategoryId && c.seedName)) {
+    const parent = cache.find((c) => c.id === sub.parentCategoryId);
+    if (!parent) continue;
+    const key = keyOf(enOf(parent), sub.seedName!);
+    if (!current.has(key)) continue;
+    const before = sub.words.length;
+    sub.words = sub.words.filter((w) => {
+      if (w.isCustom || w.verbFormTag) return true;
+      const homes = homeOf.get((canonicalWordEn(w.label) || w.label).toLowerCase());
+      return !homes || homes.has(key);
+    });
+    if (sub.words.length !== before) changed = true;
+  }
+  return changed;
+}
+
+function ensureAllStandardCategories() {
+  let changed = replacePecsV1Folders();
   const now = Date.now();
 
   STARTER.forEach((s, idx) => {
@@ -1473,6 +1720,10 @@ function ensureAllStandardCategories() {
           };
         }),
       });
+      changed = true;
+    } else if (s.name === "Actions" && !hit.isCustom && hit.name === "Actions" && folderName("Actions") !== "Actions") {
+      // shown as "Verbs" now
+      hit.name = folderName("Actions");
       changed = true;
     } else if (s.name === "Core") {
       // Ensure Core has all the key starter words from the screenshot
@@ -2233,7 +2484,11 @@ export function cleanAndDeduplicateCategories() {
           standardVerbWords.add(v.continuous.toLowerCase().trim());
         });
 
+        // PECS verbs without forms that belong in this folder ("high five" in Verbs H)
+        const plainVerbs = [...PECS_PLAIN_VERBS].filter(([, l]) => l === letter).map(([p]) => p);
+        const isPlain = (w: CustomWord) => plainVerbs.includes((canonicalWordEn(w.label) || w.label).toLowerCase().trim());
         const customWords = subCat.words.filter((w) => {
+          if (isPlain(w) && !w.verbFormTag) return false;
           if (w.isCustom) return true;
           const en = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
           return !standardVerbWords.has(en) && !standardVerbWords.has(w.label.toLowerCase().trim());
@@ -2287,9 +2542,31 @@ export function cleanAndDeduplicateCategories() {
               size: "md",
               order: orderIndex++,
               verbFormTag: f.tag,
+              // which verb it is, so all its forms make one box on the Talk board (also "brush teeth")
+              verbForms: { base: v.base, past: v.past, participle: v.participle, continuous: v.continuous, emoji: v.emoji },
               hidden: existing?.hidden ?? false,
               isCustom: existing?.isCustom,
             });
+          });
+        });
+
+        plainVerbs.forEach((p) => {
+          if (isDeletedWord(subCat.id, p)) return;
+          const existing = subCat.words.find((w) => !w.verbFormTag && !usedExistingIds.has(w.id) && (canonicalWordEn(w.label) || w.label).toLowerCase().trim() === p);
+          if (existing) usedExistingIds.add(existing.id);
+          const capText = capFirst(wordLabel(capFirst(p), seedLang) || p);
+          cleanWords.push({
+            id: existing?.id ?? uid("w"),
+            label: capText,
+            phrase: capText,
+            emoji: existing?.emoji || wordEmoji(p) || "⚡",
+            imageUri: existing?.imageUri || getPictogramUrl(p) || undefined,
+            audioUri: existing?.audioUri,
+            useTextToSpeech: existing?.useTextToSpeech ?? true,
+            size: "md",
+            order: orderIndex++,
+            hidden: existing?.hidden ?? false,
+            isCustom: existing?.isCustom,
           });
         });
 
@@ -2341,6 +2618,7 @@ export function cleanAndDeduplicateCategories() {
                 size: "md",
                 order: orderIndex++,
                 verbFormTag: f.tag,
+                verbForms: { base: v.base, past: v.past, participle: v.participle, continuous: v.continuous, emoji: v.emoji },
                 hidden: existing?.hidden ?? cw.hidden ?? false,
                 isCustom: true,
               });
@@ -2359,7 +2637,8 @@ export function cleanAndDeduplicateCategories() {
               w.id !== cleanWords[i]?.id ||
               w.label !== cleanWords[i]?.label ||
               w.verbFormTag !== cleanWords[i]?.verbFormTag ||
-              w.order !== cleanWords[i]?.order
+              w.order !== cleanWords[i]?.order ||
+              (!w.verbForms && !!w.verbFormTag)
           )
         ) {
           subCat.words = cleanWords;
@@ -2415,7 +2694,9 @@ export function cleanAndDeduplicateCategories() {
       let generalSub: CustomCategory | undefined;
       const getGeneralSub = (): CustomCategory => {
         if (generalSub) return generalSub;
-        generalSub = subCatsOfParent.find((sc) => (canonicalWordEn(sc.name) || sc.name).trim().toLowerCase() === "general");
+        const nameOf = (sc: CustomCategory) => (canonicalWordEn(sc.name) || sc.name).trim().toLowerCase();
+        // "General", or the first part of a split one ("General A–F")
+        generalSub = subCatsOfParent.find((sc) => nameOf(sc) === "general") ?? subCatsOfParent.find((sc) => nameOf(sc).startsWith("general "));
         if (!generalSub) {
           const now = Date.now();
           generalSub = {
@@ -3332,7 +3613,7 @@ export function groupIntoAlphaRanges(words: CustomWord[], bucketSize = 5): { lab
 
 export const BOTTOM_CATEGORIES: { key: string; icon: string; label: string; enFallback: string; color: string }[] = [
   { key: "Core", icon: "💬", label: "Core", enFallback: "Core", color: "#2f6d62" },
-  { key: "Actions", icon: "⚡", label: "Actions", enFallback: "Actions", color: "#c98a3d" },
+  { key: "Actions", icon: "⚡", label: "Verbs", enFallback: "Actions", color: "#c98a3d" },
   { key: "Color", icon: "🎨", label: "Color", enFallback: "Red", color: "#d9534f" },
   { key: "Feelings", icon: "😊", label: "Feelings", enFallback: "Feelings", color: "#e67e22" },
   { key: "Food", icon: "🍴", label: "Food", enFallback: "Food", color: "#5c9a58" },
