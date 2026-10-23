@@ -107,6 +107,9 @@ export const VERB_FORMS_LIST: VerbForms[] = [
   { base: "think", past: "thought", participle: "thought", continuous: "thinking", emoji: "💭" },
   { base: "know", past: "knew", participle: "known", continuous: "knowing", emoji: "💡" },
   { base: "feel", past: "felt", participle: "felt", continuous: "feeling", emoji: "💓" },
+  { base: "bend", past: "bent", participle: "bent", continuous: "bending", emoji: "🙇" },
+  { base: "spin", past: "spun", participle: "spun", continuous: "spinning", emoji: "🌀" },
+  { base: "spread", past: "spread", participle: "spread", continuous: "spreading", emoji: "🧈" },
   { base: "find", past: "found", participle: "found", continuous: "finding", emoji: "🔎" },
   { base: "look", past: "looked", participle: "looked", continuous: "looking", emoji: "👀" },
   { base: "touch", past: "touched", participle: "touched", continuous: "touching", emoji: "👉" },
@@ -220,6 +223,13 @@ export function registerVerbForms(list: VerbForms[]): void {
   }
 }
 
+/** Verbs of two or more syllables whose last syllable is stressed (their last letter doubles). */
+const STRESSED_LAST_SYLLABLE = new Set([
+  "admit", "begin", "commit", "compel", "control", "equip", "expel", "forbid", "forget", "occur", "omit",
+  "patrol", "permit", "prefer", "propel", "rebel", "recur", "refer", "regret", "submit", "transfer", "upset",
+  "unzip", "unwrap", "outrun", "kidnap", "zigzag", "babysit", "handicap",
+]);
+
 /** Check if a word ends with a short consonant-vowel-consonant (CVC) pattern */
 function isCVC(word: string): boolean {
   if (word.length < 3) return false;
@@ -229,7 +239,13 @@ function isCVC(word: string): boolean {
   const thirdChar = word[word.length - 3];
   // W, X, Y are not doubled in English
   if ("wxy".includes(lastChar)) return false;
-  return !vowels.includes(thirdChar) && vowels.includes(midChar) && !vowels.includes(lastChar);
+  if (!(!vowels.includes(thirdChar) && vowels.includes(midChar) && !vowels.includes(lastChar))) return false;
+  // only a stressed last syllable doubles: stop -> stopped, begin -> beginning, but gallop -> galloped, iron -> ironed
+  const last = word.split("-").pop() || word; // "snap-unsnap": the last part counts
+  const syllables = (last.match(/[aeiouy]+/g) || []).length;
+  // "un" + one syllable keeps the stress on the end: unsnap -> unsnapped, unzip -> unzipped
+  const unPrefixed = /^un/.test(last) && (last.slice(2).match(/[aeiouy]+/g) || []).length === 1;
+  return syllables <= 1 || unPrefixed || STRESSED_LAST_SYLLABLE.has(last);
 }
 
 /** Rule-based regular verb conjugator for any regular English verb */
@@ -337,6 +353,8 @@ export function getVerbForms(label: string): VerbForms | null {
   // Direct match in dictionary
   const direct = LOOKUP_MAP.get(clean);
   if (direct) return direct;
+  const fromS = S_FORM_BASES.get(clean);
+  if (fromS && LOOKUP_MAP.get(fromS)) return LOOKUP_MAP.get(fromS)!;
 
   // Multi-word phrase starting with a verb (e.g. "go home", "eat apple")
   const parts = clean.split(/\s+/);
@@ -728,9 +746,20 @@ export function transformVerbToForm(label: string, form: "1st" | "2nd" | "3rd" |
 const S_FORM_IRREGULAR: Record<string, string> = { be: "is", have: "has", do: "does", go: "goes" };
 
 /** The "s / es" form of a verb (he/she/it): agree -> agrees, watch -> watches, cry -> cries, have -> has. */
+/** s/es forms of verb phrases that do not change their first word ("high five" -> "high fives"). */
+const S_FORM_PHRASES = new Map<string, string>();
+/** "high fives" -> "high five", so the s/es form is known as that verb too. */
+const S_FORM_BASES = new Map<string, string>();
+export function registerSForm(base: string, sForm: string): void {
+  S_FORM_PHRASES.set(base.trim().toLowerCase(), sForm.trim().toLowerCase());
+  S_FORM_BASES.set(sForm.trim().toLowerCase(), base.trim().toLowerCase());
+}
+
 export function sFormOf(base: string): string {
   const clean = (base || "").trim();
   if (!clean) return clean;
+  const phrase = S_FORM_PHRASES.get(clean.toLowerCase());
+  if (phrase) return phrase;
   const [first, ...rest] = clean.split(/\s+/);
   const w = first.toLowerCase();
   let s: string;

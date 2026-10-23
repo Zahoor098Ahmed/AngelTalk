@@ -19,6 +19,12 @@ import * as prediction from "../../../frontend/src/modules/wordPrediction";
 import * as grammar from "../../../frontend/src/modules/sentenceGrammar";
 import * as storage from "../../../frontend/src/modules/storage";
 import arasaacDict from "../../../frontend/src/modules/arasaacDict.json";
+import * as pecs from "../../../frontend/src/modules/pecsVocabulary";
+import * as nouns from "../../../frontend/src/modules/nounForms";
+import pecsPictures from "../../../frontend/src/modules/pecsPictograms.json";
+import pictureFixes from "../../../frontend/src/modules/pictureFixes.json";
+import symbolPictures from "../../../frontend/src/modules/symbolPictures.json";
+import wordEmojis from "../../../frontend/src/modules/pecsEmoji.json";
 
 type Doc = { _id: string; [k: string]: unknown };
 type Mod = Record<string, unknown>;
@@ -190,12 +196,35 @@ export async function buildCatalog(): Promise<Record<string, Doc[]>> {
   C.catalog_languages = i18n.LANGUAGES.map((l, i) => ({ _id: (l as { code: string }).code, ...(plain(l) as object), order: i }));
   C.catalog_starter_words = Object.entries(i18n.STARTER_WORDS).map(([lang, words]) => ({ _id: lang, lang, words }));
 
+  const cm0 = cats as Mod;
   // ---- 4. Pictures: curated pictogram map + the full ARASAAC dictionary + the picture library ----
   const picId = uniquer();
   C.catalog_pictograms = [
     ...Object.entries(pictos.AAC_PICTOGRAM_MAP).map(([word, url]) => ({ _id: picId(`map:${slug(word)}`), word, url, source: "curated" })),
     ...Object.entries(arasaacDict as Record<string, number>).map(([word, id]) => ({ _id: picId(`arasaac:${slug(word)}`), word, arasaacId: id, url: arasaacUrl(id), source: "arasaac-dictionary" })),
+    // checked by eye: a picture for words whose usual one shows another meaning (url null = none fits, the emoji shows)
+    ...Object.entries(pictureFixes as Record<string, number>).map(([word, id]) => ({ _id: picId(`fix:${slug(word)}`), word, arasaacId: id || null, url: id ? arasaacUrl(id) : null, source: "checked-fix" })),
+    ...Object.entries(pecsPictures as Record<string, number>).map(([word, id]) => ({ _id: picId(`pecs:${slug(word)}`), word, arasaacId: id, url: arasaacUrl(id), source: "arasaac-search" })),
+    ...Object.entries(symbolPictures as Record<string, string>).map(([word, url]) => ({ _id: picId(`symbol:${slug(word)}`), word, url, source: "global-symbols" })),
   ];
+  C.catalog_word_emojis = Object.entries(wordEmojis as Record<string, string>).map(([word, emoji]) => ({ _id: slug(word), word, emoji }));
+
+  // ---- 4b. PECS wordlist: the PDF's categories, sub-categories and verbs, as the app reads them ----
+  const pm2 = pecs as Mod;
+  C.catalog_pecs = [
+    ...((pm2.PECS_SHELVES || []) as { name: string }[]).map((x, i) => ({ _id: `shelf:${slug(x.name)}`, kind: "shelf", ...(plain(x) as object), order: i })),
+    ...((pm2.PECS_SUBS || []) as { parent: string; name: string; words: string }[]).map((x, i) => ({
+      _id: `sub:${slug(x.parent)}:${slug(x.name)}`, kind: "sub-category", ...(plain(x) as object),
+      words: x.words.split(",").map((w) => w.trim()).filter(Boolean), order: i,
+    })),
+    { _id: "verbs", kind: "verbs", words: String(pm2.PECS_VERBS || "").split(",").map((w) => w.trim()).filter(Boolean) },
+    ...(cm0.PECS_PHRASE_FORMS ? [{ _id: "phrase_forms", kind: "verb-phrase-forms", forms: plain(cm0.PECS_PHRASE_FORMS) }] : []),
+    { _id: "arabic_names", kind: "folder-names", lang: "ar-SA", map: plain(pm2.PECS_FOLDER_NAMES_AR) },
+  ] as Doc[];
+
+  // ---- 4c. Noun forms (Apple, Apples, Apple's, Apples'): the rules the app uses ----
+  const nm = nouns as Mod;
+  C.catalog_noun_rules = ["IRREGULAR", "SAME", "PLURAL_ONLY", "IE_WORDS"].filter((k) => nm[k] !== undefined).map((k) => ({ _id: k.toLowerCase(), name: k, value: plain(nm[k]) }));
   const lib = library as Mod;
   C.catalog_image_library = [
     ...(((lib.CURATED_SYMBOLS || []) as Doc[]).map((s) => ({ ...s, _id: `symbol:${s.id}`, kind: "symbol" }))),

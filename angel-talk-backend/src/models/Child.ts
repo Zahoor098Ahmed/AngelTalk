@@ -12,6 +12,11 @@ export interface IChildSettings {
   boardColumns: number; // 2 - 6
   highContrast: boolean;
   hapticsEnabled: boolean;
+  /** Talk board: verb forms shown (1st, s, 2nd, 3rd, 4th) and noun forms shown (one, many, ones, manys). */
+  visibleVerbForms?: string[];
+  visibleNounForms?: string[];
+  /** Talk board tiles per row; 0 = automatic. */
+  tilesPerRow?: number;
 }
 
 export interface IChildRewards {
@@ -115,6 +120,20 @@ const ChildSchema = new Schema<IChild>(
       hapticsEnabled: {
         type: Boolean,
         default: true,
+      },
+      visibleVerbForms: {
+        type: [String],
+        default: undefined,
+      },
+      visibleNounForms: {
+        type: [String],
+        default: undefined,
+      },
+      tilesPerRow: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 12,
       },
     },
     rewards: {

@@ -22,7 +22,7 @@ import {
   subscribeCategories,
   topLevelCategories,
 } from "./customCategories";
-import { getUsage, loadChildren } from "./storage";
+import { getUsage, loadChildren, loadSettings } from "./storage";
 import { canonicalWordEn, registerTranslations } from "./i18n";
 import { registerVerbForms, sFormOf, type VerbForms } from "./verbForms";
 import type { CustomCategory, CustomWord } from "../types";
@@ -111,6 +111,8 @@ function buildRecords(): { key: string; table: string; id: string; data: Record<
   const out: { key: string; table: string; id: string; data: Record<string, unknown> }[] = [];
   const add = (table: string, id: string, data: Record<string, unknown>) => out.push({ key: `${table}:${id}`, table, id, data });
   const children = loadChildren();
+  // the app settings of this device (Settings screen) are saved with each child
+  const app = loadSettings();
 
   for (const c of children) {
     const usage = getUsage(c.id);
@@ -123,6 +125,11 @@ function buildRecords(): { key: string; table: string; id: string; data: Record<
         boardMode: c.boardMode ?? "phrase",
         simpleMode: !!c.simpleMode,
         bilingualDisplay: !!c.bilingualDisplay,
+        language: app.language,
+        speechRate: clamp(app.speechRate ?? 0.9, 0.5, 1.5),
+        visibleVerbForms: app.visibleVerbForms,
+        visibleNounForms: app.visibleNounForms,
+        tilesPerRow: clamp(app.tilesPerRow ?? 0, 0, 12),
       },
       rewards: { stars: c.stars ?? 0, badges: c.badges ?? [], consecutiveDays: usage.consecutiveDays ?? 0 },
     });

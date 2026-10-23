@@ -2930,7 +2930,6 @@ const WORD_UR_REVERSE = buildReverse(WORD_UR);
 
 const CANONICAL_SHELVES: Record<string, string> = {
   feelings: "Feelings",
-  feeling: "Feelings",
   emotion: "Feelings",
   emotions: "Feelings",
   feelings2: "Feelings",

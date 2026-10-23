@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { CustomCategory, CustomWord, TileSize, LanguageCode } from "../types";
 import { starterLabel, wordLabel, canonicalWordEn, translateDynamic } from "./i18n";
 import { getPictogramUrl, isOneWordGuess, pictureFixFor, hasSymbolPicture } from "./aacPictograms";
-import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, isContinuousForm, sFormOf, conjugateRegularVerb, KNOWN_REGULAR_VERBS, type VerbForms } from "./verbForms";
+import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, isContinuousForm, sFormOf, conjugateRegularVerb, KNOWN_REGULAR_VERBS, registerVerbForms, registerSForm, type VerbForms } from "./verbForms";
 import PECS_EMOJI from "./pecsEmoji.json";
 import { PECS_SHELVES, PECS_SUBS, PECS_VERBS, PECS_FOLDER_NAMES_AR, cleanPecsWord, capFirst } from "./pecsVocabulary";
 const SEED_WORD_EN: Record<string, string[]> = {
@@ -732,6 +732,35 @@ const VERBS_A_TO_Z: Record<string, { base: string; past: string; participle: str
 // Verbs from the PECS word list: the ones the app can conjugate ("brush", "brush teeth") join Verbs A–Z
 // with all 5 forms; the others ("back rub", "high five") go to Verbs / Other.
 const pecsVerbLeftovers: string[] = [];
+/**
+ * PDF verbs the rules cannot conjugate, with their 5 forms: 1st, s/es, 2nd, 3rd, 4th.
+ * The 1st form is the PDF's own words, so each stays in its letter's folder.
+ */
+const PECS_PHRASE_FORMS: Record<string, [string, string, string, string, string]> = {
+  "back rub": ["back rub", "back rubs", "back rubbed", "back rubbed", "back rubbing"],
+  "back stroke": ["back stroke", "back strokes", "back stroked", "back stroked", "back stroking"],
+  "breast stroke": ["breast stroke", "breast strokes", "breast stroked", "breast stroked", "breast stroking"],
+  "cash out": ["cash out", "cashes out", "cashed out", "cashed out", "cashing out"],
+  "feet on floor": ["feet on floor", "puts feet on floor", "put feet on floor", "put feet on floor", "putting feet on floor"],
+  "flush toilet": ["flush toilet", "flushes toilet", "flushed toilet", "flushed toilet", "flushing toilet"],
+  "food prep": ["food prep", "food preps", "food prepped", "food prepped", "food prepping"],
+  "frog kick": ["frog kick", "frog kicks", "frog kicked", "frog kicked", "frog kicking"],
+  "hands in lap": ["hands in lap", "puts hands in lap", "put hands in lap", "put hands in lap", "putting hands in lap"],
+  "hands to yourself": ["hands to yourself", "keeps hands to yourself", "kept hands to yourself", "kept hands to yourself", "keeping hands to yourself"],
+  "head massage": ["head massage", "head massages", "head massaged", "head massaged", "head massaging"],
+  "hide and seek": ["hide and seek", "hides and seeks", "hid and sought", "hidden and sought", "hiding and seeking"],
+  "high five": ["high five", "high fives", "high fived", "high fived", "high fiving"],
+  "line up": ["line up", "lines up", "lined up", "lined up", "lining up"],
+  "mow lawn": ["mow lawn", "mows lawn", "mowed lawn", "mown lawn", "mowing lawn"],
+  "piggyback": ["piggyback", "piggybacks", "piggybacked", "piggybacked", "piggybacking"],
+  "sledging": ["sledge", "sledges", "sledged", "sledged", "sledging"],
+  "sorting": ["sort", "sorts", "sorted", "sorted", "sorting"],
+  "squish with beanbag": ["squish with beanbag", "squishes with beanbag", "squished with beanbag", "squished with beanbag", "squishing with beanbag"],
+  "stock shelves": ["stock shelves", "stocks shelves", "stocked shelves", "stocked shelves", "stocking shelves"],
+  "stomp feet": ["stomp feet", "stomps feet", "stomped feet", "stomped feet", "stomping feet"],
+  "tantrum": ["tantrum", "throws a tantrum", "threw a tantrum", "thrown a tantrum", "throwing a tantrum"],
+  "water play": ["water play", "plays with water", "played with water", "played with water", "playing with water"],
+};
 {
   // nouns that are on the PDF's verb list
   const NOT_VERBS = new Set(["party", "picnic", "haircut", "tantrum", "up", "piggyback", "backhand", "tubing", "sliced", "chopped"]);
@@ -764,6 +793,14 @@ const pecsVerbLeftovers: string[] = [];
       const v = first && first.base.toLowerCase() === parts[0] ? first : conjugateRegularVerb(parts[0]);
       const rest = parts.slice(1).join(" ");
       vf = { base: `${v.base} ${rest}`, past: `${fixDoubling(v.past)} ${rest}`, participle: `${fixDoubling(v.participle)} ${rest}`, continuous: `${fixDoubling(v.continuous)} ${rest}`, emoji: v.emoji };
+    }
+    // activities the rules cannot conjugate get their 5 forms written out ("high five" -> high fived)
+    const written = PECS_PHRASE_FORMS[lower];
+    if (written) {
+      const [base, s, past, participle, continuous] = written;
+      registerSForm(base, s);
+      vf = { base, past, participle, continuous, emoji: "⚡" };
+      registerVerbForms([vf as VerbForms]);
     }
     if (!vf) {
       pecsVerbLeftovers.push(phrase);
@@ -2489,6 +2526,8 @@ export function cleanAndDeduplicateCategories() {
         const isPlain = (w: CustomWord) => plainVerbs.includes((canonicalWordEn(w.label) || w.label).toLowerCase().trim());
         const customWords = subCat.words.filter((w) => {
           if (isPlain(w) && !w.verbFormTag) return false;
+          // an old spelling of a built-in verb's form ("Bended") — the loop above makes the right one ("Bent")
+          if (!w.isCustom && w.verbFormTag && w.verbForms && list.some((v) => v.base === w.verbForms!.base)) return false;
           if (w.isCustom) return true;
           const en = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
           return !standardVerbWords.has(en) && !standardVerbWords.has(w.label.toLowerCase().trim());
