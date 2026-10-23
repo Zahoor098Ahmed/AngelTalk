@@ -1,6 +1,7 @@
 import { I18nManager } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Language, LanguageCode } from '../types';
+import BOARD_ARABIC from './boardArabic.json';
 
 export const LANGUAGES: Language[] = [
   { code: 'en-US', name: 'English', nativeName: 'English', rtl: false, flag: '🇺🇸' },
@@ -2854,6 +2855,14 @@ function initNormalizedDictionaries() {
     WORD_AR_NORM[kNorm] = v;
     WORD_AR_REV_NORM[v.trim().toLowerCase()] = k.trim();
     WORD_AR_REV_NORM[normalizeArabic(v)] = k.trim();
+  }
+  // Arabic for every other word on the board (PECS words, verb forms); the dictionary above wins
+  for (const [k, v] of Object.entries(BOARD_ARABIC as Record<string, string>)) {
+    const kNorm = k.trim().toLowerCase();
+    if (!/[؀-ۿ]/.test(v)) continue;
+    if (!WORD_AR_NORM[kNorm]) WORD_AR_NORM[kNorm] = v;
+    if (!WORD_AR_REV_NORM[v.trim().toLowerCase()]) WORD_AR_REV_NORM[v.trim().toLowerCase()] = k.trim();
+    if (!WORD_AR_REV_NORM[normalizeArabic(v)]) WORD_AR_REV_NORM[normalizeArabic(v)] = k.trim();
   }
   for (const [k, v] of Object.entries(WORD_UR)) {
     const kNorm = k.trim().toLowerCase();

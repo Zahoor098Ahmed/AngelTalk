@@ -923,7 +923,10 @@ function enforceVerbLetterBuckets(): boolean {
     const letter = verbSubLetter(sub)!;
     const keep: CustomWord[] = [];
     for (const w of sub.words) {
-      const wl = verbLetterOf(w.label);
+      // the verb itself decides the folder ("Is" -> be -> B), not the label's language
+      const wl = w.verbForms?.base
+        ? (w.verbForms.base.charAt(0).toLowerCase().match(/[a-z]/)?.[0] ?? null)
+        : verbLetterOf(/[؀-ۿ]/.test(w.label) && w.seedLabel ? w.seedLabel : w.label);
       if (!wl || wl === letter) {
         keep.push(w);
         continue;
@@ -1350,6 +1353,12 @@ const pecsSplitNames: { en: string; base: string; range: string }[] = [];
   const allSubs = [...PECS_SUBS, ...letterSubs];
   for (const sub of allSubs) {
     const words: string[] = [];
+    // every PDF category keeps all of its words, also those another folder has too ("Apple" in Food / Fruits and
+    // in "Fruits, Vegetables & Nuts"); only a folder's own repeats are dropped. Verb phrases are placed once.
+    const isLetterSub = /^Verbs [A-Z]$/.test(sub.name);
+    const inThisFolder = new Set(
+      (STARTER_SUBCATEGORIES.find((x) => x.parentCategory === sub.parent && x.name === sub.name)?.words ?? []).map(([l]) => norm(l)),
+    );
     for (const rawWord of sub.words.split(",")) {
       const cleaned = cleanPecsWord(rawWord, "keepNumbers" in sub ? !!sub.keepNumbers : false);
       if (!cleaned) continue;
@@ -1362,9 +1371,10 @@ const pecsSplitNames: { en: string; base: string; range: string }[] = [];
         if (!words.includes(label)) words.push(label);
         continue;
       }
-      if (seen.has(key)) continue;
+      if (isLetterSub ? seen.has(key) : inThisFolder.has(key)) continue;
       if (guarded.has(sub.parent.toLowerCase()) && verbWords.has(key)) continue;
       seen.add(key);
+      inThisFolder.add(key);
       words.push(label);
       if (/^Verbs [A-Z]$/.test(sub.name)) PECS_PLAIN_VERBS.set(label.toLowerCase(), sub.name.slice(-1));
     }
@@ -1511,6 +1521,7 @@ async function translatePendingAsync(
           const targetCat = cache.find((c) => c.id === item.catId);
           const targetWord = targetCat?.words.find((w) => w.id === item.id);
           if (targetWord) {
+            if (!/[؀-ۿ]/.test(targetWord.label)) targetWord.seedLabel = targetWord.label;
             targetWord.label = translated;
             targetWord.phrase = translated;
             hasUpdates = true;
@@ -1588,14 +1599,15 @@ export function retranslateSeedBoard(lang: LanguageCode) {
     // 1. Category name translation (both standard & custom)
     const rawCatName = cat.name.trim();
     if (lang === "en-US") {
-      const enRaw = canonicalWordEn(rawCatName) || FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || rawCatName;
-      const enCat = FOLDER_ALIASES[enRaw.toLowerCase()] ?? enRaw;
+      const enRaw = FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || canonicalWordEn(rawCatName) || rawCatName;
+      const enKey = FOLDER_ALIASES[enRaw.toLowerCase()] ?? enRaw;
+      const enCat = FOLDER_NAMES["en-US"]?.[enKey] ?? enKey; // the "Actions" shelf is shown as "Verbs"
       if (enCat !== cat.name) {
         cat.name = enCat;
         changed = true;
       }
     } else {
-      const enRaw = canonicalWordEn(rawCatName) || FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || rawCatName;
+      const enRaw = FOLDER_EN_BY_LANG[rawCatName.toLowerCase()] || canonicalWordEn(rawCatName) || rawCatName;
       const enCat = FOLDER_ALIASES[enRaw.toLowerCase()] ?? enRaw;
       const anchor = FOLDER_EN_BY_LANG[enCat.toLowerCase()] ?? enCat; // "Verbs" -> "Actions"
       const localizedName = FOLDER_NAMES[lang]?.[enCat] || FOLDER_NAMES[lang]?.[anchor] || wordLabel(enCat, lang);
@@ -1619,6 +1631,12 @@ export function retranslateSeedBoard(lang: LanguageCode) {
         }
       } else {
         const en = englishOfWord(w, cat);
+        // remember the English word, so switching back to English finds it again
+        // (two words can share one Arabic word, and online translations have no way back)
+        if (en && !/[؀-ۿ]/.test(en) && w.seedLabel !== en) {
+          w.seedLabel = en;
+          changed = true;
+        }
         const localized = wordLabel(en, lang);
 
         if (localized && localized.toLowerCase() !== rawWordLabel.toLowerCase()) {
@@ -2474,7 +2492,9 @@ export function cleanAndDeduplicateCategories() {
     const uniqueWords: CustomWord[] = [];
     for (const w of c.words) {
       const tagPrefix = w.verbFormTag ? `${w.verbFormTag}::` : "";
-      const key = `${tagPrefix}${(canonicalWordEn(w.label) || w.label).trim().toLowerCase()}`;
+      // the English word (two English words can share one Arabic word: crocodile / alligator)
+      const en = /[؀-ۿ]/.test(w.label) && w.seedLabel ? w.seedLabel : canonicalWordEn(w.label) || w.label;
+      const key = `${tagPrefix}${en.trim().toLowerCase()}`;
       if (!key) continue;
       const idx = seenWords.get(key);
       if (idx === undefined) {
@@ -2555,14 +2575,14 @@ export function cleanAndDeduplicateCategories() {
             if (isDeletedWord(subCat.id, f.word, f.tag)) return; // deleted by caregiver
             let existing = preferCustomized(subCat.words.filter((w) => {
               if (usedExistingIds.has(w.id)) return false;
-              const en = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
+              const en = (w.seedLabel || canonicalWordEn(w.label) || w.label).toLowerCase().trim();
               const isMatch = en === f.word.toLowerCase() || w.label.toLowerCase().trim() === f.word.toLowerCase();
               return isMatch && w.verbFormTag === f.tag;
             }));
             if (!existing) {
               existing = subCat.words.find((w) => {
                 if (usedExistingIds.has(w.id)) return false;
-                const en = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
+                const en = (w.seedLabel || canonicalWordEn(w.label) || w.label).toLowerCase().trim();
                 return en === f.word.toLowerCase() || w.label.toLowerCase().trim() === f.word.toLowerCase();
               });
             }
@@ -2581,6 +2601,7 @@ export function cleanAndDeduplicateCategories() {
               size: "md",
               order: orderIndex++,
               verbFormTag: f.tag,
+              seedLabel: capWord(f.word),
               // which verb it is, so all its forms make one box on the Talk board (also "brush teeth")
               verbForms: { base: v.base, past: v.past, participle: v.participle, continuous: v.continuous, emoji: v.emoji },
               hidden: existing?.hidden ?? false,
@@ -2700,7 +2721,7 @@ export function cleanAndDeduplicateCategories() {
       ["the", "🔹"],
     ];
     for (const [wLabel, wEmoji] of [...essentialCore].reverse()) {
-      if (!isDeletedWord(coreCat.id, wLabel) && !coreCat.words.some((w) => w.label.toLowerCase() === wLabel.toLowerCase())) {
+      if (!isDeletedWord(coreCat.id, wLabel) && !coreCat.words.some((w) => [w.label, w.seedLabel, canonicalWordEn(w.label)].some((l) => (l || "").toLowerCase() === wLabel.toLowerCase()))) {
         coreCat.words.unshift({
           id: uid("word"),
           label: wLabel,

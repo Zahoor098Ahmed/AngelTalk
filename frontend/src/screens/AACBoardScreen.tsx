@@ -188,6 +188,9 @@ function CardPic({
   return <Text style={{ fontSize: Math.max(18, Math.round(size * 0.72)) }}>{emoji || "🔹"}</Text>;
 }
 
+/** The noun forms popup (Apple / Apples / Apple's / Apples') is off: forms are only for verbs. */
+const NOUN_FORMS_ENABLED = false;
+
 /** Shelves whose tiles are not nouns (no Apple / Apples / Apple's / Apples' popup). */
 const NOT_NOUN_SHELVES = new Set([
   "core", "say it for me", "subjects", "sentence starters & phrases", "attributes", "feelings", "alphabet & numerals",
@@ -448,7 +451,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
 
   // Nouns: one box; tapping it opens Apple · Apples · Apple's · Apples' (Settings > "Noun forms to show")
   const isNounCategory = useMemo(() => {
-    if (!current || isActionsCategory) return false;
+    // forms are shown only in the Verbs folders; noun tiles speak straight away
+    if (!NOUN_FORMS_ENABLED || !current || isActionsCategory) return false;
     const root = current.parentCategoryId ? getCategory(current.parentCategoryId) ?? current : current;
     const en = (canonicalWordEn(root.name) || root.name).trim().toLowerCase();
     return !NOT_NOUN_SHELVES.has(en);

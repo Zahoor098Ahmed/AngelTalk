@@ -204,6 +204,8 @@ export default function AccessibilityScreen({ onBack }: Props) {
             })}
           </View>
 
+          {/* ---- noun forms (off: forms are shown only for verbs) ---- */}
+          {false && (<>
           {/* ---- noun forms ---- */}
           <Text style={styles.sectionTitle}>
             {lang === "ar-SA" ? "صيغ الأسماء المعروضة" : lang === "ur-PK" ? "دکھائی جانے والی اسم کی فارمز" : "Noun forms to show"}
@@ -248,6 +250,8 @@ export default function AccessibilityScreen({ onBack }: Props) {
               );
             })}
           </View>
+
+          </>)}
 
           {/* ---- admin ---- */}
           <Text style={styles.sectionTitle}>{t("setParentControls", lang)}</Text>
