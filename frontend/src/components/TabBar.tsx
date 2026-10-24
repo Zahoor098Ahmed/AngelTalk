@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TabScreen } from "../types";
@@ -19,16 +19,30 @@ const TABS: { key: TabScreen; icon: keyof typeof Ionicons.glyphMap; tKey: TKey }
   { key: "progress", icon: "stats-chart", tKey: "progress" },
 ];
 
-export default function TabBar({ active, onChange, labels }: TabBarProps) {
+/** The bottom navbar is turned off in the whole app: screens move with their own Home / back buttons. */
+const TAB_BAR_ENABLED = false;
+
+export default function TabBar(props: TabBarProps) {
+  if (!TAB_BAR_ENABLED) return null;
+  return <TabBarView {...props} />;
+}
+
+function TabBarView({ active, onChange, labels }: TabBarProps) {
   const { isSmallPhone, isTablet } = useResponsive();
   const { settings } = useSettings();
   const lang = settings.language;
   const insets = useSafeAreaInsets();
+  // PC / wide screens keep the full-size bar; on a phone the icons stay the same size,
+  // only the green circle behind them and the bar's padding are smaller
+  const { width } = useWindowDimensions();
+  const isWide = width >= 700;
   const iconSize = isSmallPhone ? 27 : isTablet ? 34 : 31;
   const labelFontSize = isSmallPhone ? 12 : isTablet ? 15 : 14;
+  const circle = isWide ? 58 : 42;
+  const pad = isWide ? 8 : 7; // same space above and below the icons on a phone
 
   return (
-    <View style={[styles.bar, { paddingBottom: 8 + insets.bottom }]}>
+    <View style={[styles.bar, { paddingTop: isWide ? 6 : pad, paddingBottom: pad + insets.bottom }]}>
       <View style={[styles.innerContainer, isTablet && styles.innerContainerTablet]}>
         {TABS.map((tab) => {
           const isActive = active === tab.key;
@@ -41,7 +55,7 @@ export default function TabBar({ active, onChange, labels }: TabBarProps) {
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
             >
-              <View style={[styles.iconCircle, isActive && styles.iconCircleActive]}>
+              <View style={[styles.iconCircle, { width: circle, height: circle, borderRadius: circle / 2 }, isActive && styles.iconCircleActive]}>
                 <Ionicons
                   name={tab.icon}
                   size={iconSize}
@@ -76,8 +90,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     borderTopWidth: 1,
     borderTopColor: "#e5e9ee",
-    paddingTop: 6,
-    paddingBottom: 8,
+    paddingTop: 4,
+    paddingBottom: 4,
     width: "100%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -2 },
@@ -100,12 +114,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
-    paddingVertical: 2,
+    paddingVertical: 0,
   },
   iconCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },

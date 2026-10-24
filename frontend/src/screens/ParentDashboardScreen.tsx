@@ -47,11 +47,13 @@ type SubTab = "overview" | "therapy" | "journal" | "passcard" | "vocabulary" | "
 
 const SUB_TABS: { key: SubTab; labelKey: TKey; icon: string }[] = [
   { key: "overview", labelKey: "tabOverview", icon: "stats-chart" },
-  { key: "therapy", labelKey: "tabTherapyGoals", icon: "flag" },
-  { key: "journal", labelKey: "tabCareJournal", icon: "journal" },
+  // Therapy Goals and Care Journal: hidden for now
+  // { key: "therapy", labelKey: "tabTherapyGoals", icon: "flag" },
+  // { key: "journal", labelKey: "tabCareJournal", icon: "journal" },
   { key: "passcard", labelKey: "tabPasscard", icon: "card" },
   { key: "vocabulary", labelKey: "tabVocabulary", icon: "chatbubble-ellipses" },
-  { key: "schedule", labelKey: "tabSchedule", icon: "calendar" },
+  // Schedule: hidden for now
+  // { key: "schedule", labelKey: "tabSchedule", icon: "calendar" },
   { key: "privacy", labelKey: "tabPrivacy", icon: "shield-checkmark" },
 ];
 
@@ -296,7 +298,8 @@ export default function ParentDashboardScreen({
 
         {/* SubTabs Navigation Bar */}
         <View style={{ width: "100%", borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.subTabs}>
+          {/* the tabs share the full width equally */}
+          <View style={styles.subTabs}>
             {SUB_TABS.map((s) => {
               const active = subTab === s.key;
               return (
@@ -313,14 +316,18 @@ export default function ParentDashboardScreen({
                     size={15}
                     color={active ? colors.indigo : colors.textLight}
                   />
-                  <Text style={[styles.subTabText, active && { color: colors.indigo, fontWeight: "800" }]}>
+                  <Text
+                    style={[styles.subTabText, active && { color: colors.indigo, fontWeight: "800" }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
                     {tt(s.labelKey)}
                   </Text>
                   {active && <View style={styles.subTabUnderline} />}
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </View>
         </View>
 
         <ScrollView contentContainerStyle={[styles.body, isTablet && styles.bodyTablet]} showsVerticalScrollIndicator={false}>
@@ -1157,27 +1164,29 @@ const styles = StyleSheet.create({
   diagChipText: { color: colors.forestDark, fontSize: 11, fontWeight: "700" },
 
   subTabs: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 16,
+    flexDirection: "row",
+    width: "100%",
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    gap: 12,
+    gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   subTabBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 8,
     borderRadius: 16,
     backgroundColor: "#f1f5f9",
   },
   subTabBtnActive: {
     backgroundColor: "#eff6ff",
   },
-  subTabText: { fontSize: 13, color: colors.textLight, fontWeight: "600" },
+  subTabText: { fontSize: 13, color: colors.textLight, fontWeight: "600", flexShrink: 1 },
   subTabUnderline: { display: "none" },
 
   body: { padding: 18, gap: 16, paddingBottom: 60 },

@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -11,10 +11,15 @@ import { tapFeedback } from "../modules/haptics";
 import SmartImage from "../components/SmartImage";
 import { useResponsive } from "../modules/responsive";
 import LangBadge from "../components/LangBadge";
-import Mascot from "../components/Mascot";
 import SoftBackdrop from "../components/SoftBackdrop";
 import TabBar from "../components/TabBar";
 import { colors } from "../theme";
+import { ensureCategoriesLoaded, bottomTabCategories, getCategory, folderPictureFor, folderEnglishName, subscribeCategories } from "../modules/customCategories";
+import HOME_PICTURES from "../modules/homeCategoryPictures.json";
+import Mascot from "../components/Mascot";
+
+/** Hand-drawn 3D pictures (Microsoft Fluent Emoji, MIT) for the main categories on the Home screen. */
+const homePictures: Record<string, string> = HOME_PICTURES as Record<string, string>;
 
 interface Props {
   child: ChildProfile;
@@ -24,12 +29,33 @@ interface Props {
   onOpenSocialStories?: () => void;
   labels: Record<TabScreen, string>;
   onUpdateChild?: (child: ChildProfile) => void;
+  /** Opens the Talk board inside this category. */
+  onOpenCategory?: (categoryId: string) => void;
 }
 
 export default function HomeScreen(props: Props) {
-  const { child: propChild, tab, onTabChange, onOpenMore, labels, onUpdateChild } = props;
-  const child = getChild(propChild.id) ?? propChild;
+  const { child: propChild, tab, onTabChange, onOpenMore, labels, onUpdateChild, onOpenCategory } = props;
   const { settings } = useSettings();
+  // the main categories of the Talk board; tapping one opens the board inside it
+  const [catTick, setCatTick] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    ensureCategoriesLoaded().then(() => alive && setCatTick((n) => n + 1));
+    const unsub = subscribeCategories(() => setCatTick((n) => n + 1));
+    return () => {
+      alive = false;
+      unsub();
+    };
+  }, []);
+  // exactly the Talk board's list: same names and order, and a category the parent hides or deletes leaves both
+  const categories = useMemo(
+    () =>
+      bottomTabCategories(settings.language)
+        .map((t) => ({ tab: t, cat: getCategory(t.id) }))
+        .filter((x): x is { tab: typeof x.tab; cat: NonNullable<typeof x.cat> } => !!x.cat && !x.cat.hidden),
+    [catTick, settings.language],
+  );
+  const child = getChild(propChild.id) ?? propChild;
   const { isTablet } = useResponsive();
   const lang = settings.language;
   const hour = new Date().getHours();
@@ -50,7 +76,8 @@ export default function HomeScreen(props: Props) {
   }, [child.id, child.stars, usage.consecutiveDays, usage.gameStreak, usage.lastPlayedDate, onUpdateChild]);
 
   const STATS: { icon: keyof typeof Ionicons.glyphMap; tint: string; bg: string; value: number; label: string }[] = [
-    { icon: "star", tint: "#d97706", bg: "#fef3c7", value: child.stars ?? 0, label: tr("Stars", "نجوم", "ستارے") },
+    // Stars card: hidden for now
+    // { icon: "star", tint: "#d97706", bg: "#fef3c7", value: child.stars ?? 0, label: tr("Stars", "نجوم", "ستارے") },
     { icon: "chatbubbles", tint: "#2563eb", bg: "#dbeafe", value: weekWords, label: tr("Words this week", "كلمات هذا الأسبوع", "اس ہفتے کے الفاظ") },
     { icon: "flame", tint: "#ea580c", bg: "#ffedd5", value: usage.consecutiveDays ?? 0, label: tr("Days in a row", "أيام متتالية", "لگاتار دن") },
   ];
@@ -84,10 +111,12 @@ export default function HomeScreen(props: Props) {
                 </View>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                {/* star count badge: hidden for now
                 <View style={styles.starBadgeHeader}>
                   <Ionicons name="star" size={17} color="#fbbf24" />
                   <Text style={styles.starBadgeHeaderText}>{child.stars ?? 0}</Text>
                 </View>
+                */}
                 <LangBadge dark />
                 <Pressable
                   onPress={onOpenMore}
@@ -107,6 +136,8 @@ export default function HomeScreen(props: Props) {
           showsVerticalScrollIndicator={false}
         >
           {/* Start talking — the main thing a child comes here to do */}
+          {/* Talk Board card (Start Talking): hidden for now */}
+          {false && (
           <Pressable
             onPress={() => {
               tapFeedback();
@@ -135,9 +166,10 @@ export default function HomeScreen(props: Props) {
               )}
             </View>
           </Pressable>
+          )}
 
-          {/* Little progress strip */}
-          <View style={styles.statsRow}>
+          {/* Little progress strip: hidden for now */}
+          {false && <View style={styles.statsRow}>
             {STATS.map((st) => (
               <View key={st.icon} style={[styles.statCard, isTablet && styles.statCardTablet]}>
                 <View style={[styles.statIcon, { backgroundColor: st.bg }]}>
@@ -149,14 +181,54 @@ export default function HomeScreen(props: Props) {
                 </View>
               </View>
             ))}
-          </View>
+          </View>}
+
+          {/* Main categories: tap one to open it on the Talk board */}
+          {categories.length > 0 && (
+            <>
+              <Text style={styles.catTitle}>{tr("Categories", "الفئات", "زمرے")}</Text>
+              <View style={styles.catGrid}>
+                {categories.map(({ tab, cat: c }) => {
+                  const en = folderEnglishName(c).toLowerCase();
+                  const home = homePictures[en === "actions" ? "verbs" : en];
+                  const pic = home ? { uri: home } : folderPictureFor(c);
+                  return (
+                    <Pressable
+                      key={c.id}
+                      onPress={() => {
+                        tapFeedback();
+                        if (onOpenCategory) onOpenCategory(c.id);
+                        else onTabChange("speak");
+                      }}
+                      style={({ pressed }) => [styles.catCard, isTablet && styles.catCardTablet, pressed && { transform: [{ scale: 0.97 }] }]}
+                      accessibilityLabel={tab.name}
+                    >
+                      <View style={[styles.catPicBox, { backgroundColor: (c.color || colors.forest) + "18" }]}>
+                        {pic.uri ? (
+                          <SmartImage source={{ uri: pic.uri }} style={styles.catPic} />
+                        ) : pic.text ? (
+                          <Text style={[styles.catPicText, { color: c.color || colors.forest }]}>{pic.text}</Text>
+                        ) : (
+                          <Text style={{ fontSize: 34 }}>{tab.icon || "📁"}</Text>
+                        )}
+                      </View>
+                      <Text style={[styles.catName, { color: c.color || colors.textDark }]} numberOfLines={2}>
+                        {tab.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          )}
 
           <View style={{ height: 20 }} />
         </ScrollView>
       </SafeAreaView>
 
-      {/* Main 5-Tab Navigation Bar */}
+      {/* Main 5-Tab Navigation Bar: hidden on Home for now
       <TabBar active={tab} onChange={onTabChange} labels={labels} />
+      */}
     </View>
   );
 }
@@ -255,6 +327,22 @@ const styles = StyleSheet.create({
 
   /* stats strip */
   statsRow: { flexDirection: "row", gap: 12 },
+  logoWrap: {
+    width: 60, height: 60, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center", justifyContent: "center",
+  },
+  catTitle: { fontSize: 18, fontWeight: "800", color: colors.textDark, marginTop: 18, marginBottom: 10 },
+  catGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  catCard: {
+    width: "31%", flexGrow: 1, maxWidth: "32%", minWidth: 96, backgroundColor: "#ffffff", borderRadius: 20,
+    borderWidth: 1, borderColor: "#efe9e1", padding: 10, alignItems: "center", gap: 8,
+    shadowColor: "#7a5c3e", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
+  },
+  catCardTablet: { width: "18%", maxWidth: "19.2%" },
+  catPicBox: { width: "100%", aspectRatio: 1.2, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  catPic: { width: "78%", height: "84%", resizeMode: "contain" },
+  catPicText: { fontSize: 26, fontWeight: "800" },
+  catName: { fontSize: 13, fontWeight: "800", textAlign: "center" },
   statCard: {
     flex: 1,
     backgroundColor: "#ffffff",

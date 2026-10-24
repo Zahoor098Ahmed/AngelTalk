@@ -78,6 +78,8 @@ function AppInner() {
   const [currentChild, setCurrentChild] = useState<ChildProfile | null>(null);
   const [categoryReturnScreen, setCategoryReturnScreen] = useState<"speak" | "more">("more");
   const [categoryInitialId, setCategoryInitialId] = useState<string | null>(null);
+  // the category picked on the Home screen; the Talk board opens inside it
+  const [talkCategoryId, setTalkCategoryId] = useState<string | null>(null);
   const [enrollReturnScreen, setEnrollReturnScreen] = useState<Screen>("face-scan");
   const lang = settings.language;
   const tabLabels: Record<TabScreen, string> = {
@@ -174,11 +176,15 @@ function AppInner() {
         <HomeScreen
           child={currentChild}
           tab={currentTab}
-          onTabChange={(t) => setCurrentTab(t)}
+          onTabChange={(t) => { setTalkCategoryId(null); setCurrentTab(t); }}
           onOpenMore={() => go("more")}
           onOpenSocialStories={() => go("social-stories")}
           onUpdateChild={setCurrentChild}
           labels={tabLabels}
+          onOpenCategory={(catId) => {
+            setTalkCategoryId(catId);
+            setCurrentTab("speak");
+          }}
         />
       );
     } else if (currentTab === "speak") {
@@ -188,6 +194,7 @@ function AppInner() {
           tab={currentTab}
           onTabChange={(t) => setCurrentTab(t)}
           labels={tabLabels}
+          initialCategoryId={talkCategoryId}
           onOpenCategories={(catId) => {
             setCategoryReturnScreen("speak");
             setCategoryInitialId(catId ?? null);
@@ -329,8 +336,9 @@ function MoreMenu({
   const insets = useSafeAreaInsets();
 
   const tabShortcuts: { tab: TabScreen; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
-    { tab: "home", label: t("homeHub", lang), icon: "home", color: colors.forest },
-    { tab: "speak", label: t("aacTalkBoard", lang), icon: "chatbubble-ellipses", color: "#0284c7" },
+    // Home Hub and AAC Talk Board: hidden for now (Home opens the Talk board itself)
+    // { tab: "home", label: t("homeHub", lang), icon: "home", color: colors.forest },
+    // { tab: "speak", label: t("aacTalkBoard", lang), icon: "chatbubble-ellipses", color: "#0284c7" },
     { tab: "progress", label: t("doctorProgressReports", lang), icon: "stats-chart", color: "#7c3aed" },
   ];
 

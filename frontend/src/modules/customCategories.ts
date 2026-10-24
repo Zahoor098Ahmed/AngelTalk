@@ -862,6 +862,12 @@ function mergeIntoExistingWord(
 
 /** Returns the letter ("a".."z") if this category is a "Verbs X" sub-category, else null. */
 /** "A".."Z" for the Actions › Verbs A–Z folders, otherwise null. */
+/** The English name of a folder in any language ("أفعال" -> "Verbs", "حيوانات" -> "Animals"). */
+export function folderEnglishName(c: CustomCategory): string {
+  const raw = (c.seedName || FOLDER_EN_BY_LANG[(c.name || "").toLowerCase()] || canonicalWordEn(c.name) || c.name || "").trim();
+  return FOLDER_NAMES["en-US"]?.[raw] ?? raw; // "Actions" -> "Verbs"
+}
+
 export function folderPictureFor(c: CustomCategory): { text?: string; uri?: string } {
   const enOf = (x: CustomCategory) =>
     (x.seedName || FOLDER_EN_BY_LANG[(x.name || "").toLowerCase()] || canonicalWordEn(x.name) || x.name || "").trim();

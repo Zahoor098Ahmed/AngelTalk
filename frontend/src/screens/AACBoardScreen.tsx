@@ -56,6 +56,8 @@ interface Props {
   onTabChange: (tab: TabScreen) => void;
   onOpenCategories?: (categoryId?: string) => void;
   labels: Record<TabScreen, string>;
+  /** A category picked on the Home screen: the board opens inside it. */
+  initialCategoryId?: string | null;
 }
 
 interface Chip extends SpokenWord {
@@ -233,7 +235,7 @@ function verbFormBadgeTitle(badge: string, lang: string): string {
   }
 }
 
-export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategories, labels }: Props) {
+export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategories, labels, initialCategoryId }: Props) {
   const { settings, update } = useSettings();
   const lang = settings.language;
   const boardMode = settings.boardMode || "phrase";
@@ -271,7 +273,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   const folderPicSize = Math.round(Math.min(190, Math.max(36, Math.min(tileW * 0.8, tileW / 0.95 - 62))));
 
   const [ready, setReady] = useState(false);
-  const [path, setPath] = useState<string[]>([]); // category id stack
+  const [path, setPath] = useState<string[]>(initialCategoryId ? [initialCategoryId] : []); // category id stack
+  useEffect(() => {
+    if (initialCategoryId) setPath([initialCategoryId]);
+  }, [initialCategoryId]);
   const [sentence, setSentence] = useState<Chip[]>([]);
   const [typed, setTyped] = useState(""); // word the child is typing in the sentence box
   // Suggestions fold away when a category is opened so its words have room; any new word brings them back
@@ -294,9 +299,9 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
           const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
           return en === "core" || t.name === "بنیادی" || t.name === "أساسي";
         }) ?? tabs[0];
-      if (coreTab?.id) {
-        setPath([coreTab.id]);
-      }
+      // a category picked on the Home screen wins over the default
+      if (initialCategoryId && getCategory(initialCategoryId)) setPath([initialCategoryId]);
+      else if (coreTab?.id) setPath([coreTab.id]);
     });
   }, []);
 
