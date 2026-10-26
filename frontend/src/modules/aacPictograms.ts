@@ -9,6 +9,7 @@ import { getVerbForms } from "./verbForms";
 import PECS_PICTURES from "./pecsPictograms.json";
 import PICTURE_FIXES from "./pictureFixes.json";
 import SYMBOL_PICTURES from "./symbolPictures.json";
+import UNIQUE_PICTURES from "./uniquePictures.json";
 
 /** Pictures picked from ARASAAC for the PECS words that have no exact dictionary entry. */
 const pecsPictures: Record<string, number> = PECS_PICTURES as Record<string, number>;
@@ -16,6 +17,11 @@ const pecsPictures: Record<string, number> = PECS_PICTURES as Record<string, num
 const pictureFixes: Record<string, number> = PICTURE_FIXES as Record<string, number>;
 /** Exact pictures from other AAC symbol sets on Global Symbols, for words ARASAAC has no picture of. */
 const symbolPictures: Record<string, string> = SYMBOL_PICTURES as Record<string, string>;
+/**
+ * Every word on the board has its own picture: a word whose usual picture belongs to another word ("rabbit" and
+ * "bunny") gets its own exact picture here, or "" for none (the tile shows its emoji).
+ */
+const uniquePictures: Record<string, string> = UNIQUE_PICTURES as Record<string, string>;
 
 function arasaac(id: number): string {
   return `https://static.arasaac.org/pictograms/${id}/${id}_500.png`;
@@ -37,6 +43,8 @@ export const AAC_PICTOGRAM_MAP: Record<string, string> = {
   people: arasaac(2392), // Family / people
   actions: arasaac(2719), // Running / action
   feelings: arasaac(3250),
+  "computer electronics and accessories": arasaac(7191), // Computer
+  "alphabets and numerals": arasaac(2879),
 
   // Schools category words (exact matches from user reference photo)
   teacher: arasaac(2457), // Teacher pointing to chalkboard
@@ -269,7 +277,9 @@ export const AAC_PICTOGRAM_MAP: Record<string, string> = {
  * or `undefined` when the word needs no fix.
  */
 export function pictureFixFor(label: string): string | null | undefined {
-  const id = pictureFixes[label.toLowerCase().trim()];
+  const key = label.toLowerCase().trim();
+  if (key in uniquePictures) return uniquePictures[key] || null;
+  const id = pictureFixes[key];
   if (id === undefined) return undefined;
   return id ? arasaac(id) : null;
 }
@@ -303,7 +313,13 @@ export function getPictogramUrl(label: string): string | null {
   if (!label) return null;
   const lower = label.toLowerCase().trim();
 
+  // Alphabet & Numeral formatted tiles ("A - aa (Ay)", "0 - null (Zero)", "٠ - صفر (0 - Zero)") render their own language badge, never a word pictogram
+  if (/^([\u0621-\u064A\u0660-\u0669]{1,2}|[a-zA-Z\u00C0-\u017F]|\d{1,3})\s*(?:-\s*[^()]+)?\s*\([^)]+\)$/.test(label.trim())) {
+    return null;
+  }
+
   // 0. Words checked by eye whose usual picture shows another meaning ("sink" -> a sinking ship)
+  if (lower in uniquePictures) return uniquePictures[lower] || null;
   const fix = pictureFixFor(lower);
   if (fix) return fix;
   if (fix === null) return symbolPictures[lower] ?? null;

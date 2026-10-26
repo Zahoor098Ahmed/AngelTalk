@@ -512,7 +512,7 @@ export const ChildrenPage: React.FC = () => {
                             ) : (
                               <span>{sub.icon || "📂"}</span>
                             )}
-                            <span>{sub.name}</span>
+                            <span>{sub.name.replace(" / ", " › ")}</span>
                             <span
                               className={`text-[10px] px-1.5 py-0.5 rounded-md ${
                                 isSubActive

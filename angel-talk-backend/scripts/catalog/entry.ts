@@ -107,8 +107,19 @@ export async function buildCatalog(): Promise<Record<string, Doc[]>> {
   // ---- 1. Default board -> seedtemplates: one template per folder that holds words ----
   cats.setSeedLanguage("en-US" as never);
   await cats.ensureCategoriesLoaded();
-  const board = cats.listCategories();
-  const byId = new Map(board.map((c) => [c.id, c]));
+  const rawBoard = cats.listCategories();
+  const byId = new Map(rawBoard.map((c) => [c.id, c]));
+  const board: typeof rawBoard = [];
+  const visitTree = (parentId: string | null) => {
+    const children = rawBoard
+      .filter((c) => (c.parentCategoryId ?? null) === parentId)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    for (const ch of children) {
+      board.push(ch);
+      visitTree(ch.id);
+    }
+  };
+  visitTree(null);
   const pathOf = (c: (typeof board)[number]): string[] => {
     const parent = c.parentCategoryId ? byId.get(c.parentCategoryId) : undefined;
     return parent ? [...pathOf(parent), c.name] : [c.name];
@@ -165,7 +176,6 @@ export async function buildCatalog(): Promise<Record<string, Doc[]>> {
       source: "app",
     });
   };
-  verbs.VERB_FORMS_LIST.forEach((v) => addVerb(v));
   Object.values(aToZ).forEach((list) => list.forEach((v) => addVerb(v)));
   C.verbgroups = [...verbMap.values()].sort((a, b) => String(a.base).localeCompare(String(b.base)));
   const vm = verbs as Mod;

@@ -40,21 +40,31 @@ const FORM_LABEL: Record<string, string> = {
 };
 
 const MAIN_ICONS: Record<string, string> = {
-  Core: "💬",
-  People: "👨‍👩‍👧‍👦",
-  Feelings: "😊",
-  Actions: "🏃",
-  Food: "🍎",
-  Places: "🏠",
-  Things: "🧸",
-  Subjects: "🙋",
-  Red: "🎨",
-  Colors: "🎨",
-  "Say It For Me": "🗣️",
-  Schools: "🏫",
-  Sports: "⚽",
-  Hygiene: "🧼",
-  Music: "🎵",
+  "Alphabets and Numerals": "🔤",
+  Animals: "🐾",
+  Attributes: "🎨",
+  Body: "🖐️",
+  Calendar: "📅",
+  "Clothing and Accessories": "👕",
+  "Computer Electronics and Accessories": "💻",
+  Emotions: "😊",
+  "Food and Drinks": "🍎",
+  "Holidays and Celebrations": "🎉",
+  "Hygiene and Personal Care": "🧼",
+  "Money and Finance": "💰",
+  "Music, Instruments and Equipment": "🎵",
+  "Nature and Outdoor": "🌳",
+  "Objects In": "🏠",
+  "People and Characters": "👨‍👩‍👧‍👦",
+  Places: "📍",
+  Preposition: "🧭",
+  "Sentence Starters, Phrases and Questions": "💬",
+  "Songs and Stories": "📖",
+  "Sports and Fitness": "⚽",
+  "Tools and Supplies": "🛠️",
+  "Toys and Leisure Items": "🧸",
+  "Transportation and Travel": "🚗",
+  Verbs: "⚡",
 };
 
 /** Picture for a word from the app's own ARASAAC dictionary (saved in the database). */
@@ -518,12 +528,18 @@ export const TemplatesPage: React.FC = () => {
                         {group.subTemplates.map(({ subName, template: subTpl }) => {
                           const isSubSelected = subTpl._id === selectedId;
                           const count = subTpl.wordCount ?? subTpl.words?.length ?? 0;
+                          const isNestedSub = subName.includes(" / ");
+                          const displaySubName = isNestedSub
+                            ? `↳ ${subName.split(" / ").pop()}`
+                            : subName;
                           return (
                             <button
                               key={subTpl._id}
                               type="button"
                               onClick={() => choose(subTpl._id)}
-                              className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between gap-2 transition-all ${
+                              className={`w-full text-left py-2 rounded-xl text-xs flex items-center justify-between gap-2 transition-all ${
+                                isNestedSub ? "pl-7 pr-3" : "px-3"
+                              } ${
                                 isSubSelected
                                   ? "bg-indigo-600 text-white font-bold shadow-sm"
                                   : "text-slate-700 hover:bg-white font-medium"
@@ -535,7 +551,7 @@ export const TemplatesPage: React.FC = () => {
                                 ) : (
                                   <span className="text-sm shrink-0">{subTpl.icon || "📂"}</span>
                                 )}
-                                <span className="truncate">{subName}</span>
+                                <span className="truncate">{displaySubName}</span>
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0">
                                 <span

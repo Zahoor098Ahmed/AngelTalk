@@ -4,6 +4,7 @@ import { starterLabel, wordLabel, canonicalWordEn, translateDynamic } from "./i1
 import { getPictogramUrl, isOneWordGuess, pictureFixFor, hasSymbolPicture } from "./aacPictograms";
 import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, isContinuousForm, sFormOf, conjugateRegularVerb, KNOWN_REGULAR_VERBS, registerVerbForms, registerSForm, type VerbForms } from "./verbForms";
 import PECS_EMOJI from "./pecsEmoji.json";
+import { CLIENT_SHELVES, CLIENT_VERBS } from "./clientVocabulary";
 import { PECS_SHELVES, PECS_SUBS, PECS_VERBS, PECS_FOLDER_NAMES_AR, cleanPecsWord, capFirst } from "./pecsVocabulary";
 const SEED_WORD_EN: Record<string, string[]> = {
   Core: ["I", "am", "is", "are", "was", "I want", "More", "Help", "No", "Yes", "All done", "I need", "I feel", "I like", "Can I have", "Please", "Thank you", "Stop", "Go", "to", "the", "Look", "Where"],
@@ -21,7 +22,7 @@ export function setSeedLanguage(lang: LanguageCode) {
   seedLang = lang;
 }
 
-const KEY = "kiddocare_custom_categories";
+const KEY = "kiddocare_custom_categories_wordfile_v6";
 const BACKUP_VERSION = 2;
 
 // Other spellings caregivers use for a built-in folder (e.g. a voice-made "Subject" folder)
@@ -52,7 +53,7 @@ export function notifyListeners() {
   });
 }
 
-const DELETED_KEYS_STORAGE = "kiddocare_deleted_items_v2";
+const DELETED_KEYS_STORAGE = "kiddocare_deleted_items_wordfile_v6";
 let deletedItemKeys: Set<string> = new Set();
 let deletedKeysLoaded = false;
 
@@ -759,8 +760,22 @@ const PECS_PHRASE_FORMS: Record<string, [string, string, string, string, string]
   "stock shelves": ["stock shelves", "stocks shelves", "stocked shelves", "stocked shelves", "stocking shelves"],
   "stomp feet": ["stomp feet", "stomps feet", "stomped feet", "stomped feet", "stomping feet"],
   "tantrum": ["tantrum", "throws a tantrum", "threw a tantrum", "thrown a tantrum", "throwing a tantrum"],
+  "image search": ["image search", "image searches", "image searched", "image searched", "image searching"],
+  "internet search": ["internet search", "internet searches", "internet searched", "internet searched", "internet searching"],
+  "video search": ["video search", "video searches", "video searched", "video searched", "video searching"],
   "water play": ["water play", "plays with water", "played with water", "played with water", "playing with water"],
 };
+/** The app's earlier A–Z verbs: still known for their forms, but the board shows only the client's verbs. */
+const LEGACY_VERBS_A_TO_Z = Object.values(VERBS_A_TO_Z).flat();
+registerVerbForms(LEGACY_VERBS_A_TO_Z);
+for (const k of Object.keys(VERBS_A_TO_Z)) delete VERBS_A_TO_Z[k];
+/** The client's verb list as spoken words ("crack (nuts)" -> "crack nuts", "jump-pool" -> "jump in pool"). */
+const CLIENT_VERB_WORDS: Record<string, string> = {
+  "change temperature (car)": "change temperature", "change temperature (house)": "change temperature", "crack (nuts)": "crack nuts",
+  "dry hair (towel)": "dry hair", "hose (spray)": "hose", "push (button)": "push button", "jump-pool": "jump in pool",
+  "kick-water": "kick water", "frisbee-play": "play frisbee", "haircut - boy": "haircut", "up": "up",
+};
+const clientVerbWord = (v: string) => CLIENT_VERB_WORDS[v.trim().toLowerCase()] ?? v.trim();
 {
   // nouns that are on the PDF's verb list
   const NOT_VERBS = new Set(["party", "picnic", "haircut", "tantrum", "up", "piggyback", "backhand", "tubing", "sliced", "chopped"]);
@@ -769,14 +784,14 @@ const PECS_PHRASE_FORMS: Record<string, [string, string, string, string, string]
   // "deliver" -> delivered, not "deliverred"
   const fixDoubling = (f: string) => f.replace(/([aeiou][^aeiou\s]*e)r(r)(ed|ing)\b/, "$1r$3");
   const pecsSingles = new Set(
-    PECS_VERBS.split(",").map((w) => (cleanPecsWord(w) || "").toLowerCase()).filter((w) => w && !w.includes(" ") && !NOT_VERBS.has(w) && !/(ing|ed)$/.test(w)),
+    CLIENT_VERBS.map((w) => clientVerbWord(w).toLowerCase()).filter((w) => w && !w.includes(" ") && !NOT_VERBS.has(w) && !/(ing|ed)$/.test(w)),
   );
   const isKnownVerb = (w: string) => {
     const v = getVerbForms(w);
     return (!!v && v.base.toLowerCase() === w) || KNOWN_REGULAR_VERBS.has(w) || pecsSingles.has(w);
   };
-  for (const rawVerb of PECS_VERBS.split(",")) {
-    const phrase = cleanPecsWord(rawVerb);
+  for (const rawVerb of CLIENT_VERBS) {
+    const phrase = clientVerbWord(rawVerb);
     if (!phrase) continue;
     const lower = phrase.toLowerCase();
     const parts = lower.split(/\s+/);
@@ -803,7 +818,7 @@ const PECS_PHRASE_FORMS: Record<string, [string, string, string, string, string]
       registerVerbForms([vf as VerbForms]);
     }
     if (!vf) {
-      pecsVerbLeftovers.push(phrase);
+      if (!pecsVerbLeftovers.some((x) => x.toLowerCase() === lower)) pecsVerbLeftovers.push(phrase);
       continue;
     }
     const base = vf.base.toLowerCase();
@@ -873,13 +888,16 @@ export function folderPictureFor(c: CustomCategory): { text?: string; uri?: stri
     (x.seedName || FOLDER_EN_BY_LANG[(x.name || "").toLowerCase()] || canonicalWordEn(x.name) || x.name || "").trim();
   const en = enOf(c).toLowerCase();
   // letters and numbers show themselves
-  if (en === "lower case") return { text: "abc" };
-  if (en === "upper case") return { text: "ABC" };
-  if (en === "numerals") return { text: "123" };
+  if (en === "lower case" || en === "english alphabets lowercase") return { text: "abc" };
+  if (en === "upper case" || en === "english alphabets uppercase") return { text: "ABC" };
+  if (en === "arabic alphabets") return { text: "أ ب ت" };
+  if (en === "arabic numerals") return { text: "١٢٣" };
+  if (en === "french alphabets" || en === "spanish alphabets" || en === "german alphabets") return { text: "ABC" };
+  if (en === "numerals" || en === "french numerals" || en === "spanish numerals" || en === "german numerals") return { text: "123" };
   if (c.imageUri) return { uri: c.imageUri };
-  // "General" looks like its shelf (Animals / General -> the animals picture)
+  // "General" or "Animals" looks like its shelf (Animals / Animals -> the animals picture)
   const parent = c.parentCategoryId ? cache.find((x) => x.id === c.parentCategoryId) : undefined;
-  const name = en === "general" && parent ? enOf(parent) : enOf(c);
+  const name = (en === "general" || en === "others" || en === "other") && parent ? enOf(parent) : enOf(c);
   return { uri: getPictogramUrl(name) ?? undefined };
 }
 
@@ -891,7 +909,7 @@ function verbSubLetter(c: CustomCategory): string | null {
   if (!c.parentCategoryId) return null;
   const candidates = [c.seedName, canonicalWordEn(c.name), FOLDER_EN_BY_LANG[(c.name || "").toLowerCase()], c.name];
   for (const n of candidates) {
-    const m = /^verbs ([a-z])$/i.exec((n || "").trim());
+    const m = /^verbs? ([a-z])$/i.exec((n || "").trim());
     if (m) return m[1].toLowerCase();
   }
   return null;
@@ -961,7 +979,9 @@ function enforceVerbLetterBuckets(): boolean {
 }
 
 // Generates alphabetical Actions subcategories where every verb appears strictly in 1st -> 2nd -> 3rd -> 4th order
-const ACTION_VERB_SUBCATEGORIES = Object.entries(VERBS_A_TO_Z).map(([letter, rawList]) => {
+const ACTION_VERB_SUBCATEGORIES = Object.entries(VERBS_A_TO_Z)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([letter, rawList]) => {
   const list = [...rawList].sort((a, b) => a.base.localeCompare(b.base, undefined, { sensitivity: "base" }));
   const words: [string, string, ("1st" | "s" | "2nd" | "3rd" | "4th")?][] = [];
   list.forEach((v) => {
@@ -973,7 +993,7 @@ const ACTION_VERB_SUBCATEGORIES = Object.entries(VERBS_A_TO_Z).map(([letter, raw
   });
   return {
     parentCategory: "Actions",
-    name: `Verbs ${letter}`,
+    name: `Verb ${letter}`,
     icon: letter === "A" ? "🅰️" : letter === "B" ? "🅱️" : "🔤",
     words,
   };
@@ -1337,61 +1357,71 @@ const PECS_PLAIN_VERBS = new Map<string, string>();
 /** Folder names made while splitting long PECS lists ("General A–F"), for their Arabic names. */
 const pecsSplitNames: { en: string; base: string; range: string }[] = [];
 
-// Words from the PECS word list, as sub-categories of their shelves
-(() => {
-  const norm = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}' ]+/gu, " ").replace(/\s+/g, " ").trim();
-  const seen = new Set<string>();
-  STARTER.forEach((shelf) => shelf.words.forEach(([label]) => seen.add(norm(label))));
-  STARTER_SUBCATEGORIES.forEach((sub) => sub.words.forEach(([label]) => seen.add(norm(label))));
-  Object.values(VERBS_A_TO_Z).forEach((list) =>
-    list.forEach((v) => [v.base, sFormOf(v.base), v.past, v.participle, v.continuous].forEach((f) => seen.add(norm(f)))),
-  );
-  // the board's clean-up takes verbs out of these shelves, so they are not put there in the first place
-  const guarded = new Set(["food", "places", "things", "people", "feelings"]);
-  const verbWords = new Set<string>();
-  VERB_FORMS_LIST.forEach((v) => [v.base, v.past, v.participle, v.continuous].forEach((f) => verbWords.add(f.toLowerCase().trim())));
+/** The board as the app had it before the client's list (still used to read old Arabic labels back to English). */
+const LEGACY_STARTER = [...STARTER];
+const LEGACY_SUBCATEGORIES = [...STARTER_SUBCATEGORIES];
 
-  // verbs the app cannot conjugate ("back rub", "high five") go in their letter's folder (Verbs B, Verbs H)
-  // as one tile; they come last, so a word keeps its place in a category first ("backhand" in Sports)
-  const letterSubs = pecsVerbLeftovers
-    .filter((p) => /^[a-z]/i.test(p))
-    .map((p) => ({ parent: "Actions", name: `Verbs ${p[0].toUpperCase()}`, icon: "⚡", words: p }));
-  const allSubs = [...PECS_SUBS, ...letterSubs];
-  for (const sub of allSubs) {
-    const words: string[] = [];
-    // every PDF category keeps all of its words, also those another folder has too ("Apple" in Food / Fruits and
-    // in "Fruits, Vegetables & Nuts"); only a folder's own repeats are dropped. Verb phrases are placed once.
-    const isLetterSub = /^Verbs [A-Z]$/.test(sub.name);
-    const inThisFolder = new Set(
-      (STARTER_SUBCATEGORIES.find((x) => x.parentCategory === sub.parent && x.name === sub.name)?.words ?? []).map(([l]) => norm(l)),
-    );
-    for (const rawWord of sub.words.split(",")) {
-      const cleaned = cleanPecsWord(rawWord, "keepNumbers" in sub ? !!sub.keepNumbers : false);
-      if (!cleaned) continue;
-      const keepCase = "keepCase" in sub && !!sub.keepCase;
-      const label = keepCase ? cleaned : capFirst(cleaned);
-      const key = norm(label);
-      if (!key) continue;
+// The board is the client's list: its categories, sub-categories and words, A–Z. A word is on the board once:
+// verbs (with all their forms) keep their place in Verbs A–Z, every other word stays where it first appears.
+(() => {
+  const norm = (w: string) => w.toLowerCase().replace(/\s+/g, " ").trim();
+  const seen = new Set<string>();
+  Object.values(VERBS_A_TO_Z).forEach((list) =>
+    // a verb's other forms live inside its box (popup), so only the verb itself takes its place on the board
+    list.forEach((v) => seen.add(norm(v.base))),
+  );
+  const take = (words: string[], keepCase = false): string[] => {
+    const out: string[] = [];
+    for (const raw of words) {
+      const label = keepCase ? raw.trim() : capFirst(raw.trim());
+      if (!label) continue;
       if (keepCase) {
-        // letters: a–z and A–Z are their own sub-categories (not compared with other words)
-        if (!words.includes(label)) words.push(label);
+        // letters a–z / A–Z are their own folders, not compared with other words
+        if (!out.includes(label)) out.push(label);
         continue;
       }
-      if (isLetterSub ? seen.has(key) : inThisFolder.has(key)) continue;
-      if (guarded.has(sub.parent.toLowerCase()) && verbWords.has(key)) continue;
+      const key = norm(label);
+      if (seen.has(key)) continue;
       seen.add(key);
-      inThisFolder.add(key);
-      words.push(label);
-      if (/^Verbs [A-Z]$/.test(sub.name)) PECS_PLAIN_VERBS.set(label.toLowerCase(), sub.name.slice(-1));
+      out.push(label);
     }
-    if (words.length === 0) continue;
-
-    const existing = STARTER_SUBCATEGORIES.find((x) => x.parentCategory === sub.parent && x.name === sub.name);
-    if (existing) {
-      existing.words.push(...words.map((w) => [w, wordEmoji(w) ?? sub.icon] as [string, string]));
-      continue;
+    return out;
+  };
+  const shelves: typeof STARTER = [];
+  const subs: typeof STARTER_SUBCATEGORIES = [];
+  for (const shelf of CLIENT_SHELVES) {
+    const flat = take(shelf.words ?? []);
+    shelves.push({ name: shelf.name, icon: shelf.icon, words: flat.map((w) => [w, wordEmoji(w) ?? shelf.icon] as [string, string]) });
+    for (const sub of shelf.subs ?? []) {
+      const words = take(sub.words, !!sub.keepCase);
+      if (words.length || (sub.subs && sub.subs.length)) {
+        subs.push({ parentCategory: shelf.name, name: sub.name, icon: sub.icon, words: words.map((w) => [w, (sub.keepCase ? sub.icon : wordEmoji(w)) ?? sub.icon] as [string, string]) });
+      }
+      for (const childSub of sub.subs ?? []) {
+        const childWords = take(childSub.words, !!childSub.keepCase);
+        if (childWords.length) {
+          subs.push({ parentCategory: sub.name, name: childSub.name, icon: childSub.icon, words: childWords.map((w) => [w, wordEmoji(w) ?? childSub.icon] as [string, string]) });
+        }
+      }
     }
-    STARTER_SUBCATEGORIES.push({ parentCategory: sub.parent, name: sub.name, icon: sub.icon, words: words.map((w) => [w, wordEmoji(w) ?? sub.icon] as [string, string]) });
+  }
+  // verbs the app cannot conjugate ("high five" is written out; "party", "picnic" are plain tiles) in their letter's folder
+  const verbSubs = new Map<string, string[]>();
+  for (const p of pecsVerbLeftovers) {
+    if (!/^[a-z]/i.test(p)) continue;
+    const [w] = take([p]);
+    if (!w) continue;
+    const letter = p[0].toUpperCase();
+    (verbSubs.get(letter) || verbSubs.set(letter, []).get(letter)!).push(w);
+    PECS_PLAIN_VERBS.set(w.toLowerCase(), letter);
+  }
+  shelves.push({ name: "Actions", icon: "⚡", color: "#c98a3d", words: [] });
+  STARTER.splice(0, STARTER.length, ...shelves);
+  STARTER_SUBCATEGORIES.splice(0, STARTER_SUBCATEGORIES.length, ...subs, ...ACTION_VERB_SUBCATEGORIES);
+  for (const [letter, words] of verbSubs) {
+    const sub = STARTER_SUBCATEGORIES.find((x) => x.parentCategory === "Actions" && x.name === `Verb ${letter}`);
+    if (sub) sub.words.push(...words.map((w) => [w, wordEmoji(w) ?? "⚡"] as [string, string]));
+    else STARTER_SUBCATEGORIES.push({ parentCategory: "Actions", name: `Verb ${letter}`, icon: "🔤", words: words.map((w) => [w, wordEmoji(w) ?? "⚡"] as [string, string]) });
   }
 })();
 
@@ -1457,6 +1487,67 @@ const FOLDER_NAMES: Partial<Record<LanguageCode, Record<string, string>>> = {
 };
 // Arabic names for the PECS shelves / sub-categories (split folders keep their letter range)
 Object.assign((FOLDER_NAMES["ar-SA"] ||= {}), PECS_FOLDER_NAMES_AR);
+// Arabic and Urdu names of the client's categories and sub-categories
+Object.assign(FOLDER_NAMES["ar-SA"], {
+  "Alphabets and Numerals": "الحروف والأرقام", "Alphabet and Numerals": "الحروف والأرقام",
+  "Arabic Alphabets": "الحروف العربية", "Arabic Numerals": "الأرقام العربية",
+  "English Alphabets uppercase": "الحروف الإنجليزية الكبيرة", "English Alphabets lowercase": "الحروف الإنجليزية الصغيرة",
+  Numerals: "الأرقام", "French Alphabets": "الحروف الفرنسية", "French Numerals": "الأرقام الفرنسية",
+  "Spanish Alphabets": "الحروف الإسبانية", "Spanish Numerals": "الأرقام الإسبانية",
+  "German alphabets": "الحروف الألمانية", "German Numerals": "الأرقام الألمانية",
+  Animals: "حيوانات", Others: "أخرى", Other: "أخرى",
+  Attributes: "صفات", Colours: "ألوان", Colors: "ألوان", Sizes: "الأحجام", Shapes: "أشكال", Texture: "الملمس", Material: "المواد", Quantity: "الكمية",
+  Body: "الجسم", "Body parts": "أجزاء الجسم", "Body Parts": "أجزاء الجسم", Senses: "الحواس", Organs: "الأعضاء",
+  Calendar: "التقويم", Days: "الأيام", Dates: "التواريخ", Months: "الأشهر",
+  "Clothing and Accessories": "ملابس وإكسسوارات",
+  "Computer Electronics and Accessories": "حواسيب وإلكترونيات وملحقات", "Computers, Electronics and Accessories": "حواسيب وإلكترونيات وملحقات",
+  Emotions: "المشاعر", Sensations: "الأحاسيس",
+  "Food and Drinks": "الأطعمة والمشروبات", "Foods and Drinks": "الأطعمة والمشروبات",
+  Breads: "خبز", "Condiments, spreads and spices": "صلصات ودهون وتوابل", "Condiments, Spreads and Spices": "صلصات ودهون وتوابل",
+  "Dairy and Eggs": "ألبان وبيض", Drinks: "مشروبات", Fruits: "فواكه", Meat: "لحوم", Nuts: "مكسرات", Soups: "شوربات", Sweets: "حلويات", Vegetables: "خضروات",
+  "Holidays and Celebrations": "عطلات واحتفالات",
+  "Hygiene and Personal Care": "النظافة والعناية الشخصية",
+  "Money and Finance": "المال والمالية",
+  "Music, Instruments and Equipment": "الموسيقى والآلات والمعدات", "Music, Instruments, and Equipment": "الموسيقى والآلات والمعدات",
+  "Nature and Outdoor": "الطبيعة والخارج", "Nature and Outdoors": "الطبيعة والخارج",
+  "Objects In": "أشياء في", Home: "المنزل", Kitchen: "المطبخ", Bedroom: "غرفة النوم", Bathroom: "الحمام", Office: "المكتب", Park: "الحديقة", School: "المدرسة", "Swimming pool": "حمام السباحة",
+  "People and Characters": "الناس والشخصيات", Family: "العائلة", People: "الناس", Professions: "المهن", Pronouns: "الضمائر",
+  Places: "أماكن", Preposition: "حروف الجر", Prepositions: "حروف الجر",
+  "Sentence Starters, Phrases and Questions": "بدايات الجمل والعبارات والأسئلة",
+  "Songs and Stories": "أغاني وقصص", "Sports and Fitness": "الرياضة واللياقة", "Tools and Supplies": "أدوات ولوازم",
+  "Toys and Leisure Items": "ألعاب وترفيه", "Transportation and Travel": "المواصلات والسفر", Vehicles: "مركبات",
+  ...Object.fromEntries("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((L) => [`Verb ${L}`, `أفعال ${L}`])),
+});
+Object.assign((FOLDER_NAMES["ur-PK"] ||= {}), {
+  "Alphabets and Numerals": "حروف اور نمبر", "Alphabet and Numerals": "حروف اور نمبر",
+  "Arabic Alphabets": "عربی حروف", "Arabic Numerals": "عربی نمبر",
+  "English Alphabets uppercase": "انگریزی بڑے حروف", "English Alphabets lowercase": "انگریزی چھوٹے حروف",
+  Numerals: "نمبر", "French Alphabets": "فرانسیسی حروف", "French Numerals": "فرانسیسی نمبر",
+  "Spanish Alphabets": "ہسپانوی حروف", "Spanish Numerals": "ہسپانوی نمبر",
+  "German alphabets": "جرمن حروف", "German Numerals": "جرمن نمبر",
+  Animals: "جانور", Others: "دیگر", Other: "دیگر",
+  Attributes: "خصوصیات", Colours: "رنگ", Colors: "رنگ", Sizes: "سائز", Shapes: "شکلیں", Texture: "بناوٹ", Material: "مواد", Quantity: "مقدار",
+  Body: "جسم", "Body parts": "جسم کے حصے", "Body Parts": "جسم کے حصے", Senses: "حواس", Organs: "اعضاء",
+  Calendar: "کیلنڈر", Days: "دن", Dates: "تاریخیں", Months: "مہینے",
+  "Clothing and Accessories": "کپڑے اور لوازمات",
+  "Computer Electronics and Accessories": "کمپیوٹر اور الیکٹرانکس", "Computers, Electronics and Accessories": "کمپیوٹر اور الیکٹرانکس",
+  Emotions: "جذبات", Sensations: "احساسات",
+  "Food and Drinks": "کھانے اور مشروبات", "Foods and Drinks": "کھانے اور مشروبات",
+  Breads: "روٹی اور بریڈ", "Condiments, spreads and spices": "چٹنی، جام اور مصالحے", "Condiments, Spreads and Spices": "چٹنی، جام اور مصالحے",
+  "Dairy and Eggs": "ڈیری اور انڈے", Drinks: "مشروبات", Fruits: "پھل", Meat: "گوشت", Nuts: "خشک میوہ جات", Soups: "سوپ", Sweets: "مٹھائیاں", Vegetables: "سبزیاں",
+  "Holidays and Celebrations": "تہوار اور تقریبات",
+  "Hygiene and Personal Care": "صفائی اور ذاتی نگہداشت",
+  "Money and Finance": "پیسہ اور مالیات",
+  "Music, Instruments and Equipment": "موسیقی اور ساز", "Music, Instruments, and Equipment": "موسیقی اور ساز",
+  "Nature and Outdoor": "فطرت اور باہر کا ماحول", "Nature and Outdoors": "فطرت اور باہر کا ماحول",
+  "Objects In": "چیزیں (مقامات میں)", Home: "گھر", Kitchen: "باورچی خانہ", Bedroom: "سونے کا کمرہ", Bathroom: "بیت الخلاء", Office: "دفتر", Park: "پارک", School: "اسکول", "Swimming pool": "سوئمنگ پول",
+  "People and Characters": "لوگ اور کردار", Family: "خاندان", People: "لوگ", Professions: "پیشے", Pronouns: "ضمائر",
+  Places: "مقامات", Preposition: "حروف جار", Prepositions: "حروف جار",
+  "Sentence Starters, Phrases and Questions": "جملے، فقرات اور سوالات",
+  "Songs and Stories": "یت اور کہانیاں", "Sports and Fitness": "کھیل اور فٹنس", "Tools and Supplies": "اوزار اور سامان",
+  "Toys and Leisure Items": "کھلونے اور تفریح", "Transportation and Travel": "سواری اور سفر", Vehicles: "گاڑیاں",
+  ...Object.fromEntries("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((L) => [`Verb ${L}`, `کام ${L}`])),
+});
 // the "Actions" shelf is called "Verbs" in English
 FOLDER_NAMES["en-US"] = { ...(FOLDER_NAMES["en-US"] ?? {}), Actions: "Verbs" };
 for (const split of pecsSplitNames) {
@@ -1480,8 +1571,7 @@ const FOLDER_EN_BY_LANG: Record<string, string> = (() => {
   m["عاطفة"] = "Feelings";
   m["احساسات"] = "Feelings";
   m["جذبات"] = "Feelings";
-  m["emotion"] = "Feelings";
-  m["emotions"] = "Feelings";
+
   m["feeling"] = "Feelings";
   m["feelings"] = "Feelings";
   m["feelings2"] = "Feelings";
@@ -1566,6 +1656,8 @@ function englishOfWord(w: CustomWord, cat: CustomCategory): string {
   const seedLists: [string, string][][] = [
     ...STARTER.map((st) => st.words),
     ...STARTER_SUBCATEGORIES.map((sub) => sub.words.map(([l, e]) => [l, e] as [string, string])),
+    ...LEGACY_STARTER.map((st) => st.words),
+    ...LEGACY_SUBCATEGORIES.map((sub) => sub.words.map(([l, e]) => [l, e] as [string, string])),
   ];
   for (const list of seedLists) {
     for (const [en] of list) {
@@ -1626,34 +1718,38 @@ export function retranslateSeedBoard(lang: LanguageCode) {
     }
 
     // 2. Words translation (both standard & custom)
-    cat.words.forEach((w) => {
-      const rawWordLabel = w.label.trim();
-      if (lang === "en-US") {
-        const en = englishOfWord(w, cat);
-        if (en && en !== w.label) {
-          w.label = en;
-          w.phrase = en;
-          changed = true;
-        }
-      } else {
-        const en = englishOfWord(w, cat);
-        // remember the English word, so switching back to English finds it again
-        // (two words can share one Arabic word, and online translations have no way back)
-        if (en && !/[؀-ۿ]/.test(en) && w.seedLabel !== en) {
-          w.seedLabel = en;
-          changed = true;
-        }
-        const localized = wordLabel(en, lang);
+    const parentCat = cat.parentCategoryId ? cache.find((p) => p.id === cat.parentCategoryId) : undefined;
+    const isFixedLanguageSub = parentCat && folderEnglishName(parentCat).toLowerCase() === "alphabets and numerals";
+    if (!isFixedLanguageSub) {
+      cat.words.forEach((w) => {
+        const rawWordLabel = w.label.trim();
+        if (lang === "en-US") {
+          const en = englishOfWord(w, cat);
+          if (en && en !== w.label) {
+            w.label = en;
+            w.phrase = en;
+            changed = true;
+          }
+        } else {
+          const en = englishOfWord(w, cat);
+          // remember the English word, so switching back to English finds it again
+          // (two words can share one Arabic word, and online translations have no way back)
+          if (en && !/[؀-ۿ]/.test(en) && w.seedLabel !== en) {
+            w.seedLabel = en;
+            changed = true;
+          }
+          const localized = wordLabel(en, lang);
 
-        if (localized && localized.toLowerCase() !== rawWordLabel.toLowerCase()) {
-          w.label = localized;
-          w.phrase = localized;
-          changed = true;
-        } else if (isTargetArabic && !/[\u0600-\u06FF]/.test(w.label)) {
-          pendingAsyncItems.push({ type: "word", id: w.id, catId: cat.id, originalText: w.label });
+          if (localized && localized.toLowerCase() !== rawWordLabel.toLowerCase()) {
+            w.label = localized;
+            w.phrase = localized;
+            changed = true;
+          } else if (isTargetArabic && !/[\u0600-\u06FF]/.test(w.label)) {
+            pendingAsyncItems.push({ type: "word", id: w.id, catId: cat.id, originalText: w.label });
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   if (changed) {
@@ -1736,8 +1832,79 @@ function replacePecsV1Folders(): boolean {
   return changed;
 }
 
+/**
+ * The board is the client's list: built-in folders that are not on it (old Core, Food, Schools… and the earlier
+ * PECS folders) go. A folder that holds the caregiver's own words or folders stays, with only those in it.
+ */
+function removeFoldersNotInClientList(): boolean {
+  let changed = false;
+  const enOf = (c: CustomCategory) => folderEnglishName(c).toLowerCase();
+  const shelfNames = new Set(STARTER.map((x) => (x.name === "Actions" ? "verbs" : x.name.toLowerCase())));
+  shelfNames.add("actions");
+  const subsOf = new Map<string, Set<string>>();
+  for (const x of STARTER_SUBCATEGORIES) {
+    const k = x.parentCategory === "Actions" ? "verbs" : x.parentCategory.toLowerCase();
+    (subsOf.get(k) || subsOf.set(k, new Set()).get(k)!).add(x.name.toLowerCase());
+  }
+  const removeTree = (c: CustomCategory) => {
+    const ids = new Set<string>([c.id]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const x of cache) if (x.parentCategoryId && ids.has(x.parentCategoryId) && !ids.has(x.id)) { ids.add(x.id); grew = true; }
+    }
+    cache = cache.filter((x) => !ids.has(x.id));
+    changed = true;
+  };
+  for (const shelf of cache.filter((c) => !c.parentCategoryId)) {
+    if (shelfNames.has(enOf(shelf))) continue;
+    removeTree(shelf);
+  }
+  for (const sub of cache.filter((c) => c.parentCategoryId)) {
+    const parent = cache.find((x) => x.id === sub.parentCategoryId);
+    if (!parent) { removeTree(sub); continue; }
+    const pEn = (parent.seedName || enOf(parent)).toLowerCase();
+    const valid = subsOf.get(pEn === "actions" ? "verbs" : pEn);
+    const name = (sub.seedName || enOf(sub)).toLowerCase();
+    if (valid?.has(name)) continue;
+    removeTree(sub);
+  }
+  return changed;
+}
+
+/** Built-in words of a category without sub-categories follow the client's list; the caregiver's own words stay. */
+function syncShelfWords(cat: CustomCategory, seedWords: [string, string][]): boolean {
+  const used = new Set<string>();
+  const target = seedWords
+    .filter(([label]) => !isDeletedWord(cat.id, label))
+    .map(([label, emoji], wi) => {
+      const existing = preferCustomized(cat.words.filter((w) => !used.has(w.id) && !w.verbFormTag &&
+        [w.seedLabel, canonicalWordEn(w.label), w.label].some((l) => (l || "").toLowerCase() === label.toLowerCase())));
+      if (existing) used.add(existing.id);
+      const localized = wordLabel(label, seedLang) || label;
+      return {
+        ...(existing ?? {}),
+        id: existing?.id ?? uid("w"),
+        label: existing?.isCustom ? existing.label : localized,
+        phrase: existing?.isCustom ? existing.phrase : localized,
+        emoji: existing?.emoji || emoji || "🔹",
+        imageUri: existing?.imageUri || getPictogramUrl(label) || undefined,
+        useTextToSpeech: existing?.useTextToSpeech ?? true,
+        size: existing?.size ?? ("md" as TileSize),
+        order: wi,
+        hidden: existing?.hidden ?? false,
+        seedLabel: label,
+      } as CustomWord;
+    });
+  const own = cat.words.filter((w) => !used.has(w.id) && w.isCustom);
+  const next = [...target, ...own.map((w, i) => ({ ...w, order: target.length + i }))];
+  if (next.length === cat.words.length && next.every((w, i) => w.id === cat.words[i].id && w.label === cat.words[i].label)) return false;
+  cat.words = next;
+  return true;
+}
+
 function ensureAllStandardCategories() {
-  let changed = replacePecsV1Folders();
+  let changed = removeFoldersNotInClientList();
   const now = Date.now();
 
   STARTER.forEach((s, idx) => {
@@ -1782,6 +1949,8 @@ function ensureAllStandardCategories() {
         }),
       });
       changed = true;
+    } else if (s.words.length > 0) {
+      if (syncShelfWords(hit, s.words)) changed = true;
     } else if (s.name === "Actions" && !hit.isCustom && hit.name === "Actions" && folderName("Actions") !== "Actions") {
       // shown as "Verbs" now
       hit.name = folderName("Actions");
@@ -1865,12 +2034,19 @@ function ensureAllStandardCategories() {
 
   // 2. Ensure standard sub-categories exist and have their words populated in exact sequence
   STARTER_SUBCATEGORIES.forEach((sub, subIdx) => {
-    const parent = cache.find(
-      (c) =>
-        !c.parentCategoryId &&
-        (c.name.toLowerCase() === sub.parentCategory.toLowerCase() ||
-          (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase() === sub.parentCategory.toLowerCase())
-    );
+    const parent =
+      cache.find(
+        (c) =>
+          !c.parentCategoryId &&
+          (c.name.toLowerCase() === sub.parentCategory.toLowerCase() ||
+            (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase() === sub.parentCategory.toLowerCase())
+      ) ??
+      cache.find(
+        (c) =>
+          !!c.parentCategoryId &&
+          ((c.seedName && c.seedName.toLowerCase() === sub.parentCategory.toLowerCase()) ||
+            folderEnglishName(c).toLowerCase() === sub.parentCategory.toLowerCase())
+      );
     if (!parent) return;
 
     if (isDeletedCategory(sub.name, parent.id)) {
@@ -1916,6 +2092,8 @@ function ensureAllStandardCategories() {
 
     // Populate and synchronize words for this sub-category in strict sequential order
     const usedExistingIds = new Set<string>();
+    const isFixedLangSub = sub.parentCategory.toLowerCase() === "alphabets and numerals";
+    const isAlphabetSub = sub.parentCategory.toLowerCase() === "alphabets and numerals";
     const targetWords = sub.words
       .filter(([label, , verbFormTag]) => !isDeletedWord(subCat!.id, label, verbFormTag))
       .map(([label, emoji, verbFormTag], wi) => {
@@ -1924,7 +2102,7 @@ function ensureAllStandardCategories() {
           if (w.seedLabel && w.seedLabel.toLowerCase() === label.toLowerCase()) {
             return !(verbFormTag && w.verbFormTag) || w.verbFormTag === verbFormTag;
           }
-          const en = (canonicalWordEn(w.label) || w.label).toLowerCase();
+          const en = isFixedLangSub ? w.label.toLowerCase() : (canonicalWordEn(w.label) || w.label).toLowerCase();
           const matchesLabel = en === label.toLowerCase() || w.label.toLowerCase() === label.toLowerCase();
           if (!matchesLabel) return false;
           if (verbFormTag && w.verbFormTag) {
@@ -1933,13 +2111,13 @@ function ensureAllStandardCategories() {
           return true;
         }));
         if (existing) usedExistingIds.add(existing.id);
-        const localized = wordLabel(label, seedLang) || label;
+        const localized = isFixedLangSub ? label : (wordLabel(label, seedLang) || label);
         return {
           id: existing?.id ?? uid("w"),
           label: existing?.isCustom ? existing.label : localized,
           phrase: existing?.isCustom ? existing.phrase : localized,
           emoji: existing?.emoji || emoji || "🔹",
-          imageUri: existing?.imageUri || getPictogramUrl(label) || undefined,
+          imageUri: existing?.imageUri || (isAlphabetSub ? undefined : getPictogramUrl(label)) || undefined,
           color: existing?.color,
           audioUri: existing?.audioUri,
           useTextToSpeech: existing?.useTextToSpeech ?? true,
@@ -1958,6 +2136,7 @@ function ensureAllStandardCategories() {
     const customParentWords = subCat.words.filter((w) => {
       if (usedExistingIds.has(w.id)) return false; // already kept above
       if (w.isCustom) return true;
+      if (!isVerbSub) return false; // a built-in word that is not on the client's list
       const en = (canonicalWordEn(w.label) || w.label).toLowerCase();
       if (isVerbSub) {
         return !sub.words.some(([swLabel]) => swLabel.toLowerCase() === en || swLabel.toLowerCase() === w.label.toLowerCase());
@@ -2344,13 +2523,53 @@ export function removeWord(catId: string, wordId: string) {
   });
 }
 
+export const NATURAL_ORDER_SUBCATEGORIES = new Set([
+  "arabic alphabets",
+  "arabic numerals",
+  "english alphabets uppercase",
+  "english alphabets lowercase",
+  "numerals",
+  "french alphabets",
+  "french numerals",
+  "spanish alphabets",
+  "spanish numerals",
+  "german alphabets",
+  "german numerals",
+  "days",
+  "dates",
+  "months",
+]);
+
+export function isNaturalOrderCategory(catName: string): boolean {
+  const en = (FOLDER_EN_BY_LANG[(catName || "").trim().toLowerCase()] || canonicalWordEn(catName) || catName).trim().toLowerCase();
+  return NATURAL_ORDER_SUBCATEGORIES.has(en);
+}
+
 /**
  * Universal category word sorter:
+ * Natural-sequence categories (Days, Months, Dates, Alphabets, Numerals) preserve their real-life sequence.
  * Non-verb categories are sorted alphabetically.
  * Verb categories (Verbs A-Z and Action shelves) are strictly sorted by:
  * Base Verb (A to Z) -> 1st Form -> 2nd Form -> 3rd Form -> 4th Form.
  */
 export function sortWordsForCategory(words: CustomWord[], catName: string): CustomWord[] {
+  const enCat = (FOLDER_EN_BY_LANG[(catName || "").trim().toLowerCase()] || canonicalWordEn(catName) || catName).trim().toLowerCase();
+  if (NATURAL_ORDER_SUBCATEGORIES.has(enCat)) {
+    const seedSub = STARTER_SUBCATEGORIES.find((s) => s.name.trim().toLowerCase() === enCat);
+    if (seedSub) {
+      const idxMap = new Map<string, number>();
+      seedSub.words.forEach(([w], i) => idxMap.set(w.trim().toLowerCase(), i));
+      return [...words].sort((a, b) => {
+        const ka = (a.seedLabel || a.label || "").trim().toLowerCase();
+        const kb = (b.seedLabel || b.label || "").trim().toLowerCase();
+        const ia = idxMap.get(ka) ?? idxMap.get((canonicalWordEn(a.label) || a.label).trim().toLowerCase()) ?? 9999 + (a.order ?? 0);
+        const ib = idxMap.get(kb) ?? idxMap.get((canonicalWordEn(b.label) || b.label).trim().toLowerCase()) ?? 9999 + (b.order ?? 0);
+        return ia - ib;
+      });
+    }
+    return [...words].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }
+
   const isVerbCategory =
     catName.toLowerCase().includes("verb") ||
     (canonicalWordEn(catName) || "").toLowerCase().includes("verb") ||
@@ -2532,9 +2751,7 @@ export function cleanAndDeduplicateCategories() {
       const subCat = cache.find(
         (c) =>
           c.parentCategoryId === actionsCat.id &&
-          ((canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).toLowerCase() === `verbs ${letter.toLowerCase()}` ||
-            c.name.toLowerCase() === `verbs ${letter.toLowerCase()}` ||
-            c.name.toLowerCase() === folderName(`Verbs ${letter}`).toLowerCase())
+          verbSubLetter(c) === letter.toLowerCase()
       );
       if (subCat) {
         const list = [...rawList].sort((a, b) => a.base.localeCompare(b.base, undefined, { sensitivity: "base" }));
@@ -2572,10 +2789,7 @@ export function cleanAndDeduplicateCategories() {
             { word: v.continuous, tag: "4th" },
           ];
 
-          const anyExistingImg = subCat.words.find((w) => {
-            const en = (canonicalWordEn(w.label) || w.label).toLowerCase().trim();
-            return (en === v.base.toLowerCase() || en === v.past.toLowerCase() || en === v.participle.toLowerCase() || en === v.continuous.toLowerCase()) && !!w.imageUri;
-          })?.imageUri;
+          const baseImg = getPictogramUrl(v.base) || undefined;
 
           forms.forEach((f) => {
             if (isDeletedWord(subCat.id, f.word, f.tag)) return; // deleted by caregiver
@@ -2601,7 +2815,7 @@ export function cleanAndDeduplicateCategories() {
               label: capText,
               phrase: capText,
               emoji: v.emoji || existing?.emoji || "⚡",
-              imageUri: existing?.imageUri || anyExistingImg || getPictogramUrl(f.word) || undefined,
+              imageUri: (existing?.isCustom ? existing.imageUri : undefined) || baseImg,
               audioUri: existing?.audioUri,
               useTextToSpeech: existing?.useTextToSpeech ?? true,
               size: "md",
@@ -2754,7 +2968,10 @@ export function cleanAndDeduplicateCategories() {
   }
 
   for (const c of cache) {
-    if (parentIdsWithSubCats.has(c.id) && c.words.length > 0) {
+    const isSeedWithDirectWords =
+      STARTER.some((s) => s.words.length > 0 && s.name.toLowerCase() === folderEnglishName(c).toLowerCase()) ||
+      STARTER_SUBCATEGORIES.some((s) => s.words.length > 0 && s.name.toLowerCase() === (c.seedName || folderEnglishName(c)).toLowerCase());
+    if (parentIdsWithSubCats.has(c.id) && c.words.length > 0 && !isSeedWithDirectWords) {
       // Find subcategories belonging to this parent
       const subCatsOfParent = cache.filter((sc) => sc.parentCategoryId === c.id);
       let generalSub: CustomCategory | undefined;
@@ -2984,17 +3201,22 @@ export function cleanAndDeduplicateCategories() {
   }
 
   // 2. Sorting for ALL categories (except Core & Say It For Me):
+  // Natural-order categories (Days, Months, Dates, Alphabets, Numerals) preserve their real-life sequence.
   // Regular categories are sorted alphabetically. Verb categories are strictly sorted:
   // Base Verb (alphabetical) -> 1st Form -> 2nd Form -> 3rd Form -> 4th Form.
   for (const c of cache) {
     const enName = (FOLDER_EN_BY_LANG[c.name.toLowerCase()] ?? c.name).toLowerCase();
     if (enName !== "core" && enName !== "say it for me") {
-      c.words = sortWordsForCategory(c.words, c.name);
+      c.words = sortWordsForCategory(c.words, c.seedName || c.name);
       c.words.forEach((w, i) => { w.order = i; });
     }
   }
 
-  // 3. Alphabetical (A to Z) sorting for sub-categories under any shelf:
+  // 3. Preserve the client's Word file order for sub-categories under any shelf:
+  const subOrderMap = new Map<string, number>();
+  STARTER_SUBCATEGORIES.forEach((s, i) => {
+    subOrderMap.set(`${s.parentCategory.toLowerCase()}::${s.name.toLowerCase()}`, i);
+  });
   const subCats = cache.filter((c) => !!c.parentCategoryId);
   const byParent: Record<string, CustomCategory[]> = {};
   for (const sc of subCats) {
@@ -3003,7 +3225,19 @@ export function cleanAndDeduplicateCategories() {
     byParent[p].push(sc);
   }
   for (const p in byParent) {
-    byParent[p].sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" }));
+    const parentCat = cache.find((c) => c.id === p);
+    const pRaw = parentCat ? (parentCat.seedName || folderEnglishName(parentCat)) : "";
+    const pEn = pRaw === "Verbs" ? "actions" : pRaw.toLowerCase();
+    byParent[p].sort((a, b) => {
+      const aEn = (a.seedName || folderEnglishName(a)).toLowerCase();
+      const bEn = (b.seedName || folderEnglishName(b)).toLowerCase();
+      const ia = subOrderMap.get(`${pEn}::${aEn}`);
+      const ib = subOrderMap.get(`${pEn}::${bEn}`);
+      if (ia !== undefined && ib !== undefined) return ia - ib;
+      if (ia !== undefined) return -1;
+      if (ib !== undefined) return 1;
+      return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+    });
     byParent[p].forEach((sc, i) => { sc.order = i; });
   }
 

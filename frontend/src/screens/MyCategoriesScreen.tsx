@@ -35,7 +35,7 @@ import {
   cleanAndDeduplicateCategories,
   retranslateSeedBoard,
   setCategoryWordOrder,
-  setSeedLanguage, verbFolderLetter } from "../modules/customCategories";
+  setSeedLanguage, verbFolderLetter, isNaturalOrderCategory } from "../modules/customCategories";
 import { getPictogramUrl } from "../modules/aacPictograms";
 import { searchImages } from "../modules/imageSearch";
 import { fillMissingPictures, findPictureForWord } from "../modules/wordPictures";
@@ -248,7 +248,12 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
   // Subcategories of selected shelf
   const subCats = useMemo(() => {
     if (!currentShelf) return [];
-    return childCategories(currentShelf.id);
+    const out: CustomCategory[] = [];
+    for (const sc of childCategories(currentShelf.id)) {
+      out.push(sc);
+      for (const nsc of childCategories(sc.id)) out.push(nsc);
+    }
+    return out;
   }, [currentShelf, tick]);
 
   // Selected shelf for Bulk Words tab
@@ -479,7 +484,8 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
             (w.phrase && w.phrase.toLowerCase().includes(q))
         );
 
-    if (wordSortMode === "alphabetical") {
+    const isNatural = activeCategory ? isNaturalOrderCategory(activeCategory.seedName || activeCategory.name) : false;
+    if (wordSortMode === "alphabetical" && !isNatural) {
       return [...filtered].sort((a, b) => (a.label || "").localeCompare(b.label || "", undefined, { sensitivity: "base" }));
     } else {
       return [...filtered].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -1954,7 +1960,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                                 ]}
                               >
                                 <View style={styles.sidebarSubCatLeft}>
-                                  <Text style={styles.sidebarSubCatIndent}>↳</Text>
+                                  <Text style={[styles.sidebarSubCatIndent, sc.parentCategoryId !== currentShelf?.id && { marginLeft: 16 }]}>↳</Text>
                                   <Text style={[styles.sidebarSubCatIcon, verbFolderLetter(sc) ? { fontWeight: "900", color: "#235E50" } : null]}>{verbFolderLetter(sc) ?? (sc.icon || "📁")}</Text>
                                   <Text
                                     style={[

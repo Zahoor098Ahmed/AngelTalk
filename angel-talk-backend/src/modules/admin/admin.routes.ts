@@ -565,12 +565,31 @@ adminRouter.get(
             if (!main) {
               const mainId = `main-${mainName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
               const MAIN_ICONS: Record<string, string> = {
-                People: "👨‍👩‍👧‍👦",
-                Feelings: "😊",
-                Actions: "🏃",
-                Food: "🍎",
-                Places: "🏠",
-                Things: "🧸",
+                "Alphabets and Numerals": "🔤",
+                Animals: "🐾",
+                Attributes: "🎨",
+                Body: "🖐️",
+                Calendar: "📅",
+                "Clothing and Accessories": "👕",
+                "Computer Electronics and Accessories": "💻",
+                Emotions: "😊",
+                "Food and Drinks": "🍎",
+                "Holidays and Celebrations": "🎉",
+                "Hygiene and Personal Care": "🧼",
+                "Money and Finance": "💰",
+                "Music, Instruments and Equipment": "🎵",
+                "Nature and Outdoor": "🌳",
+                "Objects In": "🏠",
+                "People and Characters": "👨‍👩‍👧‍👦",
+                Places: "📍",
+                Preposition: "🧭",
+                "Sentence Starters, Phrases and Questions": "💬",
+                "Songs and Stories": "📖",
+                "Sports and Fitness": "⚽",
+                "Tools and Supplies": "🛠️",
+                "Toys and Leisure Items": "🧸",
+                "Transportation and Travel": "🚗",
+                Verbs: "⚡",
               };
               main = { _id: mainId, name: mainName, icon: MAIN_ICONS[mainName] || tpl.icon || "📁", color: tpl.color, order: idx };
               mainMap.set(mainName, main);

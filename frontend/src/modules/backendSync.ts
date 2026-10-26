@@ -3,6 +3,7 @@ import {
   listCategories,
   restoreBackup,
   notifyListeners,
+  cleanAndDeduplicateCategories,
 } from "./customCategories";
 import { loadChildren, saveChildren } from "./storage";
 import type { ChildProfile, CustomCategory, CustomWord, DiagnosisType } from "../types";
@@ -230,6 +231,7 @@ export async function syncBidirectional(): Promise<{ pushed: number; pulled: num
           name: cat.name,
           color: cat.color,
           icon: cat.icon,
+          parentId: cat.parentCategoryId || null,
           order: cIdx,
         },
       });
@@ -299,7 +301,7 @@ export async function syncBidirectional(): Promise<{ pushed: number; pulled: num
         const remoteShelves = tables.shelves;
         const remoteWords = tables.words || [];
 
-        const incomingCategories: CustomCategory[] = remoteShelves.map((rShelf: { _id: string; name: string; color?: string; icon?: string }) => {
+        const incomingCategories: CustomCategory[] = remoteShelves.map((rShelf: { _id: string; name: string; color?: string; icon?: string; parentId?: string | null }) => {
           const shelfWords: CustomWord[] = remoteWords
             .filter((rw: { shelfId: string }) => rw.shelfId === rShelf._id)
             .map((rw: { _id: string; label: string; phrase?: string; imageUri?: string; color?: string }) => ({
@@ -315,11 +317,13 @@ export async function syncBidirectional(): Promise<{ pushed: number; pulled: num
             name: rShelf.name,
             color: rShelf.color || "#4CAF50",
             icon: rShelf.icon,
+            parentCategoryId: rShelf.parentId || null,
             words: shelfWords,
           };
         });
 
         restoreBackup({ categories: incomingCategories }, "merge");
+        cleanAndDeduplicateCategories();
         notifyListeners();
         pulledCount += incomingCategories.length;
       }

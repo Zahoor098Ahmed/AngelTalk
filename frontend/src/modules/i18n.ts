@@ -2939,8 +2939,6 @@ const WORD_UR_REVERSE = buildReverse(WORD_UR);
 
 const CANONICAL_SHELVES: Record<string, string> = {
   feelings: "Feelings",
-  emotion: "Feelings",
-  emotions: "Feelings",
   feelings2: "Feelings",
   "مشاعر": "Feelings",
   "احساسات": "Feelings",
@@ -2978,7 +2976,6 @@ const CANONICAL_SHELVES: Record<string, string> = {
   "قلها لي": "Say It For Me",
   "میرے لیے کہو": "Say It For Me",
   schools: "Schools",
-  school: "Schools",
   "مدرسة": "Schools",
   "اسکول": "Schools",
   sports: "Sports",

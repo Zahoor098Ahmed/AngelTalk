@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -34,6 +34,7 @@ import {
   retranslateSeedBoard,
   recordWordUseByWordId,
   subscribeCategories,
+  isNaturalOrderCategory,
 } from "../modules/customCategories";
 import { playWord, playSentence, stopSentence, preloadTTS, type SpokenWord } from "../modules/audio";
 import { dictUrl } from "../modules/imageLibrary";
@@ -156,10 +157,16 @@ function CardPic({
 }) {
   const [imgError, setImgError] = useState(false);
   const enLabel = canonicalWordEn(label) || label;
-  // a tile in the Lower Case / Upper Case folders shows its letter, not the pronoun "I"
-  const isLetterTile = /^[a-z]$/i.test(label.trim()) && (emoji === "🔡" || emoji === "🔠");
+  const outsideParen = label.trim().replace(/\s*\([^)]*\)\s*$/, "").trim();
+  const dashParts = outsideParen.split(/\s*-\s*/);
+  const leadSymbol = dashParts[0].trim();
+  const nativeWord = dashParts.length > 1 ? dashParts.slice(1).join(" - ").trim() : "";
+  // a tile in the Alphabets / Numerals / Dates folders shows its letter or number cleanly
+  const isLetterOrNumTile =
+    /^([a-zA-Z\u00C0-\u017F\u0621-\u064A]|\d{1,3}|[\u0660-\u0669]{1,2}|\d{1,2}(st|nd|rd|th))$/i.test(leadSymbol) &&
+    ["🔡", "🔠", "🔤", "🔢", "🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦"].includes(emoji);
   const uri = useMemo(() => {
-    if (isLetterTile) return null;
+    if (isLetterOrNumTile) return null;
     // a word whose usual picture is wrong ("sink") never falls back to it
     if (pictureFixFor(enLabel) === null && !imageUri) return getPictogramUrl(enLabel);
     return (
@@ -168,7 +175,7 @@ function CardPic({
       getPictogramUrl(label) ||
       (!imgError ? dictUrl(enLabel) || dictUrl(label) : null)
     );
-  }, [imageUri, label, enLabel, imgError, isLetterTile]);
+  }, [imageUri, label, enLabel, imgError, isLetterOrNumTile]);
 
   if (uri && !imgError) {
     return (
@@ -179,11 +186,74 @@ function CardPic({
       />
     );
   }
-  // a letter or a number is its own picture ("a", "B", "7", "10")
-  if (/^([a-z]|\d{1,2})$/i.test(label.trim())) {
+  // Language-styled icon for Alphabets / Numerals / Dates ("A - aa (Ay)", "0 - null (Zero)", "٠ - صفر (0 - Zero)")
+  if (isLetterOrNumTile || /^([a-z]|\d{1,3})$/i.test(label.trim())) {
+    const badgeText = isLetterOrNumTile ? leadSymbol : label.trim();
+    const langTheme =
+      emoji === "🇩🇪"
+        ? { color: "#b45309", bg: "#fef3c7", border: "#f59e0b", tag: "🇩🇪 DE" }
+        : emoji === "🇫🇷"
+        ? { color: "#1d4ed8", bg: "#dbeafe", border: "#60a5fa", tag: "🇫🇷 FR" }
+        : emoji === "🇪🇸"
+        ? { color: "#be123c", bg: "#ffe4e6", border: "#fb7185", tag: "🇪🇸 ES" }
+        : emoji === "🇸🇦"
+        ? { color: "#047857", bg: "#d1fae5", border: "#34d399", tag: "🇸🇦 AR" }
+        : { color: "#2f5fb3", bg: "#eff6ff", border: "#93c5fd", tag: "" };
+
+    if (size >= 60 && (langTheme.tag || nativeWord)) {
+      const mainScale = badgeText.length >= 3 ? 0.36 : badgeText.length === 2 ? 0.44 : 0.52;
+      return (
+        <View
+          style={{
+            width: Math.round(size * 0.94),
+            height: Math.round(size * 0.94),
+            borderRadius: Math.round(size * 0.16),
+            backgroundColor: langTheme.bg,
+            borderWidth: 2,
+            borderColor: langTheme.border,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingVertical: 4,
+            paddingHorizontal: 6,
+          }}
+        >
+          {langTheme.tag ? (
+            <Text style={{ fontSize: Math.max(10, Math.round(size * 0.11)), fontWeight: "800", color: langTheme.color, marginBottom: 2 }}>
+              {langTheme.tag}
+            </Text>
+          ) : null}
+          <Text
+            style={{
+              fontSize: Math.round(size * mainScale),
+              lineHeight: Math.round(size * (mainScale + 0.06)),
+              fontWeight: "900",
+              color: langTheme.color,
+            }}
+            numberOfLines={1}
+          >
+            {badgeText}
+          </Text>
+          {nativeWord ? (
+            <Text
+              style={{
+                fontSize: Math.max(11, Math.round(size * 0.14)),
+                fontWeight: "700",
+                color: langTheme.color,
+                marginTop: 2,
+              }}
+              numberOfLines={1}
+            >
+              {nativeWord}
+            </Text>
+          ) : null}
+        </View>
+      );
+    }
+
+    const fontScale = badgeText.length >= 3 ? 0.58 : badgeText.length === 2 ? 0.72 : 0.88;
     return (
-      <Text style={{ fontSize: Math.round(size * 0.9), lineHeight: Math.round(size * 1.05), fontWeight: "800", color: "#2f5fb3" }}>
-        {label.trim()}
+      <Text style={{ fontSize: Math.round(size * fontScale), lineHeight: Math.round(size * 1.05), fontWeight: "800", color: langTheme.color }}>
+        {badgeText}
       </Text>
     );
   }
@@ -282,7 +352,14 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   // Suggestions fold away when a category is opened so its words have room; any new word brings them back
   const [showSuggest, setShowSuggest] = useState(true);
   useEffect(() => setShowSuggest(false), [path]);
-  useEffect(() => setShowSuggest(true), [sentence.length, typed]);
+  useEffect(() => {
+    const activeCat = path.length > 0 ? getCategory(path[path.length - 1]) : null;
+    if (activeCat && isNaturalOrderCategory(activeCat.name) && !typed.trim()) {
+      setShowSuggest(false);
+    } else {
+      setShowSuggest(true);
+    }
+  }, [sentence.length, typed, path]);
   const [tick, setTick] = useState(0); // re-read after edits elsewhere
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [voiceTarget, setVoiceTarget] = useState<string | null>(null);
@@ -373,8 +450,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     [settings.visibleVerbForms],
   );
   const words: CustomWord[] = useMemo(() => {
-    // If current shelf has child subcategories/folders, loose words belong strictly INSIDE those folders
-    if (folders.length > 0) return [];
+    // If current shelf has child subcategories/folders and no direct seed words, loose words belong inside those folders
+    if (folders.length > 0 && rawWords.length === 0) return [];
     let list = rawWords.filter((w) => !w.verbFormTag || visibleForms.has(w.verbFormTag));
     if (child.buttonDensity && child.buttonDensity > 0) {
       list = rawWords.slice(0, child.buttonDensity);
@@ -561,9 +638,13 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
 
   const bottomTabs = useMemo(() => (ready ? bottomTabCategories(lang) : []), [ready, tick, lang]);
 
+  const lastTapRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
+
   function speakWords(): SpokenWord[] {
     return sentence.map((c) => ({
       label: wordLabel(c.label, lang),
+      phrase: c.phrase || wordLabel(c.label, lang),
+      emoji: c.emoji,
       audioUri: c.audioUri,
       useTextToSpeech: c.useTextToSpeech,
     }));
@@ -584,29 +665,42 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   }
 
   function tapWord(w: CustomWord) {
+    const now = Date.now();
+    if (lastTapRef.current.id === w.id && now - lastTapRef.current.time < 250) return;
+    lastTapRef.current = { id: w.id, time: now };
+
     tapFeedback();
     recordWordUsage(child.id, w.label);
     recordWordUseByWordId(w.id);
     const isPhraseMode = boardMode === "phrase";
     const spokenText = wordLabel(w.phrase || w.label, lang);
-    // Instant clear pronunciation of tapped card in selected voice
+    // Instant clear pronunciation of tapped card in selected voice / card language
     void playWord(
-      { label: spokenText, phrase: spokenText, audioUri: w.audioUri, useTextToSpeech: w.useTextToSpeech },
+      { label: spokenText, phrase: spokenText, emoji: w.emoji, audioUri: w.audioUri, useTextToSpeech: w.useTextToSpeech },
       lang,
       settings.speechRate,
       voiceType,
       isPhraseMode
     );
-    // Always add tapped word to sentence strip at the top
+    // Always add tapped word once to sentence strip at the top
     setSentence((prev) => [...prev, toChip(w, prev.length)]);
   }
 
   function toChip(w: CustomWord, idx: number): Chip {
+    const rawText = w.phrase || w.label;
+    const isAlphaNumTile =
+      ["🔡", "🔠", "🔤", "🔢", "🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦"].includes(w.emoji) &&
+      /\([^)]+\)$/.test(rawText.trim());
+    // Strip the parenthesized pronunciation helper for the sentence strip so clicking a letter/number adds it once cleanly
+    const cleanChipLabel = isAlphaNumTile
+      ? rawText.trim().replace(/\s*\([^)]*\)\s*$/, "").trim()
+      : wordLabel(rawText, lang);
     return {
       id: `${w.id}-${idx}-${Date.now().toString(36).slice(-4)}`,
-      label: wordLabel(w.phrase || w.label, lang),
+      label: cleanChipLabel,
+      phrase: rawText,
       emoji: w.emoji,
-      imageUri: w.imageUri || getPictogramUrl(canonicalWordEn(w.phrase || w.label)) || undefined,
+      imageUri: w.imageUri || getPictogramUrl(canonicalWordEn(rawText)) || undefined,
       audioUri: w.audioUri,
       useTextToSpeech: w.useTextToSpeech,
     };
@@ -701,7 +795,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     const spokenText = lang === "en-US" ? formatNaturalEnglishSentence(labels) : labels.join(" ");
 
     try {
-      if (lang === "en-US" && !sentence.some((c) => c.audioUri && c.useTextToSpeech !== true)) {
+      const hasMultiLangChip = sentence.some((c) => ["🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦", "🔡", "🔠", "🔢"].includes(c.emoji) && c.phrase && c.phrase !== c.label);
+      if (lang === "en-US" && !hasMultiLangChip && !sentence.some((c) => c.audioUri && c.useTextToSpeech !== true)) {
         await playSentence([{ label: spokenText, useTextToSpeech: true }], lang, settings.speechRate, voiceType);
       } else {
         await playSentence(speakWords(), lang, settings.speechRate, voiceType);
@@ -1003,14 +1098,6 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 style={({ pressed }) => [styles.phraseRow, pressed && styles.tilePressed]}
               >
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.phraseRowInner}>
-                  {sentence.slice(-2).map((c) => (
-                    <View key={`ctx-${c.id}`} style={[styles.phraseBox, styles.phraseBoxCtx]}>
-                      <CardPic label={c.label} imageUri={c.imageUri} emoji={c.emoji} size={52} />
-                      <Text style={[styles.phraseBoxText, { color: colors.textMid }]} numberOfLines={1}>
-                        {wordLabel(c.label, lang)}
-                      </Text>
-                    </View>
-                  ))}
                   {row.map((w) => (
                     <View key={w.id} style={styles.phraseBox}>
                       <CardPic label={w.label} imageUri={w.imageUri} emoji={w.emoji} size={52} />
