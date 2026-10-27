@@ -143,6 +143,266 @@ export function formatNaturalEnglishSentence(rawWords: string[]): string {
   return formatted;
 }
 
+const WEEK_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
+
+/** A day of the week: the M T W T F S S strip with that day's letter large and highlighted. */
+function WeekStrip({ days, size }: { days: number[]; size: number }) {
+  // the strip is wide and low, so it spreads across the whole tile width rather than the square picture box
+  const [width, setWidth] = useState(size);
+  // 6 small boxes + 1 large one = 7.5 boxes, filling ~96% of the width
+  const box = Math.max(5, Math.floor((width * 0.96) / 7.5));
+  const big = Math.round(box * 1.5);
+  return (
+    <View
+      onLayout={(e) => setWidth(Math.round(e.nativeEvent.layout.width))}
+      style={{ width: "100%", minWidth: size, height: size, flexDirection: "row", alignItems: "center", justifyContent: "center" }}
+    >
+      {WEEK_LETTERS.map((letter, i) => {
+        const on = days.includes(i);
+        const side = on ? big : box;
+        return (
+          <View
+            key={i}
+            style={{
+              width: side,
+              height: side,
+              marginLeft: i ? -1 : 0,
+              zIndex: on ? 1 : 0,
+              borderWidth: on ? Math.max(2, Math.round(box * 0.18)) : 1.5,
+              borderColor: "#111827",
+              backgroundColor: on ? "#d4e157" : "#ffffff",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: Math.round(side * 0.68),
+                lineHeight: Math.round(side * 0.85),
+                fontWeight: "900",
+                // weekend letters in red, like a printed calendar
+                color: i >= 5 ? "#dc2626" : "#1d4ed8",
+              }}
+            >
+              {letter}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+/** "Animal hat" (no symbol set has one): a teddy-bear beanie with round ears and a little bear face. */
+function AnimalHat({ size }: { size: number }) {
+  const w = Math.round(size * 0.78);
+  const dome = Math.round(size * 0.5);
+  const ear = Math.round(size * 0.26);
+  const line = Math.max(2, Math.round(size * 0.022));
+  const brown = "#a0682f";
+  return (
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      <View style={{ width: w, height: dome + Math.round(size * 0.2) + Math.round(ear * 0.4) }}>
+        {/* ears, behind the dome */}
+        {[0.02, 0.98].map((x) => (
+          <View
+            key={x}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: Math.round(w * x) - ear / 2,
+              width: ear,
+              height: ear,
+              borderRadius: ear / 2,
+              backgroundColor: brown,
+              borderWidth: line,
+              borderColor: "#111827",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <View style={{ width: ear * 0.5, height: ear * 0.5, borderRadius: ear / 4, backgroundColor: "#f9a8d4" }} />
+          </View>
+        ))}
+        {/* the hat itself */}
+        <View
+          style={{
+            position: "absolute",
+            top: Math.round(ear * 0.4),
+            left: 0,
+            width: w,
+            height: dome,
+            backgroundColor: brown,
+            borderTopLeftRadius: w / 2,
+            borderTopRightRadius: w / 2,
+            borderWidth: line,
+            borderBottomWidth: 0,
+            borderColor: "#111827",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            paddingBottom: Math.round(size * 0.04),
+          }}
+        >
+          {/* bear face: eyes, a light muzzle and a nose */}
+          <View style={{ flexDirection: "row", width: w * 0.42, justifyContent: "space-between", marginBottom: Math.round(size * 0.02) }}>
+            {[0, 1].map((i) => (
+              <View key={i} style={{ width: size * 0.06, height: size * 0.06, borderRadius: size * 0.03, backgroundColor: "#111827" }} />
+            ))}
+          </View>
+          <View
+            style={{
+              width: size * 0.2,
+              height: size * 0.14,
+              borderRadius: size * 0.07,
+              backgroundColor: "#f5deb3",
+              borderWidth: Math.max(1, line - 1),
+              borderColor: "#111827",
+              alignItems: "center",
+              paddingTop: size * 0.015,
+            }}
+          >
+            <View style={{ width: size * 0.08, height: size * 0.05, borderRadius: size * 0.025, backgroundColor: "#3f2a14" }} />
+          </View>
+        </View>
+        {/* the folded band at the bottom */}
+        <View
+          style={{
+            position: "absolute",
+            top: Math.round(ear * 0.4) + dome - line,
+            left: -Math.round(w * 0.04),
+            width: Math.round(w * 1.08),
+            height: Math.round(size * 0.18),
+            backgroundColor: "#fde68a",
+            borderWidth: line,
+            borderColor: "#111827",
+            borderRadius: Math.round(size * 0.05),
+          }}
+        />
+      </View>
+    </View>
+  );
+}
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+// what each month means in Pakistan / Saudi Arabia (the stock Spanish calendar showed carnival, Halloween, a champagne toast)
+const arasaacPic = (id: number) => `https://static.arasaac.org/pictograms/${id}/${id}_500.png`;
+const openClipart = (id: number) => `https://openclipart.org/image/400px/${id}`;
+const MONTH_PICTURES = [
+  arasaacPic(29198), // January - children watching New Year fireworks
+  openClipart(283419), // February - a boy flying a kite (Basant)
+  openClipart(314143), // March - spring flowers
+  arasaacPic(7285), // April - wheat harvest
+  openClipart(316601), // May - the hot summer sun
+  openClipart(333460), // June - mango season
+  openClipart(214937), // July - a child with an umbrella in the monsoon rain
+  openClipart(250123), // August - Pakistan flag (14 August)
+  openClipart(325919), // September - Saudi flag (National Day, 23 September)
+  openClipart(291053), // October - dates harvest
+  openClipart(352630), // November - kinnow / orange season
+  arasaacPic(3131), // December - a snowman (snow in the north)
+];
+
+/** A month: a wall-calendar page with the month's number, its picture and that month's days. */
+function MonthCalendar({ month, size }: { month: number; size: number }) {
+  const w = Math.round(size * 0.86);
+  const h = Math.round(size * 0.94);
+  const cell = Math.floor((w - 8) / 7);
+  // the days take the bottom ~40% of the page: 5 rows of 7, big enough to read
+  const rowH = Math.max(4, Math.floor((h * 0.4 - 14) / 5));
+  const days = Array.from({ length: MONTH_DAYS[month] }, (_, i) => i + 1);
+  return (
+    <View style={{ width: w, height: h, marginTop: Math.round(size * 0.03) }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "#fde7c8",
+          borderWidth: 2,
+          borderColor: "#1f2937",
+          borderRadius: 4,
+          padding: 3,
+          overflow: "hidden",
+        }}
+      >
+        {/* the picture fills most of the page so a child reads the month from it at a glance */}
+        <View
+          style={{
+            height: "58%",
+            backgroundColor: "#ffffff",
+            borderWidth: 1.5,
+            borderColor: "#1f2937",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <SmartImage source={{ uri: MONTH_PICTURES[month] }} style={{ width: "96%", height: "96%" }} />
+          <View
+            style={{
+              position: "absolute",
+              top: 2,
+              right: 2,
+              minWidth: Math.round(size * 0.2),
+              paddingHorizontal: 3,
+              borderRadius: Math.round(size * 0.1),
+              backgroundColor: "#2563eb",
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={{
+                fontSize: Math.round(size * 0.13),
+                lineHeight: Math.round(size * 0.18),
+                fontWeight: "900",
+                color: "#ffffff",
+              }}
+            >
+              {month + 1}
+            </Text>
+          </View>
+        </View>
+        <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", marginTop: 3, alignContent: "flex-start" }}>
+          {days.map((d) => (
+            <View
+              key={d}
+              style={{
+                width: cell,
+                height: rowH,
+                borderWidth: 0.5,
+                borderColor: "#6b7280",
+                backgroundColor: "#ffffff",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={{ fontSize: Math.max(5, Math.round(rowH * 0.78)), lineHeight: rowH, fontWeight: "900", color: d % 7 === 0 ? "#dc2626" : "#111827" }}>
+                {d}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+      {/* the two rings the page hangs from */}
+      {[0.18, 0.82].map((x) => (
+        <View
+          key={x}
+          style={{
+            position: "absolute",
+            top: -4,
+            left: Math.round(w * x) - 5,
+            width: 10,
+            height: 10,
+            borderRadius: 5,
+            borderWidth: 2,
+            borderColor: "#1f2937",
+            backgroundColor: "#38bdf8",
+          }}
+        />
+      ))}
+    </View>
+  );
+}
+
 /** Card pictogram illustration with automatic ARASAAC lookup and emoji fallback */
 function CardPic({
   label,
@@ -163,8 +423,8 @@ function CardPic({
   const nativeWord = dashParts.length > 1 ? dashParts.slice(1).join(" - ").trim() : "";
   // a tile in the Alphabets / Numerals / Dates folders shows its letter or number cleanly
   const isLetterOrNumTile =
-    /^([a-zA-Z\u00C0-\u017F\u0621-\u064A]|\d{1,3}|[\u0660-\u0669]{1,2}|\d{1,2}(st|nd|rd|th))$/i.test(leadSymbol) &&
-    ["🔡", "🔠", "🔤", "🔢", "🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦"].includes(emoji);
+    /^([a-zA-Z\u00C0-\u017F\u0621-\u064A\u0679-\u06D3]|\d{1,3}|[\u0660-\u0669\u06F0-\u06F9]{1,3}|\d{1,2}(st|nd|rd|th))$/i.test(leadSymbol) &&
+    ["🔡", "🔠", "🔤", "🔢", "🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦", "🇵🇰"].includes(emoji);
   const uri = useMemo(() => {
     if (isLetterOrNumTile) return null;
     // a word whose usual picture is wrong ("sink") never falls back to it
@@ -176,6 +436,56 @@ function CardPic({
       (!imgError ? dictUrl(enLabel) || dictUrl(label) : null)
     );
   }, [imageUri, label, enLabel, imgError, isLetterOrNumTile]);
+
+  // days of the week draw their own English strip (the stock pictures are the Spanish L M X J V S D);
+  // a photo a parent chose still wins
+  const dayIdx = WEEK_DAYS.indexOf(enLabel.trim().toLowerCase());
+  if (dayIdx >= 0 && (!imageUri || imageUri.includes("arasaac.org"))) {
+    return <WeekStrip days={[dayIdx]} size={size} />;
+  }
+  const lowerEn = enLabel.trim().toLowerCase();
+  if (lowerEn === "weekend" && (!imageUri || imageUri.includes("arasaac.org"))) {
+    return <WeekStrip days={[5, 6]} size={size} />;
+  }
+  if (lowerEn === "animal hat" && !imageUri) {
+    return <AnimalHat size={size} />;
+  }
+  // "What year": a calendar page whose year is "20??" - the question is the missing year
+  if (lowerEn === "what year" && !imageUri) {
+    const w = Math.round(size * 0.84);
+    return (
+      <View style={{ width: w, height: Math.round(size * 0.9), marginTop: Math.round(size * 0.04) }}>
+        <View style={{ flex: 1, borderWidth: 2.5, borderColor: "#111827", borderRadius: 6, backgroundColor: "#ffffff", overflow: "hidden" }}>
+          <View style={{ height: "24%", backgroundColor: "#2563eb" }} />
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: Math.round(size * 0.27), lineHeight: Math.round(size * 0.34), fontWeight: "900", color: "#111827" }}>
+              20<Text style={{ color: "#dc2626" }}>??</Text>
+            </Text>
+          </View>
+        </View>
+        {/* the rings the page hangs from */}
+        {[0.2, 0.4, 0.6, 0.8].map((x) => (
+          <View
+            key={x}
+            style={{
+              position: "absolute",
+              top: -Math.round(size * 0.05),
+              left: Math.round(w * x) - 3,
+              width: 6,
+              height: Math.round(size * 0.12),
+              borderRadius: 3,
+              backgroundColor: "#111827",
+            }}
+          />
+        ))}
+      </View>
+    );
+  }
+  // months: a calendar page with a picture from Pakistani / Saudi life (case-sensitive, so the word "may" stays a word)
+  const monthIdx = MONTHS.indexOf(enLabel.trim());
+  if (monthIdx >= 0 && (!imageUri || imageUri.includes("arasaac.org"))) {
+    return <MonthCalendar month={monthIdx} size={size} />;
+  }
 
   if (uri && !imgError) {
     return (
@@ -191,16 +501,19 @@ function CardPic({
     const badgeText = isLetterOrNumTile ? leadSymbol : label.trim();
     const langTheme =
       emoji === "🇩🇪"
-        ? { color: "#b45309", bg: "#fef3c7", border: "#f59e0b", tag: "🇩🇪 DE" }
+        ? { color: "#b45309", bg: "#fef3c7", border: "#f59e0b" }
         : emoji === "🇫🇷"
-        ? { color: "#1d4ed8", bg: "#dbeafe", border: "#60a5fa", tag: "🇫🇷 FR" }
+        ? { color: "#1d4ed8", bg: "#dbeafe", border: "#60a5fa" }
         : emoji === "🇪🇸"
-        ? { color: "#be123c", bg: "#ffe4e6", border: "#fb7185", tag: "🇪🇸 ES" }
+        ? { color: "#be123c", bg: "#ffe4e6", border: "#fb7185" }
         : emoji === "🇸🇦"
-        ? { color: "#047857", bg: "#d1fae5", border: "#34d399", tag: "🇸🇦 AR" }
-        : { color: "#2f5fb3", bg: "#eff6ff", border: "#93c5fd", tag: "" };
+        ? { color: "#047857", bg: "#d1fae5", border: "#34d399" }
+        : emoji === "🇵🇰"
+        ? { color: "#166534", bg: "#dcfce7", border: "#4ade80" }
+        : { color: "#2f5fb3", bg: "#eff6ff", border: "#93c5fd" };
+    const isLangTile = ["🇩🇪", "🇫🇷", "🇪🇸", "🇸🇦", "🇵🇰"].includes(emoji);
 
-    if (size >= 60 && (langTheme.tag || nativeWord)) {
+    if (size >= 60 && (isLangTile || nativeWord)) {
       const mainScale = badgeText.length >= 3 ? 0.36 : badgeText.length === 2 ? 0.44 : 0.52;
       return (
         <View
@@ -217,11 +530,6 @@ function CardPic({
             paddingHorizontal: 6,
           }}
         >
-          {langTheme.tag ? (
-            <Text style={{ fontSize: Math.max(10, Math.round(size * 0.11)), fontWeight: "800", color: langTheme.color, marginBottom: 2 }}>
-              {langTheme.tag}
-            </Text>
-          ) : null}
           <Text
             style={{
               fontSize: Math.round(size * mainScale),
@@ -236,12 +544,13 @@ function CardPic({
           {nativeWord ? (
             <Text
               style={{
-                fontSize: Math.max(11, Math.round(size * 0.14)),
+                fontSize: Math.max(nativeWord.length > 10 ? 9 : 11, Math.round(size * (nativeWord.length > 10 ? 0.1 : 0.14))),
                 fontWeight: "700",
                 color: langTheme.color,
                 marginTop: 2,
+                textAlign: "center",
               }}
-              numberOfLines={1}
+              numberOfLines={2}
             >
               {nativeWord}
             </Text>
@@ -639,6 +948,9 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   const bottomTabs = useMemo(() => (ready ? bottomTabCategories(lang) : []), [ready, tick, lang]);
 
   const lastTapRef = useRef<{ id: string; time: number }>({ id: "", time: 0 });
+  // the tap that opens a folder must not also land on the tile drawn under the finger
+  const navigatedAtRef = useRef(0);
+  const justNavigated = () => Date.now() - navigatedAtRef.current < 450;
 
   function speakWords(): SpokenWord[] {
     return sentence.map((c) => ({
@@ -689,7 +1001,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   function toChip(w: CustomWord, idx: number): Chip {
     const rawText = w.phrase || w.label;
     const isAlphaNumTile =
-      ["🔡", "🔠", "🔤", "🔢", "🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦"].includes(w.emoji) &&
+      ["🔡", "🔠", "🔤", "🔢", "🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦", "🇵🇰"].includes(w.emoji) &&
       /\([^)]+\)$/.test(rawText.trim());
     // Strip the parenthesized pronunciation helper for the sentence strip so clicking a letter/number adds it once cleanly
     const cleanChipLabel = isAlphaNumTile
@@ -775,6 +1087,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   }
 
   function openFolder(id: string) {
+    if (justNavigated()) return;
+    navigatedAtRef.current = Date.now();
     selectFeedback();
     setPath((p) => [...p, id]);
   }
@@ -795,7 +1109,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     const spokenText = lang === "en-US" ? formatNaturalEnglishSentence(labels) : labels.join(" ");
 
     try {
-      const hasMultiLangChip = sentence.some((c) => ["🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦", "🔡", "🔠", "🔢"].includes(c.emoji) && c.phrase && c.phrase !== c.label);
+      const hasMultiLangChip = sentence.some((c) => ["🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦", "🇵🇰", "🔡", "🔠", "🔢"].includes(c.emoji) && c.phrase && c.phrase !== c.label);
       if (lang === "en-US" && !hasMultiLangChip && !sentence.some((c) => c.audioUri && c.useTextToSpeech !== true)) {
         await playSentence([{ label: spokenText, useTextToSpeech: true }], lang, settings.speechRate, voiceType);
       } else {
@@ -807,17 +1121,18 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   }
 
   function handleBack() {
+    navigatedAtRef.current = Date.now();
     tapFeedback();
     if (path.length > 1) {
       setPath((p) => p.slice(0, -1));
       return;
     }
     const tabs = bottomTabCategories(lang);
-    const coreTab =
-      tabs.find((t) => {
-        const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
-        return en === "core" || t.name === "بنیادی" || t.name === "أساسي";
-      }) ?? tabs[0];
+    // back from a shelf lands on Core when the board has one, otherwise on Home (never the first shelf)
+    const coreTab = tabs.find((t) => {
+      const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
+      return en === "core" || t.name === "بنیادی" || t.name === "أساسي";
+    });
     if (coreTab?.id && path[0] !== coreTab.id) {
       setPath([coreTab.id]);
       return;
@@ -827,6 +1142,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
 
   function openBottomTab(idOrNull: string | null) {
     if (!idOrNull) return;
+    navigatedAtRef.current = Date.now();
     selectFeedback();
     setPath([idOrNull]);
   }
@@ -1224,6 +1540,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                   <View key={w.id} style={[styles.cell, tileSize]}>
                     <Pressable
                       onPress={() => {
+                        if (justNavigated()) return;
                         if (verbKey) {
                           const rows = formRowsFor(verbKey);
                           if (rows.length === 1) return tapVerbForm(verbKey, rows[0].text, rows[0].tile);
@@ -1787,6 +2104,7 @@ const styles = StyleSheet.create({
   },
   miniCardMedia: {
     flex: 1,
+    alignSelf: "stretch",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1903,11 +2221,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#f1f5f9",
   },
-  wordLabelSecond: { color: "#475569", fontWeight: "700", fontSize: 12, textAlign: "center", marginTop: 1 },
+  wordLabelSecond: { color: "#475569", fontWeight: "700", fontSize: 14, textAlign: "center", marginTop: 1 },
   wordLabelText: {
     color: "#0f172a",
     fontWeight: "800",
-    fontSize: 14,
+    fontSize: 18,
     textAlign: "center",
   },
 

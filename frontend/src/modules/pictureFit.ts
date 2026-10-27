@@ -6,7 +6,7 @@
  * ("cover") instead of sitting in a strip with white bands above and below.
  */
 // (OpenSymbols serves its symbol sets from a CDN under /libraries/<set>/)
-const SYMBOL_SOURCES = /arasaac\.org|opensymbols\.org|cloudfront\.net\/libraries\/|mulberry|globalsymbols|\.svg(?:\.png)?(?:\?|$)|^data:image\/svg/i;
+const SYMBOL_SOURCES = /arasaac\.org|opensymbols\.org|cloudfront\.net\/libraries\/|mulberry|globalsymbols|openclipart\.org|\.svg(?:\.png)?(?:\?|$)|^data:image\/svg/i;
 
 export function pictureFit(uri?: string | null): "contain" | "cover" {
   if (!uri) return "contain";

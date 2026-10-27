@@ -892,11 +892,19 @@ export function folderPictureFor(c: CustomCategory): { text?: string; uri?: stri
   if (en === "upper case" || en === "english alphabets uppercase") return { text: "ABC" };
   if (en === "arabic alphabets") return { text: "أ ب ت" };
   if (en === "arabic numerals") return { text: "١٢٣" };
+  if (en === "urdu alphabets") return { text: "ا ب پ" };
+  if (en === "urdu numerals") return { text: "۱۲۳" };
   if (en === "french alphabets" || en === "spanish alphabets" || en === "german alphabets") return { text: "ABC" };
   if (en === "numerals" || en === "french numerals" || en === "spanish numerals" || en === "german numerals") return { text: "123" };
+  // the calendar's "Dates" (days of the month), not the fruit
+  if (en === "dates" && !c.isCustom) return { uri: "https://static.arasaac.org/pictograms/34799/34799_500.png" };
   if (c.imageUri) return { uri: c.imageUri };
   // "General" or "Animals" looks like its shelf (Animals / Animals -> the animals picture)
   const parent = c.parentCategoryId ? cache.find((x) => x.id === c.parentCategoryId) : undefined;
+  // Calendar / Others (day, week, year, today...) is about time: an hourglass, not a second calendar next to Months
+  if ((en === "others" || en === "other") && parent && enOf(parent).toLowerCase() === "calendar") {
+    return { uri: "https://static.arasaac.org/pictograms/22631/22631_500.png" };
+  }
   const name = (en === "general" || en === "others" || en === "other") && parent ? enOf(parent) : enOf(c);
   return { uri: getPictogramUrl(name) ?? undefined };
 }
@@ -1491,6 +1499,7 @@ Object.assign((FOLDER_NAMES["ar-SA"] ||= {}), PECS_FOLDER_NAMES_AR);
 Object.assign(FOLDER_NAMES["ar-SA"], {
   "Alphabets and Numerals": "الحروف والأرقام", "Alphabet and Numerals": "الحروف والأرقام",
   "Arabic Alphabets": "الحروف العربية", "Arabic Numerals": "الأرقام العربية",
+  "Urdu Alphabets": "الحروف الأردية", "Urdu Numerals": "الأرقام الأردية",
   "English Alphabets uppercase": "الحروف الإنجليزية الكبيرة", "English Alphabets lowercase": "الحروف الإنجليزية الصغيرة",
   Numerals: "الأرقام", "French Alphabets": "الحروف الفرنسية", "French Numerals": "الأرقام الفرنسية",
   "Spanish Alphabets": "الحروف الإسبانية", "Spanish Numerals": "الأرقام الإسبانية",
@@ -1521,6 +1530,7 @@ Object.assign(FOLDER_NAMES["ar-SA"], {
 Object.assign((FOLDER_NAMES["ur-PK"] ||= {}), {
   "Alphabets and Numerals": "حروف اور نمبر", "Alphabet and Numerals": "حروف اور نمبر",
   "Arabic Alphabets": "عربی حروف", "Arabic Numerals": "عربی نمبر",
+  "Urdu Alphabets": "اردو حروفِ تہجی", "Urdu Numerals": "اردو گنتی",
   "English Alphabets uppercase": "انگریزی بڑے حروف", "English Alphabets lowercase": "انگریزی چھوٹے حروف",
   Numerals: "نمبر", "French Alphabets": "فرانسیسی حروف", "French Numerals": "فرانسیسی نمبر",
   "Spanish Alphabets": "ہسپانوی حروف", "Spanish Numerals": "ہسپانوی نمبر",
@@ -2117,7 +2127,10 @@ function ensureAllStandardCategories() {
           label: existing?.isCustom ? existing.label : localized,
           phrase: existing?.isCustom ? existing.phrase : localized,
           emoji: existing?.emoji || emoji || "🔹",
-          imageUri: existing?.imageUri || (isAlphabetSub ? undefined : getPictogramUrl(label)) || undefined,
+          // a built-in word nobody edited always shows today's checked picture, never one saved by an older version
+          imageUri: existing?.isCustom
+            ? existing.imageUri
+            : (isAlphabetSub ? undefined : getPictogramUrl(label)) || undefined,
           color: existing?.color,
           audioUri: existing?.audioUri,
           useTextToSpeech: existing?.useTextToSpeech ?? true,
@@ -2158,6 +2171,7 @@ function ensureAllStandardCategories() {
       subCat.words.some(
         (w, i) =>
           w.label !== combinedWords[i]?.label ||
+          w.imageUri !== combinedWords[i]?.imageUri ||
           w.verbFormTag !== combinedWords[i]?.verbFormTag ||
           w.hidden !== combinedWords[i]?.hidden
       )
@@ -2526,6 +2540,8 @@ export function removeWord(catId: string, wordId: string) {
 export const NATURAL_ORDER_SUBCATEGORIES = new Set([
   "arabic alphabets",
   "arabic numerals",
+  "urdu alphabets",
+  "urdu numerals",
   "english alphabets uppercase",
   "english alphabets lowercase",
   "numerals",

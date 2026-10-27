@@ -1,4 +1,5 @@
-import { Image, StyleSheet, View, type ImageProps } from "react-native";
+import { Image, Platform, StyleSheet, View, type ImageProps } from "react-native";
+import { SvgUri } from "react-native-svg";
 import { pictureFit } from "../modules/pictureFit";
 
 /**
@@ -10,6 +11,14 @@ import { pictureFit } from "../modules/pictureFit";
  */
 export default function SmartImage({ source, style, resizeMode: _ignored, ...rest }: ImageProps) {
   const uri = (source as { uri?: string } | undefined)?.uri;
+  // symbol sets such as Mulberry only come as SVG: the browser shows them as an image, phones need react-native-svg
+  if (uri && Platform.OS !== "web" && /\.svg(\?|$)/i.test(uri)) {
+    return (
+      <View style={style as object}>
+        <SvgUri uri={uri} width="100%" height="100%" onError={() => rest.onError?.({} as never)} />
+      </View>
+    );
+  }
   if (pictureFit(uri) === "contain") {
     return <Image source={source} style={style} resizeMode="contain" {...rest} />;
   }

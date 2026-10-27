@@ -492,9 +492,9 @@ const SPANISH_LETTER_SPEECH: Record<string, string> = {
 export function parseAlphaNumSpeech(
   raw: string,
   emoji?: string
-): { text: string; targetLang?: "ar-SA" | "de-DE" | "fr-FR" | "es-ES" | "en-US" } {
+): { text: string; targetLang?: "ar-SA" | "ur-PK" | "de-DE" | "fr-FR" | "es-ES" | "en-US" } {
   const s = (raw || "").trim().replace(/\.$/, "");
-  const emojiLang: "ar-SA" | "de-DE" | "fr-FR" | "es-ES" | "en-US" | undefined =
+  const emojiLang: "ar-SA" | "ur-PK" | "de-DE" | "fr-FR" | "es-ES" | "en-US" | undefined =
     emoji === "🇩🇪"
       ? "de-DE"
       : emoji === "🇫🇷"
@@ -503,14 +503,16 @@ export function parseAlphaNumSpeech(
       ? "es-ES"
       : emoji === "🇸🇦"
       ? "ar-SA"
+      : emoji === "🇵🇰"
+      ? "ur-PK"
       : emoji === "🔠" || emoji === "🔡" || emoji === "🔢"
       ? "en-US"
       : undefined;
 
   // 1. Arabic format: "ا - ألف (Alif)" or "٠ - صفر (0 - Zero)" or legacy "٠ (0) - صفر (Sifr)" / "ا (Alif)"
-  const arDashMatch = s.match(/^([\u0621-\u064A\u0660-\u0669]+)\s*-\s*([\u0600-\u06FF\s]+)\s*\([^)]+\)$/);
+  const arDashMatch = s.match(/^([\u0621-\u064A\u0660-\u0669\u0679-\u06D3\u06F0-\u06F9]+)\s*-\s*([\u0600-\u06FF\s]+)\s*\([^)]+\)$/);
   if (arDashMatch) {
-    return { text: arDashMatch[2].trim(), targetLang: "ar-SA" };
+    return { text: arDashMatch[2].trim(), targetLang: emojiLang === "ur-PK" ? "ur-PK" : "ar-SA" };
   }
   const arLegacyNum = s.match(/^[\u0660-\u0669]+\s*\([^)]+\)\s*-\s*([^\s(]+)/);
   if (arLegacyNum) {
@@ -522,7 +524,7 @@ export function parseAlphaNumSpeech(
   }
 
   // 2. Foreign Numeral format: "0 - null (Zero)", "0 - zéro (Zero)", "0 - cero (Zero)"
-  const numDashMatch = s.match(/^\d+\s*-\s*([^\s(]+)(?:\s*\([^)]+\))?$/);
+  const numDashMatch = s.match(/^\d+\s*-\s*([^()]+?)\s*(?:\([^)]+\))?$/);
   if (numDashMatch) {
     const word = numDashMatch[1].trim();
     const low = word.toLowerCase();
