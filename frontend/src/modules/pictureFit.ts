@@ -1,3 +1,5 @@
+import UNIQUE_PICTURES from "./uniquePictures.json";
+
 /**
  * How a word picture should fill its square box.
  *
@@ -8,7 +10,11 @@
 // (OpenSymbols serves its symbol sets from a CDN under /libraries/<set>/)
 const SYMBOL_SOURCES = /arasaac\.org|opensymbols\.org|cloudfront\.net\/libraries\/|mulberry|globalsymbols|openclipart\.org|\.svg(?:\.png)?(?:\?|$)|^data:image\/svg/i;
 
+/** Symbols drawn for the app itself (half circle, semi circle): built-in data pictures, shown like other symbols. */
+const BUILT_IN_DRAWINGS = new Set(Object.values(UNIQUE_PICTURES as Record<string, string>).filter((u) => u.startsWith("data:")));
+
 export function pictureFit(uri?: string | null): "contain" | "cover" {
   if (!uri) return "contain";
+  if (BUILT_IN_DRAWINGS.has(uri)) return "contain";
   return SYMBOL_SOURCES.test(uri) ? "contain" : "cover";
 }

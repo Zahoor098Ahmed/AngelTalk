@@ -50,6 +50,7 @@ import AddByVoiceScreen from "./AddByVoiceScreen";
 import { colors } from "../theme";
 import { getVerbForms, detectVerbForm, isContinuousForm, generateAllVerbForms, sFormOf, type VerbForms } from "../modules/verbForms";
 import SmartImage from "../components/SmartImage";
+import MONTH_PICTURE_DATA from "../modules/monthPictures.json";
 
 interface Props {
   child: ChildProfile;
@@ -287,31 +288,20 @@ function AnimalHat({ size }: { size: number }) {
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 // what each month means in Pakistan / Saudi Arabia (the stock Spanish calendar showed carnival, Halloween, a champagne toast)
-const arasaacPic = (id: number) => `https://static.arasaac.org/pictograms/${id}/${id}_500.png`;
-const openClipart = (id: number) => `https://openclipart.org/image/400px/${id}`;
-const MONTH_PICTURES = [
-  arasaacPic(29198), // January - children watching New Year fireworks
-  openClipart(283419), // February - a boy flying a kite (Basant)
-  openClipart(314143), // March - spring flowers
-  arasaacPic(7285), // April - wheat harvest
-  openClipart(316601), // May - the hot summer sun
-  openClipart(333460), // June - mango season
-  openClipart(214937), // July - a child with an umbrella in the monsoon rain
-  openClipart(250123), // August - Pakistan flag (14 August)
-  openClipart(325919), // September - Saudi flag (National Day, 23 September)
-  openClipart(291053), // October - dates harvest
-  openClipart(352630), // November - kinnow / orange season
-  arasaacPic(3131), // December - a snowman (snow in the north)
-];
+// The app is used worldwide: seasons and holidays differ by country and hemisphere, so each month shows
+// a calendar page with its own colour, short name and number (JAN 1 … DEC 12), stored in the app
+const MONTH_PICTURES: string[] = MONTH_PICTURE_DATA;
 
 /** A month: a wall-calendar page with the month's number, its picture and that month's days. */
 function MonthCalendar({ month, size }: { month: number; size: number }) {
   const w = Math.round(size * 0.86);
   const h = Math.round(size * 0.94);
   const cell = Math.floor((w - 8) / 7);
-  // the days take the bottom ~40% of the page: 5 rows of 7, big enough to read
-  const rowH = Math.max(4, Math.floor((h * 0.4 - 14) / 5));
   const days = Array.from({ length: MONTH_DAYS[month] }, (_, i) => i + 1);
+  // the days fill the page below the picture to its bottom edge: what is left of the page
+  // (border 2+2, padding 3+3, picture 58%, gap 3) shared by the month's rows of 7
+  const inner = h - 10;
+  const rowH = Math.max(4, Math.floor((inner - Math.round(inner * 0.58) - 3) / Math.ceil(days.length / 7)));
   return (
     <View style={{ width: w, height: h, marginTop: Math.round(size * 0.03) }}>
       <View
@@ -375,7 +365,7 @@ function MonthCalendar({ month, size }: { month: number; size: number }) {
                 justifyContent: "center",
               }}
             >
-              <Text style={{ fontSize: Math.max(5, Math.round(rowH * 0.78)), lineHeight: rowH, fontWeight: "900", color: d % 7 === 0 ? "#dc2626" : "#111827" }}>
+              <Text style={{ fontSize: Math.max(5, Math.round(Math.min(rowH * 0.78, cell * 0.55))), lineHeight: rowH, fontWeight: "900", color: d % 7 === 0 ? "#dc2626" : "#111827" }}>
                 {d}
               </Text>
             </View>
@@ -1371,6 +1361,12 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
         )}
         {(searchHits.length > 0 || phraseRows.length > 0 || suggestions.length > 0) && showSuggest && (
         <View style={{ width: "100%" }}>
+        {/* the same bar folds them away again */}
+        <Pressable onPress={() => setShowSuggest(false)} style={styles.suggestCollapsed} accessibilityLabel="Hide suggestions">
+          <Ionicons name="sparkles" size={17} color={colors.forest} />
+          <Text style={styles.suggestHeaderText}>{lang === "ar-SA" ? "اقتراحات" : lang === "ur-PK" ? "تجاویز" : "Suggestions"}</Text>
+          <Ionicons name="chevron-up" size={18} color={colors.forest} />
+        </Pressable>
         {/* Search results for the word being typed */}
         {searchHits.length > 0 && (
           <View style={styles.suggestWrap}>
@@ -1403,10 +1399,6 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
         {/* Google-style phrase suggestions: the sentence so far + what could come next, all as boxes */}
         {phraseRows.length > 0 && (
           <View style={styles.suggestWrap}>
-            <View style={styles.suggestHeader}>
-              <Ionicons name="sparkles" size={17} color={colors.forest} />
-              <Text style={styles.suggestHeaderText}>{lang === "ar-SA" ? "اقتراحات" : lang === "ur-PK" ? "تجاویز" : "Suggestions"}</Text>
-            </View>
             {phraseRows.map((row) => (
               <Pressable
                 key={row.map((w) => w.id).join("|")}

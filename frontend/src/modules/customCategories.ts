@@ -4,6 +4,7 @@ import { starterLabel, wordLabel, canonicalWordEn, translateDynamic } from "./i1
 import { getPictogramUrl, isOneWordGuess, pictureFixFor, hasSymbolPicture } from "./aacPictograms";
 import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, isContinuousForm, sFormOf, conjugateRegularVerb, KNOWN_REGULAR_VERBS, registerVerbForms, registerSForm, type VerbForms } from "./verbForms";
 import PECS_EMOJI from "./pecsEmoji.json";
+import UNIQUE_PICTURES from "./uniquePictures.json";
 import { CLIENT_SHELVES, CLIENT_VERBS } from "./clientVocabulary";
 import { PECS_SHELVES, PECS_SUBS, PECS_VERBS, PECS_FOLDER_NAMES_AR, cleanPecsWord, capFirst } from "./pecsVocabulary";
 const SEED_WORD_EN: Record<string, string[]> = {
@@ -22,7 +23,28 @@ export function setSeedLanguage(lang: LanguageCode) {
   seedLang = lang;
 }
 
+/**
+ * Where the board is saved on the device. Keep this name: a new name starts every family on an empty board
+ * and loses their own words. The built-in words reach existing boards without it (ensureAllStandardCategories
+ * adds and updates them, and keeps what the family added, edited or deleted).
+ */
 const KEY = "kiddocare_custom_categories_wordfile_v6";
+/** Boards saved under earlier names: removed on load, they only fill the device's storage (about 1 MB each). */
+const OLD_BOARD_KEYS = [
+  "kiddocare_custom_categories",
+  "kiddocare_custom_categories_wordfile_v1", "kiddocare_custom_categories_wordfile_v2", "kiddocare_custom_categories_wordfile_v3",
+  "kiddocare_custom_categories_wordfile_v4", "kiddocare_custom_categories_wordfile_v5",
+  "kiddocare_deleted_items_v2", "kiddocare_deleted_items_wordfile_v1", "kiddocare_deleted_items_wordfile_v2",
+  "kiddocare_deleted_items_wordfile_v3", "kiddocare_deleted_items_wordfile_v4", "kiddocare_deleted_items_wordfile_v5",
+];
+async function removeOldBoards(): Promise<void> {
+  for (const k of OLD_BOARD_KEYS) {
+    try {
+      if (typeof window !== "undefined" && window.localStorage) window.localStorage.removeItem(k);
+    } catch { /* storage blocked */ }
+    await AsyncStorage.removeItem(k).catch(() => { });
+  }
+}
 const BACKUP_VERSION = 2;
 
 // Other spellings caregivers use for a built-in folder (e.g. a voice-made "Subject" folder)
@@ -54,6 +76,9 @@ export function notifyListeners() {
 }
 
 const DELETED_KEYS_STORAGE = "kiddocare_deleted_items_wordfile_v6";
+const RESTORED_BODY_SINGULARS = "kiddocare_restored_body_singulars_v1";
+const RESTORED_ATTRIBUTES_LIST = "kiddocare_restored_attributes_list_v1";
+const RESTORED_BODY_LIST = "kiddocare_restored_body_list_v1";
 let deletedItemKeys: Set<string> = new Set();
 let deletedKeysLoaded = false;
 
@@ -66,6 +91,21 @@ async function ensureDeletedKeysLoaded() {
       if (Array.isArray(arr)) {
         deletedItemKeys = new Set(arr);
       }
+    }
+    // words an older build took off on purpose come back once:
+    // body singulars (only plurals were kept for a while), and every word of the client's Attributes list
+    // ("one", "heart", "tiny", "giant" were removed before the list asked for them), and of its Body list
+    const comeBack: [string, string[]][] = [
+      [RESTORED_BODY_SINGULARS, ["ankle", "arm", "cheek", "elbow", "eyebrow", "finger", "foot", "hand", "knee", "leg", "shoulder", "thumb", "tooth", "ear"]],
+      [RESTORED_ATTRIBUTES_LIST, (CLIENT_SHELVES.find((s) => s.name === "Attributes")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
+      [RESTORED_BODY_LIST, (CLIENT_SHELVES.find((s) => s.name === "Body")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
+    ];
+    for (const [marker, back] of comeBack) {
+      if (await AsyncStorage.getItem(marker)) continue;
+      const before = deletedItemKeys.size;
+      deletedItemKeys = new Set([...deletedItemKeys].filter((k) => !(k.startsWith("word::") && back.includes(k.slice(k.lastIndexOf("::") + 2)))));
+      if (deletedItemKeys.size !== before) persistDeletedKeys();
+      AsyncStorage.setItem(marker, "1").catch(() => { });
     }
   } catch { }
   deletedKeysLoaded = true;
@@ -180,6 +220,8 @@ export function ensureCategoriesLoaded(): Promise<void> {
 }
 
 async function loadCategories(): Promise<void> {
+  // free the space old boards take, or the browser has no room to save this one (it then forgets every change)
+  await removeOldBoards();
   await ensureDeletedKeysLoaded();
   if (loaded) return;
   try {
@@ -212,6 +254,8 @@ async function loadCategories(): Promise<void> {
   // Also on a fresh install: the starter board only holds the top-level folders,
   // their sub-folders and words (Family, Drinks, Verbs A–Z…) are filled in here.
   ensureAllStandardCategories();
+  // (a word taken off the list must not come back with a merged old shelf)
+  if (mergeRenamedShelves()) { removeRetiredBuiltinWords(); persist(); }
   cleanAndDeduplicateCategories();
   retranslateSeedBoard(seedLang);
   refreshSayItForMeImages();
@@ -239,6 +283,23 @@ function refreshGuessedPictures() {
           w.emoji = own;
           changed = true;
         }
+      }
+      // openclipart.org now answers every picture link with the same scissors placeholder:
+      // a saved openclipart picture (even a family's own) gives way to today's built-in one, or the emoji
+      if (w.imageUri && /openclipart\.org/i.test(w.imageUri)) {
+        const now = getPictogramUrl((w.verbForms?.base || canonicalWordEn(w.label) || w.label).trim()) ?? undefined;
+        w.imageUri = now && !/openclipart\.org/i.test(now) ? now : undefined;
+        changed = true;
+        continue;
+      }
+      // a picture drawn for the app (half circle, semi circle) is replaced by its newest drawing
+      if (!w.isCustom && w.imageUri?.startsWith("data:image/png")) {
+        const drawn = pictureFixFor((w.verbForms?.base || canonicalWordEn(w.label) || w.label).trim());
+        if (drawn && drawn.startsWith("data:") && drawn !== w.imageUri) {
+          w.imageUri = drawn;
+          changed = true;
+        }
+        continue;
       }
       if (w.isCustom || !w.imageUri || !w.imageUri.startsWith("https://static.arasaac.org/")) continue;
       const en = (w.verbForms?.base || canonicalWordEn(w.label) || w.label).trim();
@@ -1374,10 +1435,16 @@ const LEGACY_SUBCATEGORIES = [...STARTER_SUBCATEGORIES];
 (() => {
   const norm = (w: string) => w.toLowerCase().replace(/\s+/g, " ").trim();
   const seen = new Set<string>();
+  const verbBases = new Set<string>();
   Object.values(VERBS_A_TO_Z).forEach((list) =>
     // a verb's other forms live inside its box (popup), so only the verb itself takes its place on the board
-    list.forEach((v) => seen.add(norm(v.base))),
+    list.forEach((v) => verbBases.add(norm(v.base))),
   );
+  // Attributes describe things: "open" there is the adjective (an open box), so it stays beside the verb "open";
+  // Body names its parts and senses the same way ("touch" the sense beside the verb "touch")
+  let describing = false;
+  // words with two meanings the client's list puts in two places, each with its own picture (folderWordPicture)
+  const TWO_MEANINGS = new Set(["heart", "calf"]);
   const take = (words: string[], keepCase = false): string[] => {
     const out: string[] = [];
     for (const raw of words) {
@@ -1389,7 +1456,7 @@ const LEGACY_SUBCATEGORIES = [...STARTER_SUBCATEGORIES];
         continue;
       }
       const key = norm(label);
-      if (seen.has(key)) continue;
+      if ((seen.has(key) && !TWO_MEANINGS.has(key)) || (verbBases.has(key) && !describing)) continue;
       seen.add(key);
       out.push(label);
     }
@@ -1398,6 +1465,7 @@ const LEGACY_SUBCATEGORIES = [...STARTER_SUBCATEGORIES];
   const shelves: typeof STARTER = [];
   const subs: typeof STARTER_SUBCATEGORIES = [];
   for (const shelf of CLIENT_SHELVES) {
+    describing = shelf.name === "Attributes" || shelf.name === "Body";
     const flat = take(shelf.words ?? []);
     shelves.push({ name: shelf.name, icon: shelf.icon, words: flat.map((w) => [w, wordEmoji(w) ?? shelf.icon] as [string, string]) });
     for (const sub of shelf.subs ?? []) {
@@ -1413,6 +1481,7 @@ const LEGACY_SUBCATEGORIES = [...STARTER_SUBCATEGORIES];
       }
     }
   }
+  describing = false;
   // verbs the app cannot conjugate ("high five" is written out; "party", "picnic" are plain tiles) in their letter's folder
   const verbSubs = new Map<string, string[]>();
   for (const p of pecsVerbLeftovers) {
@@ -1843,6 +1912,61 @@ function replacePecsV1Folders(): boolean {
 }
 
 /**
+ * A word on the board in two places with two meanings has a picture of its own in each folder:
+ * "Heart" is a shape in Shapes and the organ in Organs, "Calf" a baby cow in Animals and part of the leg in Body parts.
+ */
+function folderWordPicture(folder: string, label: string): string | undefined {
+  return (UNIQUE_PICTURES as Record<string, string>)[`${folder.toLowerCase()}::${label.toLowerCase()}`] || undefined;
+}
+
+/** Shelves an older list named differently -> their name now. */
+const RENAMED_SHELVES: Record<string, string> = {
+  "alphabet and numerals": "Alphabets and Numerals",
+  "computers, electronics and accessories": "Computer Electronics and Accessories",
+  "foods and drinks": "Food and Drinks",
+  "music, instruments, and equipment": "Music, Instruments and Equipment",
+  "nature and outdoors": "Nature and Outdoor",
+};
+
+/**
+ * A shelf kept under its old name only because the family changed something in it ("Alphabet and Numerals"
+ * beside "Alphabets and Numerals"): what they changed moves onto the same words in the shelf of today's name
+ * (their picture, sound, colour), words of their own move along, and the old shelf goes.
+ */
+function mergeRenamedShelves(): boolean {
+  let changed = false;
+  const norm = (s: string) => (s || "").trim().toLowerCase();
+  const moveWords = (from: CustomCategory, to: CustomCategory) => {
+    for (const w of from.words.filter((x) => x.isCustom)) {
+      const same = to.words.find((x) => norm(x.label) === norm(w.label) || norm(x.seedLabel || "") === norm(w.label));
+      if (same) Object.assign(same, { imageUri: w.imageUri ?? same.imageUri, audioUri: w.audioUri ?? same.audioUri, color: w.color ?? same.color, emoji: w.emoji || same.emoji, isCustom: true });
+      else to.words.push({ ...w, order: to.words.length });
+    }
+  };
+  for (const old of cache.filter((c) => !c.parentCategoryId && RENAMED_SHELVES[norm(c.name)])) {
+    const now = cache.find((c) => !c.parentCategoryId && norm(c.name) === norm(RENAMED_SHELVES[norm(old.name)]));
+    if (!now) continue;
+    moveWords(old, now);
+    for (const sub of cache.filter((c) => c.parentCategoryId === old.id)) {
+      const twin = cache.find((c) => c.parentCategoryId === now.id && norm(c.name) === norm(sub.name));
+      if (twin) {
+        moveWords(sub, twin);
+        cache.forEach((c) => { if (c.parentCategoryId === sub.id) c.parentCategoryId = twin.id; });
+        cache = cache.filter((c) => c.id !== sub.id);
+      } else if (sub.isCustom || sub.source !== "seed" || sub.words.some((w) => w.isCustom)) {
+        sub.parentCategoryId = now.id; // a folder of their own goes along
+      } else {
+        cache = cache.filter((c) => c.id !== sub.id && c.parentCategoryId !== sub.id);
+      }
+    }
+    cache = cache.filter((c) => c.id !== old.id);
+    changed = true;
+  }
+  if (changed) cache = [...cache];
+  return changed;
+}
+
+/**
  * The board is the client's list: built-in folders that are not on it (old Core, Food, Schools… and the earlier
  * PECS folders) go. A folder that holds the caregiver's own words or folders stays, with only those in it.
  */
@@ -1866,18 +1990,32 @@ function removeFoldersNotInClientList(): boolean {
     cache = cache.filter((x) => !ids.has(x.id));
     changed = true;
   };
+  // the family's own folders, and built-in ones holding their own words, are never removed
+  const hasOwn = (c: CustomCategory): boolean =>
+    !!c.isCustom || c.source !== "seed" || c.words.some((w) => w.isCustom) || cache.some((x) => x.parentCategoryId === c.id && hasOwn(x));
+  const strip = (c: CustomCategory) => {
+    const before = c.words.length;
+    c.words = c.words.filter((w) => w.isCustom).map((w, i) => ({ ...w, order: i }));
+    if (c.words.length !== before) changed = true;
+  };
   for (const shelf of cache.filter((c) => !c.parentCategoryId)) {
     if (shelfNames.has(enOf(shelf))) continue;
-    removeTree(shelf);
+    if (!hasOwn(shelf)) { removeTree(shelf); continue; }
+    if (shelf.source !== "seed" || shelf.isCustom) continue; // made by the family: kept as it is
+    strip(shelf);
+    for (const sub of cache.filter((x) => x.parentCategoryId === shelf.id && x.source === "seed" && !x.isCustom)) {
+      if (hasOwn(sub)) strip(sub); else removeTree(sub);
+    }
   }
-  for (const sub of cache.filter((c) => c.parentCategoryId)) {
+  for (const sub of cache.filter((c) => c.parentCategoryId && c.source === "seed" && !c.isCustom)) {
     const parent = cache.find((x) => x.id === sub.parentCategoryId);
-    if (!parent) { removeTree(sub); continue; }
+    if (!parent) { if (!hasOwn(sub)) removeTree(sub); continue; }
+    if (parent.parentCategoryId || !shelfNames.has(enOf(parent))) continue;
     const pEn = (parent.seedName || enOf(parent)).toLowerCase();
     const valid = subsOf.get(pEn === "actions" ? "verbs" : pEn);
     const name = (sub.seedName || enOf(sub)).toLowerCase();
     if (valid?.has(name)) continue;
-    removeTree(sub);
+    if (hasOwn(sub)) strip(sub); else removeTree(sub);
   }
   return changed;
 }
@@ -1913,8 +2051,61 @@ function syncShelfWords(cat: CustomCategory, seedWords: [string, string][]): boo
   return true;
 }
 
+/**
+ * Built-in words taken off the list on purpose: they go from every board, also where a picture was changed on them
+ * (that marks a word as the family's own, which normally keeps it).
+ */
+const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
+  // Attributes follow the client's list word for word
+  colours: ["tan", "blue-light", "blue-dark", "colors", "multi", "rainbow"],
+  shapes: ["half circle", "semi circle", "shapes"],
+  sizes: ["fat", "skinny", "huge"],
+  texture: ["crunchy", "elastic", "flexible", "stiff"],
+  material: ["sand", "wooden"],
+  quantity: ["empty", "more", "nothing"],
+  other: ["bone", "bad", "evil", "freeze dried", "good", "heavy", "high", "low", "noise", "noisy", "off switch", "okay", "on switch", "sliced", "stinky", "that", "volume down", "volume up", "zig-zags", "cut", "turn"],
+  // ... and the list's words leave the folders they were in before
+  "body parts": ["beard", "belly button", "fingernails", "lap", "mustache", "our bodies", "teeth", "toenails", "tooth", "tummy", "cane", "otoscope", "rubber gloves", "spacer", "stethoscope", "stretch band", "surgical mask", "therapy ball", "thermometer", "walker", "walking stick", "wheelchair"],
+  senses: ["hearing aid", "bitter", "salty", "sour", "ear", "ears", "eye", "eyelashes", "eyelid", "eyes", "hear", "lips", "mouth", "nose", "see", "skin", "tongue"],
+  others: ["ears"],
+  organs: ["belly", "tummy", "blood pressure", "blood", "bones", "kidneys", "lungs", "muscles", "ribs", "spine", "veins"],
+  fruits: ["peach"],
+  sweets: ["cone"],
+  kitchen: ["glass"],
+  home: ["light"],
+  office: ["paper"],
+  school: ["clay"],
+  "sports and fitness": ["arrow"],
+  "tools and supplies": ["cotton", "wool"],
+  preposition: ["on", "off", "bottom"],
+  "computer electronics and accessories": ["app", "white noise machine"],
+  sensations: ["i'm bleeding", "sick"],
+  emotions: ["afraid", "angry", "anxious", "bored", "excited", "happy", "nervous", "sad", "surprised", "worried"],
+};
+function removeRetiredBuiltinWords(): boolean {
+  let changed = false;
+  for (const c of cache) {
+    const retired = RETIRED_BUILTIN_WORDS[folderEnglishName(c).toLowerCase()];
+    if (!retired) continue;
+    const before = c.words.length;
+    c.words = c.words.filter((w) => {
+      const names = [w.label, w.seedLabel, canonicalWordEn(w.label)].map((l) => (l || "").trim().toLowerCase());
+      if (!names.some((n) => retired.includes(n))) return true;
+      names.forEach((n) => n && deletedItemKeys.add(`word::${c.id}::${n}`));
+      return false;
+    });
+    if (c.words.length !== before) {
+      c.words = c.words.map((w, i) => ({ ...w, order: i }));
+      persistDeletedKeys();
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function ensureAllStandardCategories() {
-  let changed = removeFoldersNotInClientList();
+  let changed = removeRetiredBuiltinWords();
+  if (removeFoldersNotInClientList()) changed = true;
   const now = Date.now();
 
   STARTER.forEach((s, idx) => {
@@ -2130,7 +2321,7 @@ function ensureAllStandardCategories() {
           // a built-in word nobody edited always shows today's checked picture, never one saved by an older version
           imageUri: existing?.isCustom
             ? existing.imageUri
-            : (isAlphabetSub ? undefined : getPictogramUrl(label)) || undefined,
+            : (isAlphabetSub ? undefined : folderWordPicture(sub.name, label) ?? getPictogramUrl(label)) || undefined,
           color: existing?.color,
           audioUri: existing?.audioUri,
           useTextToSpeech: existing?.useTextToSpeech ?? true,
@@ -2428,6 +2619,14 @@ export function updateWord(
     const oldEnLabel = (canonicalWordEn(w.label) || w.label).trim().toLowerCase();
     const oldVForms = w.verbForms || generateAllVerbForms(oldEnLabel);
 
+    // a built-in word renamed by the family: the old name is not brought back by the next load
+    if (patch.label && patch.label.trim().toLowerCase() !== (w.label || "").trim().toLowerCase()) {
+      [w.label, w.seedLabel, canonicalWordEn(w.label)].forEach((l) => {
+        const n = (l || "").trim().toLowerCase();
+        if (n) deletedItemKeys.add(w.verbFormTag ? `word::${targetCatId}::${w.verbFormTag}::${n}` : `word::${targetCatId}::${n}`);
+      });
+      persistDeletedKeys();
+    }
     Object.assign(w, patch);
     w.isCustom = true;
 
