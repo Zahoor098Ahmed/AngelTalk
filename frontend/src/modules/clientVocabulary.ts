@@ -2112,7 +2112,6 @@ export const CLIENT_SHELVES: ClientShelf[] = [
           "dried fruit",
           "dried mango",
           "dried papaya",
-          "ground nuts",
           "macadamia nuts",
           "nuts",
           "peanuts",

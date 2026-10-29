@@ -2089,7 +2089,7 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   "meats and fish": ["ahi tuna", "bacon", "beef burger", "beefburger- no roll", "beefburger-double", "boneless", "buffalo wings", "calamari", "calamari rings", "cheese steak", "cheeseburger", "cheeseburger-double", "chicken strips", "chicken tenders", "chili dog", "chop", "chorizo", "corn dog", "cuttlefish", "fish fingers", "fish sticks", "fish-broiled", "fish-grilled", "gyro", "hamburger and gravy", "hamburger patty", "hamburger-double", "hot dog", "lox", "lunchmeat", "meat", "meatballs", "meatloaf", "minced beef", "mussels", "octopus dumplings", "oyster", "pate", "pepperoni", "pigs in a blanket", "pork cutlet", "pork schnitzel", "prosciutto", "rissole", "roast dinner", "salmon flakes", "salmon steak", "sausages and mash", "sloppy joe", "smoked salmon bagel", "sushi"],
   soups: ["chili", "miso soup", "noodle soup", "noodles-chinese", "noodles-cup of", "noodles-soba", "noodles-udon", "soup", "stew"],
   "dairy and eggs": ["butter"],
-  nuts: ["date"],
+  nuts: ["date", "ground nuts"],
   meat: ["chicken nuggets", "fish and chips", "fried chicken", "hamburger"],
   emotions: ["afraid", "angry", "anxious", "bored", "excited", "happy", "nervous", "sad", "surprised", "worried"],
 };
