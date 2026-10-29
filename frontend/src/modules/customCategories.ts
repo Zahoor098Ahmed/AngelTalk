@@ -1444,7 +1444,8 @@ const LEGACY_SUBCATEGORIES = [...STARTER_SUBCATEGORIES];
   // Body names its parts and senses the same way ("touch" the sense beside the verb "touch")
   let describing = false;
   // words with two meanings the client's list puts in two places, each with its own picture (folderWordPicture)
-  const TWO_MEANINGS = new Set(["heart", "calf"]);
+  // (an animal in Animals is also its meat in Meats and fish: "chicken", "turkey"…)
+  const TWO_MEANINGS = new Set(["heart", "calf", "chicken", "crab", "duck", "fish", "goat", "lamb", "lobster", "tuna", "turkey"]);
   const take = (words: string[], keepCase = false): string[] => {
     const out: string[] = [];
     for (const raw of words) {
@@ -1913,7 +1914,8 @@ function replacePecsV1Folders(): boolean {
 
 /**
  * A word on the board in two places with two meanings has a picture of its own in each folder:
- * "Heart" is a shape in Shapes and the organ in Organs, "Calf" a baby cow in Animals and part of the leg in Body parts.
+ * "Heart" is a shape in Shapes and the organ in Organs, "Calf" a baby cow in Animals and part of the leg in Body parts,
+ * "Chicken" the bird in Animals and the meat in Meats and fish.
  */
 function folderWordPicture(folder: string, label: string): string | undefined {
   return (UNIQUE_PICTURES as Record<string, string>)[`${folder.toLowerCase()}::${label.toLowerCase()}`] || undefined;
@@ -2063,14 +2065,14 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   texture: ["crunchy", "elastic", "flexible", "stiff"],
   material: ["sand", "wooden"],
   quantity: ["empty", "more", "nothing"],
-  other: ["bone", "bad", "evil", "freeze dried", "good", "heavy", "high", "low", "noise", "noisy", "off switch", "okay", "on switch", "sliced", "stinky", "that", "volume down", "volume up", "zig-zags", "cut", "turn"],
+  other: ["bone", "bad", "evil", "freeze dried", "good", "heavy", "high", "low", "noise", "noisy", "off switch", "okay", "on switch", "sliced", "stinky", "that", "volume down", "volume up", "zig-zags", "cut", "turn", "falafel", "lasagna", "pasta", "pizza", "rice", "spaghetti"],
   // ... and the list's words leave the folders they were in before
   "body parts": ["beard", "belly button", "fingernails", "lap", "mustache", "our bodies", "teeth", "toenails", "tooth", "tummy", "cane", "otoscope", "rubber gloves", "spacer", "stethoscope", "stretch band", "surgical mask", "therapy ball", "thermometer", "walker", "walking stick", "wheelchair"],
   senses: ["hearing aid", "bitter", "salty", "sour", "ear", "ears", "eye", "eyelashes", "eyelid", "eyes", "hear", "lips", "mouth", "nose", "see", "skin", "tongue"],
   others: ["ears"],
   organs: ["belly", "tummy", "blood pressure", "blood", "bones", "kidneys", "lungs", "muscles", "ribs", "spine", "veins"],
-  fruits: ["peach"],
-  sweets: ["cone"],
+  fruits: ["peach", "fruit salad", "fruit-baby"],
+  sweets: ["cone", "animal crackers", "applesauce", "astronaut ice cream", "banana split", "bun-iced", "cake mix", "cake-creme filled", "cake-snack", "candy", "candy apple", "candy cane", "candy corn", "candy floss", "candy hearts", "cherry pie", "chips-candy", "chocolate mousse", "chocolate roll", "chocolate swiss roll", "chouquette", "christmas pudding", "churros", "cinnamon rolls", "cookies-slice and bake", "cotton candy", "cream puffs", "creme caramel", "donut holes", "fairy floss", "flan", "fortune cookie", "frozen treats", "fruit roll", "fruit snack", "fruit sweets", "fruitcake", "fun fruit", "gelatin", "gum", "gummy candy", "gummy sweets", "heart sweets", "ice cream bar", "ice cream cone", "ice cream sandwich", "ice cream sundae", "ice cream treat", "ice lolly", "jellybeans", "krispy bars", "licorice", "lollipop", "lolly", "marshmallow", "marshmallow candy", "marshmallow-sweets", "mince pie", "mini candy", "mini gelatin cup", "mini sweets", "mints", "panettone", "popsicle", "profiteroles", "puffs", "pumpkin roll", "sherbet", "soft serve ice cream", "sorbet", "spoon sweets", "sprinkles-chocolate", "sprinkles-rainbow", "sweet buns", "sweets", "swiss roll", "tart", "toaster pastry", "toffee-apple", "treacle toffee", "turkish delight", "water ice", "whoopie pie", "yorkshire pudding", "yule log cake"],
   kitchen: ["glass"],
   home: ["light"],
   office: ["paper"],
@@ -2080,6 +2082,15 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   preposition: ["on", "off", "bottom"],
   "computer electronics and accessories": ["app", "white noise machine"],
   sensations: ["i'm bleeding", "sick"],
+  // Food and Drinks follows the client's table: only the table's words stay in its sub-folders, and words moved to the sub-folder the table puts them in
+  breads: ["baguette roll", "bap", "biscuit", "bread", "challah", "croutons", "crumpet", "english muffin", "fried dough", "malt loaf", "matzah", "pastry", "pita", "roll", "roll-sandwich", "scones", "sourdough bread", "toast", "muffin"],
+  condiments: ["avocado dip", "cheese sauce", "chocolate spread", "cinnamon", "cooking spray", "corn flour", "dip", "dulce de leche", "flour", "food coloring", "frosting", "ginger", "guacamole", "honey", "hot sauce", "hot sauce packet", "icing", "jelly", "ketchup packet", "marmalade", "mayonnaise packet", "milk caramel spread", "mustard packet", "natillas", "oil", "oil and vinegar", "pesto", "pesto sauce", "pickle relish", "pickle slices", "pizza sauce", "salad dressing", "salt", "sauce", "spices", "spread", "sugar", "sugar free", "sugar packet", "sweetener", "syrup", "syrup packet", "tomato sauce", "tzatziki", "wasabi paste", "whipped cream"],
+  drinks: ["babyccino", "beer", "bottled water", "champagne", "coffee beans", "coffee-blended iced", "coolade", "cordial", "drink", "drinking fountain", "fizzy drink", "flavored milk", "fruit punch", "ground coffee", "horchata", "hot cocoa", "hot tea", "ice", "iced coffee", "iced latte", "iced tea", "juice", "juice box", "juice carton", "latte", "mint drink", "pink lemonade", "pop", "slush puppie", "slushy drink", "soda", "soda pop", "sparkling water", "tea selection", "wine"],
+  "meats and fish": ["ahi tuna", "bacon", "beef burger", "beefburger- no roll", "beefburger-double", "boneless", "buffalo wings", "calamari", "calamari rings", "cheese steak", "cheeseburger", "cheeseburger-double", "chicken strips", "chicken tenders", "chili dog", "chop", "chorizo", "corn dog", "cuttlefish", "fish fingers", "fish sticks", "fish-broiled", "fish-grilled", "gyro", "hamburger and gravy", "hamburger patty", "hamburger-double", "hot dog", "lox", "lunchmeat", "meat", "meatballs", "meatloaf", "minced beef", "mussels", "octopus dumplings", "oyster", "pate", "pepperoni", "pigs in a blanket", "pork cutlet", "pork schnitzel", "prosciutto", "rissole", "roast dinner", "salmon flakes", "salmon steak", "sausages and mash", "sloppy joe", "smoked salmon bagel", "sushi"],
+  soups: ["chili", "miso soup", "noodle soup", "noodles-chinese", "noodles-cup of", "noodles-soba", "noodles-udon", "soup", "stew"],
+  "dairy and eggs": ["butter"],
+  nuts: ["date"],
+  meat: ["chicken nuggets", "fish and chips", "fried chicken", "hamburger"],
   emotions: ["afraid", "angry", "anxious", "bored", "excited", "happy", "nervous", "sad", "surprised", "worried"],
 };
 function removeRetiredBuiltinWords(): boolean {
