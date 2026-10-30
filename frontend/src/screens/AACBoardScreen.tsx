@@ -286,111 +286,14 @@ function AnimalHat({ size }: { size: number }) {
 }
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 // what each month means in Pakistan / Saudi Arabia (the stock Spanish calendar showed carnival, Halloween, a champagne toast)
 // The app is used worldwide: seasons and holidays differ by country and hemisphere, so each month shows
 // a calendar page with its own colour, short name and number (JAN 1 … DEC 12), stored in the app
 const MONTH_PICTURES: string[] = MONTH_PICTURE_DATA;
 
-/** A month: a wall-calendar page with the month's number, its picture and that month's days. */
+/** A month: its calendar picture alone (JAN 1 … DEC 12), big on the card. */
 function MonthCalendar({ month, size }: { month: number; size: number }) {
-  const w = Math.round(size * 0.86);
-  const h = Math.round(size * 0.94);
-  const cell = Math.floor((w - 8) / 7);
-  const days = Array.from({ length: MONTH_DAYS[month] }, (_, i) => i + 1);
-  // the days fill the page below the picture to its bottom edge: what is left of the page
-  // (border 2+2, padding 3+3, picture 58%, gap 3) shared by the month's rows of 7
-  const inner = h - 10;
-  const rowH = Math.max(4, Math.floor((inner - Math.round(inner * 0.58) - 3) / Math.ceil(days.length / 7)));
-  return (
-    <View style={{ width: w, height: h, marginTop: Math.round(size * 0.03) }}>
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: "#fde7c8",
-          borderWidth: 2,
-          borderColor: "#1f2937",
-          borderRadius: 4,
-          padding: 3,
-          overflow: "hidden",
-        }}
-      >
-        {/* the picture fills most of the page so a child reads the month from it at a glance */}
-        <View
-          style={{
-            height: "58%",
-            backgroundColor: "#ffffff",
-            borderWidth: 1.5,
-            borderColor: "#1f2937",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <SmartImage source={{ uri: MONTH_PICTURES[month] }} style={{ width: "96%", height: "96%" }} />
-          <View
-            style={{
-              position: "absolute",
-              top: 2,
-              right: 2,
-              minWidth: Math.round(size * 0.2),
-              paddingHorizontal: 3,
-              borderRadius: Math.round(size * 0.1),
-              backgroundColor: "#2563eb",
-              alignItems: "center",
-            }}
-          >
-            <Text
-              style={{
-                fontSize: Math.round(size * 0.13),
-                lineHeight: Math.round(size * 0.18),
-                fontWeight: "900",
-                color: "#ffffff",
-              }}
-            >
-              {month + 1}
-            </Text>
-          </View>
-        </View>
-        <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", marginTop: 3, alignContent: "flex-start" }}>
-          {days.map((d) => (
-            <View
-              key={d}
-              style={{
-                width: cell,
-                height: rowH,
-                borderWidth: 0.5,
-                borderColor: "#6b7280",
-                backgroundColor: "#ffffff",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Text style={{ fontSize: Math.max(5, Math.round(Math.min(rowH * 0.78, cell * 0.55))), lineHeight: rowH, fontWeight: "900", color: d % 7 === 0 ? "#dc2626" : "#111827" }}>
-                {d}
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
-      {/* the two rings the page hangs from */}
-      {[0.18, 0.82].map((x) => (
-        <View
-          key={x}
-          style={{
-            position: "absolute",
-            top: -4,
-            left: Math.round(w * x) - 5,
-            width: 10,
-            height: 10,
-            borderRadius: 5,
-            borderWidth: 2,
-            borderColor: "#1f2937",
-            backgroundColor: "#38bdf8",
-          }}
-        />
-      ))}
-    </View>
-  );
+  return <SmartImage source={{ uri: MONTH_PICTURES[month] }} style={{ width: Math.round(size * 0.96), height: Math.round(size * 0.96) }} />;
 }
 
 /** Card pictogram illustration with automatic ARASAAC lookup and emoji fallback */

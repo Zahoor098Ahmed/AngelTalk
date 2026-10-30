@@ -79,6 +79,8 @@ const DELETED_KEYS_STORAGE = "kiddocare_deleted_items_wordfile_v6";
 const RESTORED_BODY_SINGULARS = "kiddocare_restored_body_singulars_v1";
 const RESTORED_ATTRIBUTES_LIST = "kiddocare_restored_attributes_list_v1";
 const RESTORED_BODY_LIST = "kiddocare_restored_body_list_v1";
+const RESTORED_BODY_EYE = "kiddocare_restored_body_eye_v1";
+const RESTORED_FOOD_WORDS = "kiddocare_restored_food_words_v1";
 let deletedItemKeys: Set<string> = new Set();
 let deletedKeysLoaded = false;
 
@@ -98,6 +100,9 @@ async function ensureDeletedKeysLoaded() {
     const comeBack: [string, string[]][] = [
       [RESTORED_BODY_SINGULARS, ["ankle", "arm", "cheek", "elbow", "eyebrow", "finger", "foot", "hand", "knee", "leg", "shoulder", "thumb", "tooth", "ear"]],
       [RESTORED_ATTRIBUTES_LIST, (CLIENT_SHELVES.find((s) => s.name === "Attributes")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
+      [RESTORED_BODY_EYE, ["eye"]],
+      // the earlier Food and Drinks words, taken off for the client's table, are back next to it
+      [RESTORED_FOOD_WORDS, (CLIENT_SHELVES.find((s) => s.name === "Food and Drinks")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
       [RESTORED_BODY_LIST, (CLIENT_SHELVES.find((s) => s.name === "Body")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
     ];
     for (const [marker, back] of comeBack) {
@@ -292,20 +297,31 @@ function refreshGuessedPictures() {
         changed = true;
         continue;
       }
-      // a picture drawn for the app (half circle, semi circle) is replaced by its newest drawing
-      if (!w.isCustom && w.imageUri?.startsWith("data:image/png")) {
-        const drawn = pictureFixFor((w.verbForms?.base || canonicalWordEn(w.label) || w.label).trim());
-        if (drawn && drawn.startsWith("data:") && drawn !== w.imageUri) {
-          w.imageUri = drawn;
+      // "eye" showing the two-eyes picture (or "eyes" the one-eye picture) gets its own, even on a family's word
+      const pairs: Record<string, string> = { eye: "eyes", eyes: "eye" };
+      const own = (w.label || "").trim().toLowerCase();
+      if (pairs[own] && w.imageUri === (UNIQUE_PICTURES as Record<string, string>)[pairs[own]]) {
+        w.imageUri = (UNIQUE_PICTURES as Record<string, string>)[own];
+        changed = true;
+        continue;
+      }
+      if (!w.isCustom && w.imageUri?.startsWith("data:")) {
+        const en = (w.verbForms?.base || canonicalWordEn(w.label) || w.label).trim();
+        const lowerEn = en.toLowerCase();
+        // a folder's own picture first (Organs' "heart" is the real heart, not the shape)
+        const fresh = folderWordPicture(folderEnglishName(c), en) || (UNIQUE_PICTURES as Record<string, string>)[lowerEn] || pictureFixFor(en);
+        if (fresh && fresh.startsWith("data:") && fresh !== w.imageUri) {
+          w.imageUri = fresh;
           changed = true;
         }
         continue;
       }
       if (w.isCustom || !w.imageUri || !w.imageUri.startsWith("https://static.arasaac.org/")) continue;
       const en = (w.verbForms?.base || canonicalWordEn(w.label) || w.label).trim();
+      const lowerEn = en.toLowerCase();
       // a picture checked by eye replaces the automatic one ("sink", "see saw"), or removes it
-      // ... or the exact word from another symbol set; a guess from one of its words ("blue" for "blue whale") too
-      const exact = pictureFixFor(en) !== undefined || hasSymbolPicture(en);
+      // ... or an exact picture from uniquePictures or another symbol set; a guess from one of its words too
+      const exact = pictureFixFor(en) !== undefined || hasSymbolPicture(en) || lowerEn in (UNIQUE_PICTURES as Record<string, string>);
       if (!exact && !isOneWordGuess(en, w.imageUri) && !isOneWordGuess(w.label, w.imageUri)) continue;
       const better = getPictogramUrl(en) ?? undefined;
       if ((better || exact) && better !== w.imageUri) {
@@ -2072,7 +2088,6 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   others: ["ears"],
   organs: ["belly", "tummy", "blood pressure", "blood", "bones", "kidneys", "lungs", "muscles", "ribs", "spine", "veins"],
   fruits: ["peach", "fruit salad", "fruit-baby"],
-  sweets: ["cone", "animal crackers", "applesauce", "astronaut ice cream", "banana split", "bun-iced", "cake mix", "cake-creme filled", "cake-snack", "candy", "candy apple", "candy cane", "candy corn", "candy floss", "candy hearts", "cherry pie", "chips-candy", "chocolate mousse", "chocolate roll", "chocolate swiss roll", "chouquette", "christmas pudding", "churros", "cinnamon rolls", "cookies-slice and bake", "cotton candy", "cream puffs", "creme caramel", "donut holes", "fairy floss", "flan", "fortune cookie", "frozen treats", "fruit roll", "fruit snack", "fruit sweets", "fruitcake", "fun fruit", "gelatin", "gum", "gummy candy", "gummy sweets", "heart sweets", "ice cream bar", "ice cream cone", "ice cream sandwich", "ice cream sundae", "ice cream treat", "ice lolly", "jellybeans", "krispy bars", "licorice", "lollipop", "lolly", "marshmallow", "marshmallow candy", "marshmallow-sweets", "mince pie", "mini candy", "mini gelatin cup", "mini sweets", "mints", "panettone", "popsicle", "profiteroles", "puffs", "pumpkin roll", "sherbet", "soft serve ice cream", "sorbet", "spoon sweets", "sprinkles-chocolate", "sprinkles-rainbow", "sweet buns", "sweets", "swiss roll", "tart", "toaster pastry", "toffee-apple", "treacle toffee", "turkish delight", "water ice", "whoopie pie", "yorkshire pudding", "yule log cake"],
   kitchen: ["glass"],
   home: ["light"],
   office: ["paper"],
@@ -2082,15 +2097,14 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   preposition: ["on", "off", "bottom"],
   "computer electronics and accessories": ["app", "white noise machine"],
   sensations: ["i'm bleeding", "sick"],
-  // Food and Drinks follows the client's table: only the table's words stay in its sub-folders, and words moved to the sub-folder the table puts them in
-  breads: ["baguette roll", "bap", "biscuit", "bread", "challah", "croutons", "crumpet", "english muffin", "fried dough", "malt loaf", "matzah", "pastry", "pita", "roll", "roll-sandwich", "scones", "sourdough bread", "toast", "muffin"],
-  condiments: ["avocado dip", "cheese sauce", "chocolate spread", "cinnamon", "cooking spray", "corn flour", "dip", "dulce de leche", "flour", "food coloring", "frosting", "ginger", "guacamole", "honey", "hot sauce", "hot sauce packet", "icing", "jelly", "ketchup packet", "marmalade", "mayonnaise packet", "milk caramel spread", "mustard packet", "natillas", "oil", "oil and vinegar", "pesto", "pesto sauce", "pickle relish", "pickle slices", "pizza sauce", "salad dressing", "salt", "sauce", "spices", "spread", "sugar", "sugar free", "sugar packet", "sweetener", "syrup", "syrup packet", "tomato sauce", "tzatziki", "wasabi paste", "whipped cream"],
-  drinks: ["babyccino", "beer", "bottled water", "champagne", "coffee beans", "coffee-blended iced", "coolade", "cordial", "drink", "drinking fountain", "fizzy drink", "flavored milk", "fruit punch", "ground coffee", "horchata", "hot cocoa", "hot tea", "ice", "iced coffee", "iced latte", "iced tea", "juice", "juice box", "juice carton", "latte", "mint drink", "pink lemonade", "pop", "slush puppie", "slushy drink", "soda", "soda pop", "sparkling water", "tea selection", "wine"],
-  "meats and fish": ["ahi tuna", "bacon", "beef burger", "beefburger- no roll", "beefburger-double", "boneless", "buffalo wings", "calamari", "calamari rings", "cheese steak", "cheeseburger", "cheeseburger-double", "chicken strips", "chicken tenders", "chili dog", "chop", "chorizo", "corn dog", "cuttlefish", "fish fingers", "fish sticks", "fish-broiled", "fish-grilled", "gyro", "hamburger and gravy", "hamburger patty", "hamburger-double", "hot dog", "lox", "lunchmeat", "meat", "meatballs", "meatloaf", "minced beef", "mussels", "octopus dumplings", "oyster", "pate", "pepperoni", "pigs in a blanket", "pork cutlet", "pork schnitzel", "prosciutto", "rissole", "roast dinner", "salmon flakes", "salmon steak", "sausages and mash", "sloppy joe", "smoked salmon bagel", "sushi"],
-  soups: ["chili", "miso soup", "noodle soup", "noodles-chinese", "noodles-cup of", "noodles-soba", "noodles-udon", "soup", "stew"],
+  // Food and Drinks: the client's table, plus the earlier words brought back (RESTORED_FOOD_WORDS)
   "dairy and eggs": ["butter"],
   nuts: ["date", "ground nuts"],
+  vegetables: ["potato-baked", "potato-jacket", "mushy peas"],
   meat: ["chicken nuggets", "fish and chips", "fried chicken", "hamburger"],
+  "holidays and celebrations": ["balloons", "flashing disco ball", "scarecrow", "witch", "ghost", "clown", "face painting", "surprise", "tooth fairy", "cards", "candle", "angel", "elf", "olympics"],
+  "hygiene and personal care": ["vitamins", "shot", "inoculation"],
+  "money and finance": ["money-australia", "money-canada", "money-england", "money-euro", "money-new zealand"],
   emotions: ["afraid", "angry", "anxious", "bored", "excited", "happy", "nervous", "sad", "surprised", "worried"],
 };
 function removeRetiredBuiltinWords(): boolean {
