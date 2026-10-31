@@ -1603,6 +1603,7 @@ Object.assign(FOLDER_NAMES["ar-SA"], {
   "Food and Drinks": "الأطعمة والمشروبات", "Foods and Drinks": "الأطعمة والمشروبات",
   Breads: "خبز", "Condiments, spreads and spices": "صلصات ودهون وتوابل", "Condiments, Spreads and Spices": "صلصات ودهون وتوابل",
   "Dairy and Eggs": "ألبان وبيض", Drinks: "مشروبات", Fruits: "فواكه", Meat: "لحوم", Nuts: "مكسرات", Soups: "شوربات", Sweets: "حلويات", Vegetables: "خضروات",
+  "Health and Medical": "الصحة والطب", "Medical Equipment": "معدات طبية", Health: "الصحة",
   "Holidays and Celebrations": "عطلات واحتفالات",
   "Hygiene and Personal Care": "النظافة والعناية الشخصية",
   "Money and Finance": "المال والمالية",
@@ -1634,6 +1635,7 @@ Object.assign((FOLDER_NAMES["ur-PK"] ||= {}), {
   "Food and Drinks": "کھانے اور مشروبات", "Foods and Drinks": "کھانے اور مشروبات",
   Breads: "روٹی اور بریڈ", "Condiments, spreads and spices": "چٹنی، جام اور مصالحے", "Condiments, Spreads and Spices": "چٹنی، جام اور مصالحے",
   "Dairy and Eggs": "ڈیری اور انڈے", Drinks: "مشروبات", Fruits: "پھل", Meat: "گوشت", Nuts: "خشک میوہ جات", Soups: "سوپ", Sweets: "مٹھائیاں", Vegetables: "سبزیاں",
+  "Health and Medical": "صحت اور طب", "Medical Equipment": "طبی آلات", Health: "صحت",
   "Holidays and Celebrations": "تہوار اور تقریبات",
   "Hygiene and Personal Care": "صفائی اور ذاتی نگہداشت",
   "Money and Finance": "پیسہ اور مالیات",
@@ -2117,7 +2119,7 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   kitchen: ["glass", "cookie sheet", "mini oven-grill", "splade", "hourglass", "watering can", "bread box", "tin opener", "chopping board", "dish drainer", "washing up liquid", "egg beater", "refrigerator", "tin foil", "parchment paper", "grease proof paper", "oven glove", "hob", "stove top", "kitchen towel", "silverware", "trainer cup", "coffee pot", "pitcher", "washing up bowl", "electric kettle"],
   // Home's loose words now live in its "Other" folder
   home: ["light", "air freshener", "basket", "beach chair", "beach towel", "bin", "bin bags", "biscuit-cutter", "bookshelf", "broom", "bucket", "category", "chair-cushion", "chair-reclining", "chair-rocking", "cheers", "child's pen", "cleaning cloth", "cleaning fluid", "cleaning spray", "cleanser", "clock", "clothes line", "clothes pin", "communication book", "couch", "cubby house", "deck-chair", "den", "dining room", "door", "doorknob", "drawer", "driveway", "dryer", "dryer sheet", "dust pan", "elevator", "emoji", "entrance", "escalator", "exit", "fabric conditioner", "fabric softener", "family room", "fan", "fire hydrant", "fire place", "fireman's pole", "flag", "flag-australia", "flag-brazil", "flag-canada", "flag-china", "flag-france", "flag-germany", "flag-greece", "flag-italy", "flag-japan", "flag-poland", "flag-portugal", "flag-romania", "flag-south korea", "flag-spain", "flag-uk", "flag-us", "garage", "hand held vacuum", "handshake", "home", "hose", "hosepipe", "hot tub", "iron", "ironing board", "jobs", "key chain", "keys", "laundry basket", "laundry detergent", "letter box", "lid", "lift", "light", "living room", "lounge", "mailbox", "mini mop", "mop", "paper bags", "paper sacks", "paper towel dispenser", "photo album", "picnic", "picture exchange", "play house", "sand castle", "sand timer", "schedule", "scrubbing brush", "selfie", "shadow", "shopping basket", "shopping cart", "spa", "spill", "spray cleaner", "spray starch", "squeegee", "stairs", "storage bags", "storage room", "storage shed", "table", "tattoo", "ticket", "time", "timetable", "tokens", "trash bags", "tube", "umbrella-beach", "vacuum cleaner", "washing line", "washing machine", "washing powder", "wendy house", "window", "wine stopper"],
-  office: ["paper"],
+  office: ["paper", "dry wipe board", "dry erase board", "felt tips", "guillotine", "tape-roll", "folding file"],
   school: ["clay"],
   "sports and fitness": ["arrow"],
   "tools and supplies": ["cotton", "wool"],
@@ -2141,7 +2143,7 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   bedroom: ["dummy", "dresser", "pacifier", "night light"],
   bathroom: ["face cloth", "flannel", "tub", "urinal", "female toilet", "male toilet", "accessible toilet", "hand dryer", "jacuzzi"],
   "holidays and celebrations": ["shamrock", "wedding cake", "yule log", "chinese new year", "balloons", "flashing disco ball", "scarecrow", "witch", "ghost", "clown", "face painting", "surprise", "tooth fairy", "cards", "candle", "angel", "elf", "olympics"],
-  "hygiene and personal care": ["vitamins", "shot", "inoculation"],
+  "hygiene and personal care": ["vitamins", "shot", "inoculation", "bandage", "plaster", "medicine", "inhaler", "cough syrup", "eye drops", "injection", "ice pack"],
   "money and finance": ["money-australia", "money-canada", "money-england", "money-euro", "money-new zealand"],
   emotions: ["afraid", "angry", "anxious", "bored", "excited", "happy", "nervous", "sad", "surprised", "worried"],
 };
