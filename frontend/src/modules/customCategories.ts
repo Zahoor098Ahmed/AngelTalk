@@ -81,6 +81,7 @@ const RESTORED_ATTRIBUTES_LIST = "kiddocare_restored_attributes_list_v1";
 const RESTORED_BODY_LIST = "kiddocare_restored_body_list_v1";
 const RESTORED_BODY_EYE = "kiddocare_restored_body_eye_v1";
 const RESTORED_FOOD_WORDS = "kiddocare_restored_food_words_v1";
+const RESTORED_HOLIDAY_WORDS = "kiddocare_restored_holiday_words_v1";
 let deletedItemKeys: Set<string> = new Set();
 let deletedKeysLoaded = false;
 
@@ -102,6 +103,8 @@ async function ensureDeletedKeysLoaded() {
       [RESTORED_ATTRIBUTES_LIST, (CLIENT_SHELVES.find((s) => s.name === "Attributes")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
       [RESTORED_BODY_EYE, ["eye"]],
       // the earlier Food and Drinks words, taken off for the client's table, are back next to it
+      // every word of Holidays and Celebrations shows, also on boards where some were taken off before
+      [RESTORED_HOLIDAY_WORDS, (CLIENT_SHELVES.find((s) => s.name === "Holidays and Celebrations")?.words ?? []).map((w) => w.toLowerCase())],
       [RESTORED_FOOD_WORDS, (CLIENT_SHELVES.find((s) => s.name === "Food and Drinks")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
       [RESTORED_BODY_LIST, (CLIENT_SHELVES.find((s) => s.name === "Body")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
     ];
@@ -1985,6 +1988,29 @@ function mergeRenamedShelves(): boolean {
 }
 
 /**
+ * "Objects In" is gone: its folders (Home, Office, Park, School, Swimming pool) are shelves of their own now.
+ * They move out with everything in them; one that already stands as a shelf takes the family's own words.
+ */
+function promoteObjectsInFolders(): boolean {
+  const norm = (s: string) => (s || "").trim().toLowerCase();
+  const old = cache.find((c) => !c.parentCategoryId && norm(folderEnglishName(c)) === "objects in");
+  if (!old) return false;
+  for (const sub of cache.filter((c) => c.parentCategoryId === old.id)) {
+    const en = norm(folderEnglishName(sub));
+    const shelf = cache.find((c) => !c.parentCategoryId && c.id !== old.id && norm(folderEnglishName(c)) === en);
+    if (!shelf) {
+      sub.parentCategoryId = null;
+      continue;
+    }
+    for (const w of sub.words.filter((x) => x.isCustom)) shelf.words.push({ ...w, order: shelf.words.length });
+    cache.forEach((c) => { if (c.parentCategoryId === sub.id) c.parentCategoryId = shelf.id; });
+    cache = cache.filter((c) => c.id !== sub.id);
+  }
+  cache = [...cache.filter((c) => c.id !== old.id)];
+  return true;
+}
+
+/**
  * The board is the client's list: built-in folders that are not on it (old Core, Food, Schools… and the earlier
  * PECS folders) go. A folder that holds the caregiver's own words or folders stays, with only those in it.
  */
@@ -2081,15 +2107,16 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   texture: ["crunchy", "elastic", "flexible", "stiff"],
   material: ["sand", "wooden"],
   quantity: ["empty", "more", "nothing"],
-  other: ["bone", "bad", "evil", "freeze dried", "good", "heavy", "high", "low", "noise", "noisy", "off switch", "okay", "on switch", "sliced", "stinky", "that", "volume down", "volume up", "zig-zags", "cut", "turn", "falafel", "lasagna", "pasta", "pizza", "rice", "spaghetti"],
+  other: ["mailbox", "bone", "bad", "evil", "freeze dried", "good", "heavy", "high", "low", "noise", "noisy", "off switch", "okay", "on switch", "sliced", "stinky", "that", "volume down", "volume up", "zig-zags", "cut", "turn", "falafel", "lasagna", "pasta", "pizza", "rice", "spaghetti", "beach chair", "beach towel", "category", "cheers", "child's pen", "communication book", "cubby house", "wendy house", "deck-chair", "elevator", "lift", "emoji", "escalator", "exit", "fire hydrant", "fireman's pole", "flag", "flag-australia", "flag-brazil", "flag-canada", "flag-china", "flag-france", "flag-germany", "flag-greece", "flag-italy", "flag-japan", "flag-poland", "flag-portugal", "flag-romania", "flag-south korea", "flag-spain", "flag-uk", "flag-us", "handshake", "jobs", "picnic", "picture exchange", "sand castle", "selfie", "shadow", "shopping basket", "shopping cart", "spa", "hot tub", "tattoo", "ticket", "time", "timetable", "schedule", "tokens", "tube", "umbrella-beach", "wine stopper", "bin bags", "paper sacks", "hosepipe", "washing line", "fabric conditioner", "couch", "lounge", "family room", "chair-rocking", "chair-reclining", "sand timer", "spray cleaner", "cleanser", "mini mop", "biscuit-cutter", "storage room"],
   // ... and the list's words leave the folders they were in before
   "body parts": ["beard", "belly button", "fingernails", "lap", "mustache", "our bodies", "teeth", "toenails", "tooth", "tummy", "cane", "otoscope", "rubber gloves", "spacer", "stethoscope", "stretch band", "surgical mask", "therapy ball", "thermometer", "walker", "walking stick", "wheelchair"],
   senses: ["hearing aid", "bitter", "salty", "sour", "ear", "ears", "eye", "eyelashes", "eyelid", "eyes", "hear", "lips", "mouth", "nose", "see", "skin", "tongue"],
   others: ["ears"],
   organs: ["belly", "tummy", "blood pressure", "blood", "bones", "kidneys", "lungs", "muscles", "ribs", "spine", "veins"],
   fruits: ["peach", "fruit salad", "fruit-baby"],
-  kitchen: ["glass"],
-  home: ["light"],
+  kitchen: ["glass", "cookie sheet", "mini oven-grill", "splade", "hourglass", "watering can", "bread box", "tin opener", "chopping board", "dish drainer", "washing up liquid", "egg beater", "refrigerator", "tin foil", "parchment paper", "grease proof paper", "oven glove", "hob", "stove top", "kitchen towel", "silverware", "trainer cup", "coffee pot", "pitcher", "washing up bowl", "electric kettle"],
+  // Home's loose words now live in its "Other" folder
+  home: ["light", "air freshener", "basket", "beach chair", "beach towel", "bin", "bin bags", "biscuit-cutter", "bookshelf", "broom", "bucket", "category", "chair-cushion", "chair-reclining", "chair-rocking", "cheers", "child's pen", "cleaning cloth", "cleaning fluid", "cleaning spray", "cleanser", "clock", "clothes line", "clothes pin", "communication book", "couch", "cubby house", "deck-chair", "den", "dining room", "door", "doorknob", "drawer", "driveway", "dryer", "dryer sheet", "dust pan", "elevator", "emoji", "entrance", "escalator", "exit", "fabric conditioner", "fabric softener", "family room", "fan", "fire hydrant", "fire place", "fireman's pole", "flag", "flag-australia", "flag-brazil", "flag-canada", "flag-china", "flag-france", "flag-germany", "flag-greece", "flag-italy", "flag-japan", "flag-poland", "flag-portugal", "flag-romania", "flag-south korea", "flag-spain", "flag-uk", "flag-us", "garage", "hand held vacuum", "handshake", "home", "hose", "hosepipe", "hot tub", "iron", "ironing board", "jobs", "key chain", "keys", "laundry basket", "laundry detergent", "letter box", "lid", "lift", "light", "living room", "lounge", "mailbox", "mini mop", "mop", "paper bags", "paper sacks", "paper towel dispenser", "photo album", "picnic", "picture exchange", "play house", "sand castle", "sand timer", "schedule", "scrubbing brush", "selfie", "shadow", "shopping basket", "shopping cart", "spa", "spill", "spray cleaner", "spray starch", "squeegee", "stairs", "storage bags", "storage room", "storage shed", "table", "tattoo", "ticket", "time", "timetable", "tokens", "trash bags", "tube", "umbrella-beach", "vacuum cleaner", "washing line", "washing machine", "washing powder", "wendy house", "window", "wine stopper"],
   office: ["paper"],
   school: ["clay"],
   "sports and fitness": ["arrow"],
@@ -2098,11 +2125,22 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   "computer electronics and accessories": ["app", "white noise machine"],
   sensations: ["i'm bleeding", "sick"],
   // Food and Drinks: the client's table, plus the earlier words brought back (RESTORED_FOOD_WORDS)
+  // ... without words that mean the same as another word of the folder
+  breads: ["bap", "pita", "roll"],
+  condiments: ["cheese sauce", "salad dressing", "pizza sauce", "pickle relish", "cooking spray", "corn flour", "flour", "food coloring", "natillas", "ginger", "frosting", "oil", "oil and vinegar", "spread", "avocado dip", "hot sauce packet", "icing", "jelly", "ketchup packet", "mayonnaise packet", "mustard packet", "sugar packet", "syrup packet", "milk caramel spread", "pesto sauce", "sugar free", "pickle slices"],
+  drinks: ["juice box", "beer", "wine", "champagne", "bottled water", "coolade", "iced latte", "soda", "pop", "soda pop", "fizzy drink", "hot cocoa", "hot tea", "juice carton", "slush puppie", "coffee-blended iced"],
+  "meats and fish": ["fish-broiled", "salmon flakes", "fish sticks", "chicken tenders", "hamburger-double", "beefburger- no roll", "calamari rings", "beef burger"],
+  "cooked food": ["vending machine", "vegetarian", "veggie sticks", "menu", "falafel sandwich", "filled roll", "food pouch", "food-baby", "pocket food", "snack mix", "takeaway", "waffle fries", "dolmades", "crisps", "cheesies", "popcorn cakes", "creamed potatoes", "lunch-japanese", "potato omelet", "waffles", "sandwich wrap", "pork and bean casserole", "sausages beans and mash", "shish-kebab"],
+  sweets: ["cake mix", "toaster pastry", "candy floss", "fairy floss", "lolly", "marshmallow candy", "marshmallow-sweets", "gummy sweets", "ice lolly", "fun fruit", "mini candy", "sweets", "toffee-apple", "cream puffs", "puffs", "chocolate roll", "chocolate swiss roll", "ice cream treat", "creme caramel", "water ice", "mini gelatin cup", "mini sweets", "heart sweets"],
   "dairy and eggs": ["butter"],
   nuts: ["date", "ground nuts"],
   vegetables: ["potato-baked", "potato-jacket", "mushy peas"],
   meat: ["chicken nuggets", "fish and chips", "fried chicken", "hamburger"],
-  "holidays and celebrations": ["balloons", "flashing disco ball", "scarecrow", "witch", "ghost", "clown", "face painting", "surprise", "tooth fairy", "cards", "candle", "angel", "elf", "olympics"],
+  "music, instruments and equipment": ["song"],
+  "nature and outdoor": ["fall", "woods", "season is", "aquarius", "aries", "cancer", "capricorn", "gemini", "leo", "libra", "pisces", "sagittarius", "scorpio", "taurus", "virgo", "cassiopeia", "cepheus", "cygnus", "draco", "hercules", "orion", "pegasus", "ursa major", "ursa minor"],
+  bedroom: ["dummy", "dresser", "pacifier", "night light"],
+  bathroom: ["face cloth", "flannel", "tub", "urinal", "female toilet", "male toilet", "accessible toilet", "hand dryer", "jacuzzi"],
+  "holidays and celebrations": ["shamrock", "wedding cake", "yule log", "chinese new year", "balloons", "flashing disco ball", "scarecrow", "witch", "ghost", "clown", "face painting", "surprise", "tooth fairy", "cards", "candle", "angel", "elf", "olympics"],
   "hygiene and personal care": ["vitamins", "shot", "inoculation"],
   "money and finance": ["money-australia", "money-canada", "money-england", "money-euro", "money-new zealand"],
   emotions: ["afraid", "angry", "anxious", "bored", "excited", "happy", "nervous", "sad", "surprised", "worried"],
@@ -2130,6 +2168,7 @@ function removeRetiredBuiltinWords(): boolean {
 
 function ensureAllStandardCategories() {
   let changed = removeRetiredBuiltinWords();
+  if (promoteObjectsInFolders()) changed = true;
   if (removeFoldersNotInClientList()) changed = true;
   const now = Date.now();
 
