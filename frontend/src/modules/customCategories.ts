@@ -82,6 +82,13 @@ const RESTORED_BODY_LIST = "kiddocare_restored_body_list_v1";
 const RESTORED_BODY_EYE = "kiddocare_restored_body_eye_v1";
 const RESTORED_FOOD_WORDS = "kiddocare_restored_food_words_v1";
 const RESTORED_HOLIDAY_WORDS = "kiddocare_restored_holiday_words_v1";
+const RESTORED_PREPOSITIONS = "kiddocare_restored_prepositions_v2";
+const RESTORED_ATTRIBUTE_PLACE_WORDS = "kiddocare_restored_attribute_place_words_v1";
+const RESTORED_SCHOOL_WORDS = "kiddocare_restored_school_words_v1";
+const PICTURES_RENEWED = "kiddocare_pictures_renewed_v6";
+/** Words whose picture was renewed by hand; shown once even where the family's board kept an older one. */
+const RENEWED_PICTURE_WORDS = ["castle", "hotel", "gurdwara", "mosque", "store", "temple", "tennis court", "cemetery", "bakery", "changing room", "mobile home", "sensory room", "community", "museum", "fair", "airport", "mall", "train station", "father", "mother", "uranus", "seeds", "haystack", "stars", "market", "barber shop", "circus", "cafe", "igloo", "plant room", "savannah", "fire station", "art", "assembly", "board rubber", "colored pencils", "spelling", "geography", "bears-counting", "dramatic play", "morning circle", "pe", "school bag", "show and tell", "story time", "worksheet", "quiet time", "gross motor", "activity schedule", "centers", "folder work", "gross motor game", "hiragana letters", "flash cards"];
+let renewPictures = false;
 let deletedItemKeys: Set<string> = new Set();
 let deletedKeysLoaded = false;
 
@@ -105,9 +112,19 @@ async function ensureDeletedKeysLoaded() {
       // the earlier Food and Drinks words, taken off for the client's table, are back next to it
       // every word of Holidays and Celebrations shows, also on boards where some were taken off before
       [RESTORED_HOLIDAY_WORDS, (CLIENT_SHELVES.find((s) => s.name === "Holidays and Celebrations")?.words ?? []).map((w) => w.toLowerCase())],
+      // Preposition gets back the words that sat in Attributes / Other (on, off, up, down…) and "bottom"
+      [RESTORED_PREPOSITIONS, (CLIENT_SHELVES.find((s) => s.name === "Preposition")?.words ?? []).map((w) => w.toLowerCase())],
+      // ... and Attributes / Other keeps them too
+      [RESTORED_ATTRIBUTE_PLACE_WORDS, ["down", "from", "inside", "left", "off", "on", "outside", "right", "to", "up"]],
+      // School gets back the client's words that were taken off for a while
+      [RESTORED_SCHOOL_WORDS, ["activity schedule", "alphabet", "beads", "bears-counting", "blocks", "bolster", "calendar", "centers", "chair", "crafts", "cubby", "cupboard", "dramatic play", "fire alarm", "fire drill", "folder work", "glitter", "gross motor game", "gross motor", "gym", "hiragana letters"]],
       [RESTORED_FOOD_WORDS, (CLIENT_SHELVES.find((s) => s.name === "Food and Drinks")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
       [RESTORED_BODY_LIST, (CLIENT_SHELVES.find((s) => s.name === "Body")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
     ];
+    if (!(await AsyncStorage.getItem(PICTURES_RENEWED))) {
+      renewPictures = true;
+      AsyncStorage.setItem(PICTURES_RENEWED, "1").catch(() => { });
+    }
     for (const [marker, back] of comeBack) {
       if (await AsyncStorage.getItem(marker)) continue;
       const before = deletedItemKeys.size;
@@ -292,13 +309,26 @@ function refreshGuessedPictures() {
           changed = true;
         }
       }
-      // openclipart.org now answers every picture link with the same scissors placeholder:
+      // Acronym capitalization fixes for built-in words (e.g. "Uae dirham" -> "UAE dirham", "Us dollar" -> "US dollar")
+      if (!w.isCustom) {
+        if (w.label === "Uae dirham") { w.label = "UAE dirham"; changed = true; }
+        else if (w.label === "Us dollar") { w.label = "US dollar"; changed = true; }
+      }
       // a saved openclipart picture (even a family's own) gives way to today's built-in one, or the emoji
       if (w.imageUri && /openclipart\.org/i.test(w.imageUri)) {
         const now = getPictogramUrl((w.verbForms?.base || canonicalWordEn(w.label) || w.label).trim()) ?? undefined;
         w.imageUri = now && !/openclipart\.org/i.test(now) ? now : undefined;
         changed = true;
         continue;
+      }
+      if (renewPictures) {
+        const k = (canonicalWordEn(w.label) || w.label).trim().toLowerCase();
+        const now = (UNIQUE_PICTURES as Record<string, string>)[k];
+        if (RENEWED_PICTURE_WORDS.includes(k) && now && w.imageUri !== now) {
+          w.imageUri = now;
+          changed = true;
+          continue;
+        }
       }
       // "eye" showing the two-eyes picture (or "eyes" the one-eye picture) gets its own, even on a family's word
       const pairs: Record<string, string> = { eye: "eyes", eyes: "eye" };
@@ -308,7 +338,16 @@ function refreshGuessedPictures() {
         changed = true;
         continue;
       }
-      if (!w.isCustom && w.imageUri?.startsWith("data:")) {
+      // a picture made for the word in this folder (Preposition "on": a ball on a box, not the light switch)
+      const folderPic = !w.isCustom && folderWordPicture(folderEnglishName(c), (canonicalWordEn(w.label) || w.label).trim());
+      if (folderPic && w.imageUri !== folderPic) {
+        w.imageUri = folderPic;
+        changed = true;
+        continue;
+      }
+      // a stored photo, or a picture from another symbol site (Global Symbols), gives way to the one picked by eye
+      const fromOtherSite = !!w.imageUri && /^https?:/.test(w.imageUri) && !w.imageUri.startsWith("https://static.arasaac.org/");
+      if (!w.isCustom && (w.imageUri?.startsWith("data:") || fromOtherSite)) {
         const en = (w.verbForms?.base || canonicalWordEn(w.label) || w.label).trim();
         const lowerEn = en.toLowerCase();
         // a folder's own picture first (Organs' "heart" is the real heart, not the shape)
@@ -979,6 +1018,11 @@ export function folderPictureFor(c: CustomCategory): { text?: string; uri?: stri
   // the calendar's "Dates" (days of the month), not the fruit
   if (en === "dates" && !c.isCustom) return { uri: "https://static.arasaac.org/pictograms/34799/34799_500.png" };
   if (c.imageUri) return { uri: c.imageUri };
+  // a folder picture made for it (People and Characters' Relationships, Characters, People, Professions: soft colours)
+  {
+    const own = (UNIQUE_PICTURES as Record<string, string>)[`folder::${en}`];
+    if (own) return { uri: own };
+  }
   // "General" or "Animals" looks like its shelf (Animals / Animals -> the animals picture)
   const parent = c.parentCategoryId ? cache.find((x) => x.id === c.parentCategoryId) : undefined;
   // Calendar / Others (day, week, year, today...) is about time: an hourglass, not a second calendar next to Months
@@ -1464,7 +1508,8 @@ const LEGACY_SUBCATEGORIES = [...STARTER_SUBCATEGORIES];
   let describing = false;
   // words with two meanings the client's list puts in two places, each with its own picture (folderWordPicture)
   // (an animal in Animals is also its meat in Meats and fish: "chicken", "turkey"…)
-  const TWO_MEANINGS = new Set(["heart", "calf", "chicken", "crab", "duck", "fish", "goat", "lamb", "lobster", "tuna", "turkey"]);
+  // a word that is a place word (Preposition) and a describing word (Attributes) shows in both
+  const TWO_MEANINGS = new Set(["down", "from", "inside", "left", "off", "on", "outside", "right", "to", "up", "bottom", "heart", "calf", "chicken", "crab", "duck", "fish", "goat", "lamb", "lobster", "tuna", "turkey"]);
   const take = (words: string[], keepCase = false): string[] => {
     const out: string[] = [];
     for (const raw of words) {
@@ -1610,7 +1655,7 @@ Object.assign(FOLDER_NAMES["ar-SA"], {
   "Music, Instruments and Equipment": "الموسيقى والآلات والمعدات", "Music, Instruments, and Equipment": "الموسيقى والآلات والمعدات",
   "Nature and Outdoor": "الطبيعة والخارج", "Nature and Outdoors": "الطبيعة والخارج",
   "Objects In": "أشياء في", Home: "المنزل", Kitchen: "المطبخ", Bedroom: "غرفة النوم", Bathroom: "الحمام", Office: "المكتب", Park: "الحديقة", School: "المدرسة", "Swimming pool": "حمام السباحة",
-  "People and Characters": "الناس والشخصيات", Family: "العائلة", People: "الناس", Professions: "المهن", Pronouns: "الضمائر",
+  "People and Characters": "الناس والشخصيات", Family: "العائلة", Relationships: "العلاقات", Characters: "الشخصيات", People: "الناس", Professions: "المهن", Pronouns: "الضمائر",
   Places: "أماكن", Preposition: "حروف الجر", Prepositions: "حروف الجر",
   "Sentence Starters, Phrases and Questions": "بدايات الجمل والعبارات والأسئلة",
   "Songs and Stories": "أغاني وقصص", "Sports and Fitness": "الرياضة واللياقة", "Tools and Supplies": "أدوات ولوازم",
@@ -1642,7 +1687,7 @@ Object.assign((FOLDER_NAMES["ur-PK"] ||= {}), {
   "Music, Instruments and Equipment": "موسیقی اور ساز", "Music, Instruments, and Equipment": "موسیقی اور ساز",
   "Nature and Outdoor": "فطرت اور باہر کا ماحول", "Nature and Outdoors": "فطرت اور باہر کا ماحول",
   "Objects In": "چیزیں (مقامات میں)", Home: "گھر", Kitchen: "باورچی خانہ", Bedroom: "سونے کا کمرہ", Bathroom: "بیت الخلاء", Office: "دفتر", Park: "پارک", School: "اسکول", "Swimming pool": "سوئمنگ پول",
-  "People and Characters": "لوگ اور کردار", Family: "خاندان", People: "لوگ", Professions: "پیشے", Pronouns: "ضمائر",
+  "People and Characters": "لوگ اور کردار", Family: "خاندان", Relationships: "رشتے", Characters: "کردار", People: "لوگ", Professions: "پیشے", Pronouns: "ضمائر",
   Places: "مقامات", Preposition: "حروف جار", Prepositions: "حروف جار",
   "Sentence Starters, Phrases and Questions": "جملے، فقرات اور سوالات",
   "Songs and Stories": "یت اور کہانیاں", "Sports and Fitness": "کھیل اور فٹنس", "Tools and Supplies": "اوزار اور سامان",
@@ -2012,6 +2057,35 @@ function promoteObjectsInFolders(): boolean {
   return true;
 }
 
+/** People and Characters / Family is called Relationships now; the folder keeps everything in it. */
+function renameFamilyToRelationships(): boolean {
+  const norm = (s: string) => (s || "").trim().toLowerCase();
+  const people = cache.find((c) => !c.parentCategoryId && norm(folderEnglishName(c)) === "people and characters");
+  const fam = people && cache.find((c) => c.parentCategoryId === people.id && norm(folderEnglishName(c)) === "family");
+  if (!fam || cache.some((c) => c.parentCategoryId === people.id && norm(folderEnglishName(c)) === "relationships")) return false;
+  fam.seedName = "Relationships";
+  fam.name = folderName("Relationships");
+  cache = [...cache];
+  return true;
+}
+
+/** "Pronouns" left People and Characters to be a shelf of its own; it moves out with everything in it. */
+function promotePronounsFolder(): boolean {
+  const norm = (s: string) => (s || "").trim().toLowerCase();
+  const people = cache.find((c) => !c.parentCategoryId && norm(folderEnglishName(c)) === "people and characters");
+  const sub = people && cache.find((c) => c.parentCategoryId === people.id && norm(folderEnglishName(c)) === "pronouns");
+  if (!sub) return false;
+  const shelf = cache.find((c) => !c.parentCategoryId && norm(folderEnglishName(c)) === "pronouns");
+  if (!shelf) {
+    sub.parentCategoryId = null;
+  } else {
+    for (const w of sub.words.filter((x) => x.isCustom)) shelf.words.push({ ...w, order: shelf.words.length });
+    cache = cache.filter((c) => c.id !== sub.id);
+  }
+  cache = [...cache];
+  return true;
+}
+
 /**
  * The board is the client's list: built-in folders that are not on it (old Core, Food, Schools… and the earlier
  * PECS folders) go. A folder that holds the caregiver's own words or folders stays, with only those in it.
@@ -2120,10 +2194,9 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   // Home's loose words now live in its "Other" folder
   home: ["light", "air freshener", "basket", "beach chair", "beach towel", "bin", "bin bags", "biscuit-cutter", "bookshelf", "broom", "bucket", "category", "chair-cushion", "chair-reclining", "chair-rocking", "cheers", "child's pen", "cleaning cloth", "cleaning fluid", "cleaning spray", "cleanser", "clock", "clothes line", "clothes pin", "communication book", "couch", "cubby house", "deck-chair", "den", "dining room", "door", "doorknob", "drawer", "driveway", "dryer", "dryer sheet", "dust pan", "elevator", "emoji", "entrance", "escalator", "exit", "fabric conditioner", "fabric softener", "family room", "fan", "fire hydrant", "fire place", "fireman's pole", "flag", "flag-australia", "flag-brazil", "flag-canada", "flag-china", "flag-france", "flag-germany", "flag-greece", "flag-italy", "flag-japan", "flag-poland", "flag-portugal", "flag-romania", "flag-south korea", "flag-spain", "flag-uk", "flag-us", "garage", "hand held vacuum", "handshake", "home", "hose", "hosepipe", "hot tub", "iron", "ironing board", "jobs", "key chain", "keys", "laundry basket", "laundry detergent", "letter box", "lid", "lift", "light", "living room", "lounge", "mailbox", "mini mop", "mop", "paper bags", "paper sacks", "paper towel dispenser", "photo album", "picnic", "picture exchange", "play house", "sand castle", "sand timer", "schedule", "scrubbing brush", "selfie", "shadow", "shopping basket", "shopping cart", "spa", "spill", "spray cleaner", "spray starch", "squeegee", "stairs", "storage bags", "storage room", "storage shed", "table", "tattoo", "ticket", "time", "timetable", "tokens", "trash bags", "tube", "umbrella-beach", "vacuum cleaner", "washing line", "washing machine", "washing powder", "wendy house", "window", "wine stopper"],
   office: ["paper", "dry wipe board", "dry erase board", "felt tips", "guillotine", "tape-roll", "folding file"],
-  school: ["clay"],
+  school: ["clay", "mainstream", "peg", "pointers", "pt", "ot", "lock-down drill", "tornado drill", "earthquake drill", "rice table", "peanut ball", "soft play room", "school shop", "library card", "sensory table", "clay", "lunch", "mat", "meeting", "notes", "paint", "picture", "quiet time", "school store", "speech", "math", "science"],
   "sports and fitness": ["arrow"],
   "tools and supplies": ["cotton", "wool"],
-  preposition: ["on", "off", "bottom"],
   "computer electronics and accessories": ["app", "white noise machine"],
   sensations: ["i'm bleeding", "sick"],
   // Food and Drinks: the client's table, plus the earlier words brought back (RESTORED_FOOD_WORDS)
@@ -2142,6 +2215,15 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   "nature and outdoor": ["fall", "woods", "season is", "aquarius", "aries", "cancer", "capricorn", "gemini", "leo", "libra", "pisces", "sagittarius", "scorpio", "taurus", "virgo", "cassiopeia", "cepheus", "cygnus", "draco", "hercules", "orion", "pegasus", "ursa major", "ursa minor"],
   bedroom: ["dummy", "dresser", "pacifier", "night light"],
   bathroom: ["face cloth", "flannel", "tub", "urinal", "female toilet", "male toilet", "accessible toilet", "hand dryer", "jacuzzi"],
+  family: ["pregnant"],
+  // People and Characters: Family is Relationships now, and the make-believe ones have their own Characters folder
+  relationships: ["pregnant", "boy", "girl", "baby", "children", "dad", "mommy", "grandpa", "pa", "grandma", "nana", "buddies"],
+  people: ["alien", "fairy", "buddies", "friends", "boy scout", "girl scouts", "brownies", "ambulance", "hospital", "pharmacy", "consultation", "dental tools", "dentist chair", "dentist office", "drugstore", "men's", "women's", "rolling robot", "scout", "girl guide", "guides", "king", "queen", "prince", "princess", "knight", "pirate", "mermaid", "monster", "vampire", "zombie", "pinocchio", "super hero", "native american", "space hero"],
+  professions: ["cowboy", "cheerleader", "ballerina", "fireman", "police officer", "chemist", "server", "dinner lady"],
+  // Preposition is the client's list of 50 now
+  preposition: ["away", "bottom", "far", "last", "left", "middle", "on top of", "out", "right", "top", "underneath", "aboard", "alongside", "amid", "amongst", "atop", "barring", "besides", "beyond", "concerning", "despite", "except", "excluding", "following", "including", "minus", "per", "plus", "regarding", "round", "than", "throughout", "till", "towards", "unlike", "upon", "via", "within", "according to", "ahead of", "along with", "apart from", "aside from", "because of", "close to", "due to", "far from", "in addition to", "in place of", "in spite of", "instead of", "on behalf of", "prior to", "thanks to", "together with", "up to", "with regard to"],
+  places: ["bear country", "ice skating rink", "locker", "movie", "kinder", "children's zoo", "monkey junction", "africa plains", "fair"],
+  park: ["sand pit", "park", "recess", "tunnel"],
   "holidays and celebrations": ["shamrock", "wedding cake", "yule log", "chinese new year", "balloons", "flashing disco ball", "scarecrow", "witch", "ghost", "clown", "face painting", "surprise", "tooth fairy", "cards", "candle", "angel", "elf", "olympics"],
   "hygiene and personal care": ["vitamins", "shot", "inoculation", "bandage", "plaster", "medicine", "inhaler", "cough syrup", "eye drops", "injection", "ice pack"],
   "money and finance": ["money-australia", "money-canada", "money-england", "money-euro", "money-new zealand"],
@@ -2171,6 +2253,8 @@ function removeRetiredBuiltinWords(): boolean {
 function ensureAllStandardCategories() {
   let changed = removeRetiredBuiltinWords();
   if (promoteObjectsInFolders()) changed = true;
+  if (promotePronounsFolder()) changed = true;
+  if (renameFamilyToRelationships()) changed = true;
   if (removeFoldersNotInClientList()) changed = true;
   const now = Date.now();
 
