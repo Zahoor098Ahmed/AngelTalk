@@ -39,6 +39,7 @@ import {
 import { playWord, playSentence, stopSentence, preloadTTS, type SpokenWord } from "../modules/audio";
 import { dictUrl } from "../modules/imageLibrary";
 import { getPictogramUrl, pictureFixFor } from "../modules/aacPictograms";
+import UNIQUE_PICTURES from "../modules/uniquePictures.json";
 import { recordWordUsage, recordSentencePlayed, recordCorrectionUsed } from "../modules/storage";
 import { ensurePredictionLoaded, learnSentence, predictNext, predictPhrases, searchWords, suggestionTiles, tileForText } from "../modules/wordPrediction";
 import { tapFeedback, selectFeedback } from "../modules/haptics";
@@ -320,6 +321,9 @@ function CardPic({
     ["🔡", "🔠", "🔤", "🔢", "🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦", "🇵🇰"].includes(emoji);
   const uri = useMemo(() => {
     if (isLetterOrNumTile) return null;
+    const lowerEn = enLabel.trim().toLowerCase();
+    const up = (UNIQUE_PICTURES as Record<string, string>)[lowerEn];
+    if (up) return up;
     // a word whose usual picture is wrong ("sink") never falls back to it
     if (pictureFixFor(enLabel) === null && !imageUri) return getPictogramUrl(enLabel);
     return (

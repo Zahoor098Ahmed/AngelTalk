@@ -85,7 +85,7 @@ const RESTORED_HOLIDAY_WORDS = "kiddocare_restored_holiday_words_v1";
 const RESTORED_PREPOSITIONS = "kiddocare_restored_prepositions_v2";
 const RESTORED_ATTRIBUTE_PLACE_WORDS = "kiddocare_restored_attribute_place_words_v1";
 const RESTORED_SCHOOL_WORDS = "kiddocare_restored_school_words_v1";
-const PICTURES_RENEWED = "kiddocare_pictures_renewed_v6";
+const PICTURES_RENEWED = "kiddocare_pictures_renewed_v16";
 /** Words whose picture was renewed by hand; shown once even where the family's board kept an older one. */
 const RENEWED_PICTURE_WORDS = ["castle", "hotel", "gurdwara", "mosque", "store", "temple", "tennis court", "cemetery", "bakery", "changing room", "mobile home", "sensory room", "community", "museum", "fair", "airport", "mall", "train station", "father", "mother", "uranus", "seeds", "haystack", "stars", "market", "barber shop", "circus", "cafe", "igloo", "plant room", "savannah", "fire station", "art", "assembly", "board rubber", "colored pencils", "spelling", "geography", "bears-counting", "dramatic play", "morning circle", "pe", "school bag", "show and tell", "story time", "worksheet", "quiet time", "gross motor", "activity schedule", "centers", "folder work", "gross motor game", "hiragana letters", "flash cards"];
 let renewPictures = false;
@@ -320,6 +320,16 @@ function refreshGuessedPictures() {
         w.imageUri = now && !/openclipart\.org/i.test(now) ? now : undefined;
         changed = true;
         continue;
+      }
+      // Built-in words with hand-curated pictures always get the latest unique picture
+      if (!w.isCustom) {
+        const k = (w.verbForms?.base || canonicalWordEn(w.label) || w.label).trim().toLowerCase();
+        const now = (UNIQUE_PICTURES as Record<string, string>)[k];
+        if (now && w.imageUri !== now) {
+          w.imageUri = now;
+          changed = true;
+          continue;
+        }
       }
       if (renewPictures) {
         const k = (canonicalWordEn(w.label) || w.label).trim().toLowerCase();
@@ -2195,8 +2205,8 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   home: ["light", "air freshener", "basket", "beach chair", "beach towel", "bin", "bin bags", "biscuit-cutter", "bookshelf", "broom", "bucket", "category", "chair-cushion", "chair-reclining", "chair-rocking", "cheers", "child's pen", "cleaning cloth", "cleaning fluid", "cleaning spray", "cleanser", "clock", "clothes line", "clothes pin", "communication book", "couch", "cubby house", "deck-chair", "den", "dining room", "door", "doorknob", "drawer", "driveway", "dryer", "dryer sheet", "dust pan", "elevator", "emoji", "entrance", "escalator", "exit", "fabric conditioner", "fabric softener", "family room", "fan", "fire hydrant", "fire place", "fireman's pole", "flag", "flag-australia", "flag-brazil", "flag-canada", "flag-china", "flag-france", "flag-germany", "flag-greece", "flag-italy", "flag-japan", "flag-poland", "flag-portugal", "flag-romania", "flag-south korea", "flag-spain", "flag-uk", "flag-us", "garage", "hand held vacuum", "handshake", "home", "hose", "hosepipe", "hot tub", "iron", "ironing board", "jobs", "key chain", "keys", "laundry basket", "laundry detergent", "letter box", "lid", "lift", "light", "living room", "lounge", "mailbox", "mini mop", "mop", "paper bags", "paper sacks", "paper towel dispenser", "photo album", "picnic", "picture exchange", "play house", "sand castle", "sand timer", "schedule", "scrubbing brush", "selfie", "shadow", "shopping basket", "shopping cart", "spa", "spill", "spray cleaner", "spray starch", "squeegee", "stairs", "storage bags", "storage room", "storage shed", "table", "tattoo", "ticket", "time", "timetable", "tokens", "trash bags", "tube", "umbrella-beach", "vacuum cleaner", "washing line", "washing machine", "washing powder", "wendy house", "window", "wine stopper"],
   office: ["paper", "dry wipe board", "dry erase board", "felt tips", "guillotine", "tape-roll", "folding file"],
   school: ["clay", "mainstream", "peg", "pointers", "pt", "ot", "lock-down drill", "tornado drill", "earthquake drill", "rice table", "peanut ball", "soft play room", "school shop", "library card", "sensory table", "clay", "lunch", "mat", "meeting", "notes", "paint", "picture", "quiet time", "school store", "speech", "math", "science"],
-  "sports and fitness": ["arrow"],
-  "tools and supplies": ["cotton", "wool"],
+  "sports and fitness": ["arrow", "checkers game"],
+  "tools and supplies": ["cotton", "wool", "flat-head screwdriver", "phillips head screwdriver", "light globe", "torch", "measuring tape", "mag mag"],
   "computer electronics and accessories": ["app", "white noise machine"],
   sensations: ["i'm bleeding", "sick"],
   // Food and Drinks: the client's table, plus the earlier words brought back (RESTORED_FOOD_WORDS)
@@ -2223,6 +2233,7 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   // Preposition is the client's list of 50 now
   preposition: ["away", "bottom", "far", "last", "left", "middle", "on top of", "out", "right", "top", "underneath", "aboard", "alongside", "amid", "amongst", "atop", "barring", "besides", "beyond", "concerning", "despite", "except", "excluding", "following", "including", "minus", "per", "plus", "regarding", "round", "than", "throughout", "till", "towards", "unlike", "upon", "via", "within", "according to", "ahead of", "along with", "apart from", "aside from", "because of", "close to", "due to", "far from", "in addition to", "in place of", "in spite of", "instead of", "on behalf of", "prior to", "thanks to", "together with", "up to", "with regard to"],
   places: ["bear country", "ice skating rink", "locker", "movie", "kinder", "children's zoo", "monkey junction", "africa plains", "fair"],
+  "toys and leisure items": ["bouncy ball", "color game", "glow ball", "light sword", "pony doll", "puzzle cube", "twist game"],
   park: ["sand pit", "park", "recess", "tunnel"],
   "holidays and celebrations": ["shamrock", "wedding cake", "yule log", "chinese new year", "balloons", "flashing disco ball", "scarecrow", "witch", "ghost", "clown", "face painting", "surprise", "tooth fairy", "cards", "candle", "angel", "elf", "olympics"],
   "hygiene and personal care": ["vitamins", "shot", "inoculation", "bandage", "plaster", "medicine", "inhaler", "cough syrup", "eye drops", "injection", "ice pack"],

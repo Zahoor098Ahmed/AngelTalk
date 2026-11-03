@@ -1753,7 +1753,7 @@
     - `frontend/src/modules/clientVocabulary.ts`
     - `frontend/src/modules/boardArabic.json`
 
-- **16:06:42 – 16:55:32** ⏱️ Active Coding Session (**49 min**)
+- **16:06:42 – 16:56:20** ⏱️ Active Coding Session (**50 min**)
   - 📁 **Files Worked On (7):**
     - `frontend/src/modules/clientVocabulary.ts`
     - `frontend/src/modules/boardArabic.json`
@@ -1762,3 +1762,157 @@
     - `.gitignore`
     - `frontend/src/modules/homeCategoryPictures.json`
     - `.gitattributes`
+
+## 2026-11-03
+
+- **09:44:33 – 09:44:44** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `.gitignore`
+    - `.gitattributes`
+
+- **09:45:01 – 10:11:14** ⏱️ Active Coding Session (**26 min**)
+  - 📁 **Files Worked On (4):**
+    - `docker-compose.yml`
+    - `frontend/src/modules/uniquePictures.json`
+    - `frontend/src/modules/clientVocabulary.ts`
+    - `frontend/src/modules/boardArabic.json`
+
+- **10:20:09 – 11:27:09** ⏱️ Active Coding Session (**67 min**)
+  - 📁 **Files Worked On (6):**
+    - `frontend/src/modules/uniquePictures.json`
+    - `.gitignore`
+    - `.gitattributes`
+    - `frontend/src/modules/clientVocabulary.ts`
+    - `frontend/src/modules/boardArabic.json`
+    - `frontend/src/modules/customCategories.ts`
+
+- **11:46:29 – 12:05:29** ⏱️ Active Coding Session (**19 min**)
+  - 📁 **Files Worked On (11):**
+    - `frontend/src/modules/uniquePictures.json`
+    - `.gitignore`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/clientVocabulary.ts`
+    - `scratch_bear_walk.jpg`
+    - `scratch_bicycle_crunches.jpg`
+    - `scratch_crab_walk.jpg`
+    - `scratch_crunch.jpg`
+    - `scratch_downward_dog_pose.jpg`
+    - `scratch_dragon_pose.jpg`
+
+- **12:14:34 – 12:21:02** ⏱️ Active Coding Session (**6 min**)
+  - 📁 **Files Worked On (9):**
+    - `arasaac_23703.png`
+    - `arasaac_38793.png`
+    - `arasaac_36506.png`
+    - `arasaac_9098.png`
+    - `arasaac_37882.png`
+    - `arasaac_38761.png`
+    - `arasaac_8574.png`
+    - `arasaac_37910.png`
+    - `frontend/src/modules/uniquePictures.json`
+
+- **12:46:03 – 13:17:32** ⏱️ Active Coding Session (**31 min**)
+  - 📁 **Files Worked On (20):**
+    - `.gitattributes`
+    - `bicycle_crunch_real.jpg`
+    - `.gitignore`
+    - `frontend/src/modules/uniquePictures.json`
+    - `pin_8297.png`
+    - `pin_30020.png`
+    - `arasaac_23703.png`
+    - `arasaac_36506.png`
+    - `arasaac_37882.png`
+    - `arasaac_37910.png`
+    - `arasaac_38761.png`
+    - `arasaac_38793.png`
+    - `arasaac_8574.png`
+    - `arasaac_9098.png`
+    - `scratch_bear_walk.jpg`
+    - `scratch_bicycle_crunches.jpg`
+    - `scratch_crab_walk.jpg`
+    - `scratch_crunch.jpg`
+    - `scratch_downward_dog_pose.jpg`
+    - `scratch_dragon_pose.jpg`
+
+- **14:31:06 – 15:07:05** ⏱️ Active Coding Session (**36 min**)
+  - 📁 **Files Worked On (21):**
+    - `frontend/src/modules/uniquePictures.json`
+    - `.gitignore`
+    - `.gitattributes`
+    - `arasaac_23703.png`
+    - `arasaac_36506.png`
+    - `arasaac_37882.png`
+    - `arasaac_37910.png`
+    - `arasaac_38761.png`
+    - `arasaac_38793.png`
+    - `arasaac_8574.png`
+    - `arasaac_9098.png`
+    - `bicycle_crunch_real.jpg`
+    - `pin_30020.png`
+    - `pin_8297.png`
+    - `scratch_bear_walk.jpg`
+    - `scratch_bicycle_crunches.jpg`
+    - `scratch_crab_walk.jpg`
+    - `scratch_crunch.jpg`
+    - `scratch_downward_dog_pose.jpg`
+    - `scratch_dragon_pose.jpg`
+    - `frontend/src/modules/customCategories.ts`
+
+- **15:17:31 – 15:43:16** ⏱️ Active Coding Session (**26 min**)
+  - 📁 **Files Worked On (6):**
+    - `frontend/src/modules/uniquePictures.json`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/clientVocabulary.ts`
+    - `frontend/src/modules/boardArabic.json`
+    - `.gitignore`
+    - `.gitattributes`
+
+- **15:52:19 – 15:52:19** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `frontend/src/modules/uniquePictures.json`
+    - `frontend/src/modules/customCategories.ts`
+
+- **16:05:30 – 16:07:00** ⏱️ Active Coding Session (**2 min**)
+  - 📁 **Files Worked On (17):**
+    - `arasaac_23703.png`
+    - `arasaac_36506.png`
+    - `arasaac_37882.png`
+    - `arasaac_37910.png`
+    - `arasaac_38761.png`
+    - `arasaac_38793.png`
+    - `arasaac_8574.png`
+    - `arasaac_9098.png`
+    - `pin_30020.png`
+    - `pin_8297.png`
+    - `scratch_bear_walk.jpg`
+    - `scratch_bicycle_crunches.jpg`
+    - `scratch_crab_walk.jpg`
+    - `scratch_crunch.jpg`
+    - `scratch_downward_dog_pose.jpg`
+    - `scratch_dragon_pose.jpg`
+    - `frontend/src/modules/uniquePictures.json`
+
+- **16:36:24 – 16:36:26** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `frontend/src/modules/uniquePictures.json`
+    - `.gitignore`
+
+- **16:48:36 – 16:48:36** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `frontend/src/modules/uniquePictures.json`
+
+- **17:10:40 – 17:14:33** ⏱️ Active Coding Session (**4 min**)
+  - 📁 **Files Worked On (1):**
+    - `frontend/scripts/check_toys.js`
+
+- **17:20:23 – 17:28:29** ⏱️ Active Coding Session (**8 min**)
+  - 📁 **Files Worked On (8):**
+    - `frontend/scripts/check_toys_all.js`
+    - `frontend/scripts/search_matches.js`
+    - `frontend/scripts/search_api.js`
+    - `frontend/scripts/search_api2.js`
+    - `frontend/scripts/search_api3.js`
+    - `frontend/scripts/search_api4.js`
+    - `frontend/scripts/apply_toy_pictures.js`
+    - `frontend/src/modules/uniquePictures.json`
