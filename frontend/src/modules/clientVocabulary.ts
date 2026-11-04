@@ -3263,7 +3263,6 @@ export const CLIENT_SHELVES: ClientShelf[] = [
       "path",
       "picnic",
       "picnic table",
-      "play area",
       "playground",
       "pond",
       "roundabout",

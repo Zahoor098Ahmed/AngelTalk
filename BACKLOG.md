@@ -1906,8 +1906,8 @@
   - 📁 **Files Worked On (1):**
     - `frontend/scripts/check_toys.js`
 
-- **17:20:23 – 17:28:29** ⏱️ Active Coding Session (**8 min**)
-  - 📁 **Files Worked On (8):**
+- **17:20:23 – 17:32:33** ⏱️ Active Coding Session (**12 min**)
+  - 📁 **Files Worked On (9):**
     - `frontend/scripts/check_toys_all.js`
     - `frontend/scripts/search_matches.js`
     - `frontend/scripts/search_api.js`
@@ -1916,3 +1916,61 @@
     - `frontend/scripts/search_api4.js`
     - `frontend/scripts/apply_toy_pictures.js`
     - `frontend/src/modules/uniquePictures.json`
+    - `.gitattributes`
+
+## 2026-11-04
+
+- **16:02:02 – 16:47:09** ⏱️ Active Coding Session (**45 min**)
+  - 📁 **Files Worked On (25):**
+    - `.gitignore`
+    - `.gitattributes`
+    - `docker-compose.yml`
+    - `frontend/scripts/inspect_categories.js`
+    - `frontend/scripts/find_photos.js`
+    - `frontend/scripts/search_term_sources.js`
+    - `frontend/scripts/check_up_sp.js`
+    - `frontend/scripts/check_aac.js`
+    - `frontend/scripts/list_all_categories.js`
+    - `frontend/scripts/scan_real_images.js`
+    - `frontend/scripts/read_aac_pic.js`
+    - `frontend/scripts/read_aac_pic2.js`
+    - `frontend/scripts/find_all_real_photos.js`
+    - `frontend/scripts/sample_jpegs.js`
+    - `frontend/scripts/check_aac_coverage.js`
+    - `frontend/scripts/count_by_shelf.js`
+    - `frontend/scripts/analyze_jpegs.js`
+    - `frontend/scripts/replace_photos_with_pictograms.js`
+    - `frontend/src/modules/uniquePictures.json`
+    - `frontend/scripts/check_remaining_jpegs.js`
+    - `frontend/scripts/apply_final_42.js`
+    - `frontend/scripts/check_missing_in_up.js`
+    - `frontend/scripts/test_missing_sample.js`
+    - `frontend/scripts/check_null_resolution.js`
+    - `frontend/scripts/apply_22.js`
+
+- **16:48:31 – 17:10:04** ⏱️ Active Coding Session (**22 min**)
+  - 📁 **Files Worked On (17):**
+    - `frontend/scripts/inspect_park.js`
+    - `frontend/scripts/test_park_ids.js`
+    - `frontend/scripts/search_park.js`
+    - `frontend/scripts/search_park2.js`
+    - `frontend/scripts/apply_park_animated.js`
+    - `frontend/src/modules/uniquePictures.json`
+    - `frontend/scripts/find_park_duplicates.js`
+    - `frontend/scripts/search_distinct_park.js`
+    - `frontend/scripts/search_distinct_park2.js`
+    - `.gitignore`
+    - `frontend/scripts/check_pic_info.js`
+    - `frontend/scripts/search_distinct_park3.js`
+    - `frontend/scripts/search_distinct_park4.js`
+    - `frontend/scripts/remove_play_area.js`
+    - `frontend/src/modules/clientVocabulary.ts`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/scripts/apply_park_distinct.js`
+
+- **17:15:20 – 17:20:50** ⏱️ Active Coding Session (**6 min**)
+  - 📁 **Files Worked On (4):**
+    - `frontend/src/modules/uniquePictures.json`
+    - `frontend/scripts/verify_park_all_unique.js`
+    - `frontend/src/modules/customCategories.ts`
+    - `.gitattributes`

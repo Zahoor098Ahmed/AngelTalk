@@ -2234,7 +2234,7 @@ const RETIRED_BUILTIN_WORDS: Record<string, string[]> = {
   preposition: ["away", "bottom", "far", "last", "left", "middle", "on top of", "out", "right", "top", "underneath", "aboard", "alongside", "amid", "amongst", "atop", "barring", "besides", "beyond", "concerning", "despite", "except", "excluding", "following", "including", "minus", "per", "plus", "regarding", "round", "than", "throughout", "till", "towards", "unlike", "upon", "via", "within", "according to", "ahead of", "along with", "apart from", "aside from", "because of", "close to", "due to", "far from", "in addition to", "in place of", "in spite of", "instead of", "on behalf of", "prior to", "thanks to", "together with", "up to", "with regard to"],
   places: ["bear country", "ice skating rink", "locker", "movie", "kinder", "children's zoo", "monkey junction", "africa plains", "fair"],
   "toys and leisure items": ["bouncy ball", "color game", "glow ball", "light sword", "pony doll", "puzzle cube", "twist game"],
-  park: ["sand pit", "park", "recess", "tunnel"],
+  park: ["play area", "sand pit", "park", "recess", "tunnel"],
   "holidays and celebrations": ["shamrock", "wedding cake", "yule log", "chinese new year", "balloons", "flashing disco ball", "scarecrow", "witch", "ghost", "clown", "face painting", "surprise", "tooth fairy", "cards", "candle", "angel", "elf", "olympics"],
   "hygiene and personal care": ["vitamins", "shot", "inoculation", "bandage", "plaster", "medicine", "inhaler", "cough syrup", "eye drops", "injection", "ice pack"],
   "money and finance": ["money-australia", "money-canada", "money-england", "money-euro", "money-new zealand"],
