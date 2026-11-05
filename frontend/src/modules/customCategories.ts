@@ -2157,7 +2157,10 @@ function syncShelfWords(cat: CustomCategory, seedWords: [string, string][]): boo
     .filter(([label]) => !isDeletedWord(cat.id, label))
     .map(([label, emoji], wi) => {
       const existing = preferCustomized(cat.words.filter((w) => !used.has(w.id) && !w.verbFormTag &&
-        [w.seedLabel, canonicalWordEn(w.label), w.label].some((l) => (l || "").toLowerCase() === label.toLowerCase())));
+        [w.seedLabel, canonicalWordEn(w.label), w.label].some((l) => {
+          const lower = (l || "").toLowerCase();
+          return lower === label.toLowerCase() || (lower === "shops" && label.toLowerCase() === "shop");
+        })));
       if (existing) used.add(existing.id);
       const localized = wordLabel(label, seedLang) || label;
       return {

@@ -1974,3 +1974,235 @@
     - `frontend/scripts/verify_park_all_unique.js`
     - `frontend/src/modules/customCategories.ts`
     - `.gitattributes`
+
+## 2026-11-05
+
+- **09:56:28 – 10:21:16** ⏱️ Active Coding Session (**25 min**)
+  - 📁 **Files Worked On (6):**
+    - `.gitignore`
+    - `.gitattributes`
+    - `docker-compose.yml`
+    - `frontend/scripts/search_commons.js`
+    - `frontend/scripts/search_arasaac_es.js`
+    - `frontend/scripts/test_clker_downloads.js`
+
+- **10:33:21 – 11:16:31** ⏱️ Active Coding Session (**43 min**)
+  - 📁 **Files Worked On (19):**
+    - `frontend/scripts/download_6_targets.js`
+    - `frontend/src/modules/uniquePictures.json`
+    - `frontend/scripts/list_park_formats.js`
+    - `scratch_tire_swing.png`
+    - `scratch_jungle_gym.png`
+    - `scratch_picnic.png`
+    - `scratch_swing.png`
+    - `scratch_see_saw.png`
+    - `scratch_slide.png`
+    - `scratch_picnic_28361.png`
+    - `scratch_picnic_39755.png`
+    - `.gitignore`
+    - `scratch_2447.png`
+    - `scratch_36145.png`
+    - `scratch_38085.png`
+    - `scratch_3012.png`
+    - `scratch_37103.png`
+    - `scratch_37072.png`
+    - `frontend/scripts/test_picnic.js`
+
+- **11:34:32 – 12:16:32** ⏱️ Active Coding Session (**42 min**)
+  - 📁 **Files Worked On (30):**
+    - `scratch_tomtom_2578.png`
+    - `scratch_chimes_39152.png`
+    - `scratch_hihat_2531.png`
+    - `scratch_bugle_5974.png`
+    - `scratch_rhythm_stick_23937.png`
+    - `scratch_shaker_2463.png`
+    - `scratch_brush_2670.png`
+    - `scratch_bells_3072.png`
+    - `scratch_cajon_23867.png`
+    - `scratch_steel_drum_37707.png`
+    - `scratch_5949.png`
+    - `check_pics.js`
+    - `search_code.js`
+    - `check_aac.js`
+    - `find_smart_image.js`
+    - `.gitignore`
+    - `check_vocab.js`
+    - `check_func.js`
+    - `test_pics.js`
+    - `test_bear.js`
+    - `sample_bear.png`
+    - `find_bear_keys.js`
+    - `test_3d.js`
+    - `sample_3d.jpg`
+    - `sample_action_toy.jpg`
+    - `sample_ball_popper.png`
+    - `find_images.js`
+    - `search_arasaac.js`
+    - `search_toys.js`
+    - `download_test.js`
+
+- **12:22:53 – 13:30:51** ⏱️ Active Coding Session (**68 min**)
+  - 📁 **Files Worked On (30):**
+    - `frontend/src/modules/uniquePictures.json`
+    - `apply_all_pics.js`
+    - `check_aac.js`
+    - `check_balls_all.js`
+    - `check_func.js`
+    - `check_music.js`
+    - `check_p_keys.js`
+    - `check_pics.js`
+    - `check_samples.js`
+    - `check_sizes.js`
+    - `check_svg_format.js`
+    - `check_variations.js`
+    - `check_vocab.js`
+    - `download_svg.js`
+    - `download_test.js`
+    - `find_all_bears.js`
+    - `find_ball_face.js`
+    - `find_bear_keys.js`
+    - `find_images.js`
+    - `find_smart_image.js`
+    - `generate_svgs.js`
+    - `get_37614.js`
+    - `search_arasaac.js`
+    - `search_balls.js`
+    - `search_code.js`
+    - `search_commons.js`
+    - `search_es.js`
+    - `search_toys.js`
+    - `test_3d.js`
+    - `test_bear.js`
+
+- **14:27:15 – 14:49:04** ⏱️ Active Coding Session (**22 min**)
+  - 📁 **Files Worked On (30):**
+    - `inspect_temple.png`
+    - `inspect_gurdwara.png`
+    - `inspect_plant_room.png`
+    - `inspect_savannah.png`
+    - `inspect_store.png`
+    - `check_5_info.js`
+    - `generate_5_svgs.js`
+    - `svg_gurdwara.svg`
+    - `svg_plant_room.svg`
+    - `svg_savannah.svg`
+    - `svg_store.svg`
+    - `svg_temple.svg`
+    - `apply_5_perfect.js`
+    - `frontend/src/modules/uniquePictures.json`
+    - `dump_5.js`
+    - `get_museums.js`
+    - `test_museum_3132.png`
+    - `test_museum_6566.png`
+    - `generate_museum_svg.js`
+    - `svg_museum_perfect.svg`
+    - `apply_museum.js`
+    - `check_pronouns.js`
+    - `check_pronoun_sources.js`
+    - `check_pronouns_format.js`
+    - `check_modules.js`
+    - `check_sym_pronouns.js`
+    - `test_pngjs.js`
+    - `check_its_color.js`
+    - `sample_its.jpg`
+    - `sample_it.jpg`
+
+- **14:56:58 – 15:02:18** ⏱️ Active Coding Session (**5 min**)
+  - 📁 **Files Worked On (3):**
+    - `test_red_replace.js`
+    - `test_soft_it.png`
+    - `soften_pronouns.js`
+
+- **15:14:03 – 15:14:03** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `frontend/src/modules/uniquePictures.json`
+
+- **15:24:05 – 15:24:15** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (11):**
+    - `check_color_its.js`
+    - `check_its_color.js`
+    - `check_modules.js`
+    - `check_pronoun_sources.js`
+    - `check_pronouns.js`
+    - `check_pronouns_format.js`
+    - `check_sym_pronouns.js`
+    - `search_pronouns_es.js`
+    - `soften_pronouns.js`
+    - `test_pngjs.js`
+    - `test_red_replace.js`
+
+- **15:35:26 – 16:02:44** ⏱️ Active Coding Session (**27 min**)
+  - 📁 **Files Worked On (17):**
+    - `check_desc.js`
+    - `check_places_shop.js`
+    - `find_shops.js`
+    - `check_cc_shops.js`
+    - `check_rename.js`
+    - `check_cc_vocab.js`
+    - `check_shelves.js`
+    - `check_sync_shelf.js`
+    - `find_shops_all.js`
+    - `frontend/src/modules/clientVocabulary.ts`
+    - `frontend/src/modules/customCategories.ts`
+    - `set_shop_pic.js`
+    - `frontend/src/modules/uniquePictures.json`
+    - `check_songs_keys.js`
+    - `search_goldilocks.js`
+    - `generate_goldilocks.js`
+    - `svg_goldilocks_3_bears.svg`
+
+- **16:10:32 – 16:13:17** ⏱️ Active Coding Session (**3 min**)
+  - 📁 **Files Worked On (20):**
+    - `test_dog_2433.png`
+    - `test_dog_7064.png`
+    - `test_dog_7114.png`
+    - `test_dog_32468.png`
+    - `test_dog_36928.png`
+    - `test_picnic_2477.png`
+    - `test_picnic_2478.png`
+    - `test_picnic_2479.png`
+    - `test_picnic_7150.png`
+    - `test_picnic_32486.png`
+    - `test_bear_2843.png`
+    - `test_bear_2844.png`
+    - `test_bear_2845.png`
+    - `test_bear_6176.png`
+    - `test_bear_7033.png`
+    - `test_bear_2415.png`
+    - `temp_prev.json`
+    - `orig_goldilocks.png`
+    - `orig_picnic.png`
+    - `orig_bingo.png`
+
+- **16:19:06 – 17:12:05** ⏱️ Active Coding Session (**53 min**)
+  - 📁 **Files Worked On (30):**
+    - `puppy_test.png`
+    - `arasaac_father_bear.png`
+    - `arasaac_mommy_bear.png`
+    - `arasaac_little_bear.png`
+    - `arasaac_bear.png`
+    - `arasaac_dog_2517.png`
+    - `arasaac_dog_7202.png`
+    - `arasaac_dog_38967.png`
+    - `arasaac_go_on_a_picnic_39755.png`
+    - `arasaac_picnic_10236.png`
+    - `arasaac_picnic_28361.png`
+    - `arasaac_goldilocks_6207.png`
+    - `arasaac_girl_2484.png`
+    - `arasaac_girl_27509.png`
+    - `clean_going_on_picnic.png`
+    - `goldilocks_3bears_v1.png`
+    - `goldilocks_3bears_v2.png`
+    - `frontend/src/modules/uniquePictures.json`
+    - `check_sports.js`
+    - `sports_words_info.json`
+    - `inspect_sports/air_hockey.png`
+    - `inspect_sports/airplane_pose.jpg`
+    - `inspect_sports/arrow.jpg`
+    - `inspect_sports/australian_football.png`
+    - `inspect_sports/backhand.png`
+    - `inspect_sports/badminton.jpg`
+    - `inspect_sports/balance_beam.jpg`
+    - `inspect_sports/ball.png`
+    - `inspect_sports/baseball.jpg`
+    - `inspect_sports/baseball_diamond.jpg`

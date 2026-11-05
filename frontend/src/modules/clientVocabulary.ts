@@ -3534,7 +3534,7 @@ export const CLIENT_SHELVES: ClientShelf[] = [
       "savannah",
       "school",
       "sensory room",
-      "shops",
+      "shop",
       "shrine",
       "store",
       "street market",

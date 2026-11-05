@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <rect width="500" height="500" fill="#ffffff"/>
+  
+  <!-- Subtle ground shadow -->
+  <ellipse cx="250" cy="405" rx="200" ry="40" fill="#e2e8f0"/>
+
+  <!-- Checkered Picnic Blanket in Perspective -->
+  <defs>
+    <pattern id="picnicGingham" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(25)">
+      <rect width="40" height="40" fill="#ffffff"/>
+      <rect width="20" height="40" fill="#fca5a5" opacity="0.8"/>
+      <rect width="40" height="20" fill="#fca5a5" opacity="0.8"/>
+      <rect width="20" height="20" fill="#ef4444"/>
+    </pattern>
+  </defs>
+
+  <!-- Blanket shape -->
+  <polygon points="70,360 170,220 420,240 370,410" 
+           fill="url(#picnicGingham)" stroke="#b91c1c" stroke-width="6" stroke-linejoin="round"/>
+
+  <!-- Classic Woven Picnic Basket -->
+  <g transform="translate(40, -10)">
+    <!-- Basket Shadow -->
+    <ellipse cx="190" cy="350" rx="90" ry="25" fill="#94a3b8" opacity="0.4"/>
+    
+    <!-- Basket Handle -->
+    <path d="M 140 230 C 140 140 240 140 240 230" fill="none" stroke="#78350f" stroke-width="14" stroke-linecap="round"/>
+    <path d="M 140 230 C 140 140 240 140 240 230" fill="none" stroke="#d97706" stroke-width="8" stroke-linecap="round"/>
+
+    <!-- Open Lid Left -->
+    <polygon points="105,245 125,200 185,225 165,260" fill="#b45309" stroke="#78350f" stroke-width="6"/>
+    <!-- Open Lid Right -->
+    <polygon points="275,245 255,200 195,225 215,260" fill="#b45309" stroke="#78350f" stroke-width="6"/>
+
+    <!-- Basket Body (woven pattern) -->
+    <path d="M 115 250 L 135 345 C 140 355 240 355 245 345 L 265 250 Z" 
+          fill="#d97706" stroke="#78350f" stroke-width="8" stroke-linejoin="round"/>
+    
+    <!-- Wicker weave horizontal stripes -->
+    <path d="M 120 275 Q 190 290 260 275" stroke="#92400e" stroke-width="5" fill="none"/>
+    <path d="M 125 300 Q 190 315 255 300" stroke="#92400e" stroke-width="5" fill="none"/>
+    <path d="M 130 325 Q 190 340 250 325" stroke="#92400e" stroke-width="5" fill="none"/>
+    
+    <!-- Basket Rim -->
+    <ellipse cx="190" cy="250" rx="76" ry="16" fill="#f59e0b" stroke="#78350f" stroke-width="7"/>
+    
+    <!-- Cloth napkin peeking out -->
+    <polygon points="150,245 175,230 190,265 160,270" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+  </g>
+
+  <!-- Picnic Food on the blanket -->
+  <!-- Sandwich -->
+  <g transform="translate(140, 20)">
+    <polygon points="120,340 180,310 185,360" fill="#fef08a" stroke="#ca8a04" stroke-width="5"/>
+    <polygon points="120,340 180,310 175,295 115,325" fill="#d97706" stroke="#78350f" stroke-width="5"/>
+    <!-- Lettuce & Tomato layer -->
+    <path d="M 120 340 Q 145 328 178 312" stroke="#22c55e" stroke-width="7" stroke-linecap="round"/>
+    <path d="M 135 333 Q 155 323 170 315" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <!-- Red Apple -->
+  <g transform="translate(190, 80)">
+    <!-- Stem & Leaf -->
+    <path d="M 140 240 Q 148 220 155 215" stroke="#78350f" stroke-width="5" fill="none"/>
+    <path d="M 152 220 Q 165 210 170 222 Q 158 226 152 220 Z" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+    <!-- Apple Body -->
+    <path d="M 140 240 C 120 230 105 260 115 285 C 125 310 138 315 140 312 C 142 315 155 310 165 285 C 175 260 160 230 140 240 Z" 
+          fill="#ef4444" stroke="#991b1b" stroke-width="6"/>
+    <!-- Highlight -->
+    <ellipse cx="128" cy="255" rx="5" ry="10" transform="rotate(-20 128 255)" fill="#fca5a5"/>
+  </g>
+
+  <!-- Juice Bottle / Thermos -->
+  <g transform="translate(265, 50)">
+    <rect x="75" y="270" width="35" height="70" rx="8" fill="#38bdf8" stroke="#0284c7" stroke-width="6"/>
+    <rect x="80" y="255" width="25" height="18" rx="4" fill="#facc15" stroke="#ca8a04" stroke-width="5"/>
+    <rect x="75" y="295" width="35" height="20" fill="#ffffff" opacity="0.6"/>
+  </g>
+</svg>

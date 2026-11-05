@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <rect width="500" height="500" fill="#ffffff"/>
+  
+  <!-- Ground base shadow -->
+  <ellipse cx="250" cy="450" rx="210" ry="25" fill="#e2e8f0"/>
+
+  <!-- Classic Jungle Gym Playground Structure -->
+  <!-- Ladder (Left) -->
+  <line x1="80" y1="440" x2="140" y2="240" stroke="#0f172a" stroke-width="10" stroke-linecap="round"/>
+  <line x1="120" y1="440" x2="170" y2="240" stroke="#0f172a" stroke-width="10" stroke-linecap="round"/>
+  <!-- Ladder rungs -->
+  <line x1="90" y1="400" x2="132" y2="400" stroke="#eab308" stroke-width="8" stroke-linecap="round"/>
+  <line x1="102" y1="355" x2="145" y2="355" stroke="#eab308" stroke-width="8" stroke-linecap="round"/>
+  <line x1="115" y1="310" x2="155" y2="310" stroke="#eab308" stroke-width="8" stroke-linecap="round"/>
+  <line x1="128" y1="265" x2="165" y2="265" stroke="#eab308" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- Main Tower Posts (Red & Blue) -->
+  <rect x="150" y="160" width="18" height="280" rx="6" fill="#ef4444" stroke="#0f172a" stroke-width="7"/>
+  <rect x="290" y="160" width="18" height="280" rx="6" fill="#ef4444" stroke="#0f172a" stroke-width="7"/>
+
+  <!-- Tower Platform Deck -->
+  <rect x="140" y="240" width="178" height="22" rx="4" fill="#facc15" stroke="#0f172a" stroke-width="7"/>
+  <!-- Safety Railing on Platform -->
+  <rect x="155" y="195" width="148" height="45" fill="none" stroke="#3b82f6" stroke-width="7"/>
+  <line x1="192" y1="195" x2="192" y2="240" stroke="#3b82f6" stroke-width="6"/>
+  <line x1="229" y1="195" x2="229" y2="240" stroke="#3b82f6" stroke-width="6"/>
+  <line x1="266" y1="195" x2="266" y2="240" stroke="#3b82f6" stroke-width="6"/>
+
+  <!-- Tower Roof / Canopy -->
+  <polygon points="135,165 230,80 325,165" fill="#3b82f6" stroke="#0f172a" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Decorative roof pennant flag -->
+  <path d="M 230 80 L 230 40 L 270 55 L 230 70" fill="#ef4444" stroke="#0f172a" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- Monkey Bars / Jungle Gym Climbing Grid (Right side) -->
+  <!-- Horizontal overhead beam -->
+  <rect x="295" y="180" width="145" height="16" rx="4" fill="#10b981" stroke="#0f172a" stroke-width="6"/>
+  <!-- Far post for monkey bars -->
+  <rect x="425" y="185" width="16" height="255" rx="5" fill="#ef4444" stroke="#0f172a" stroke-width="7"/>
+  <!-- Monkey bar overhead rungs -->
+  <circle cx="330" cy="188" r="7" fill="#fbbf24" stroke="#0f172a" stroke-width="4"/>
+  <circle cx="365" cy="188" r="7" fill="#fbbf24" stroke="#0f172a" stroke-width="4"/>
+  <circle cx="400" cy="188" r="7" fill="#fbbf24" stroke="#0f172a" stroke-width="4"/>
+
+  <!-- Climbing Grid Bars on the right structure (iconic Jungle Gym grid!) -->
+  <line x1="305" y1="260" x2="425" y2="260" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/>
+  <line x1="305" y1="320" x2="425" y2="320" stroke="#eab308" stroke-width="8" stroke-linecap="round"/>
+  <line x1="305" y1="380" x2="425" y2="380" stroke="#10b981" stroke-width="8" stroke-linecap="round"/>
+  <line x1="365" y1="195" x2="365" y2="440" stroke="#0f172a" stroke-width="8"/>
+
+  <!-- Slide attached to the front/left of platform -->
+  <path d="M 160 255 C 130 260 85 360 50 440 L 80 440 C 110 380 150 280 185 255 Z" 
+        fill="#10b981" stroke="#0f172a" stroke-width="7" stroke-linejoin="round"/>
+  <!-- Slide red side-barrier wall -->
+  <path d="M 160 248 C 130 253 85 353 50 433" fill="none" stroke="#ef4444" stroke-width="9" stroke-linecap="round"/>
+
+  <!-- Steering wheel / telescope play accessory on platform -->
+  <circle cx="215" cy="210" r="14" fill="#fbbf24" stroke="#0f172a" stroke-width="5"/>
+  <line x1="201" y1="210" x2="229" y2="210" stroke="#0f172a" stroke-width="4"/>
+  <line x1="215" y1="196" x2="215" y2="224" stroke="#0f172a" stroke-width="4"/>
+</svg>
