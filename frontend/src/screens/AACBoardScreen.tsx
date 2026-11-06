@@ -53,6 +53,9 @@ import { getVerbForms, detectVerbForm, isContinuousForm, generateAllVerbForms, s
 import SmartImage from "../components/SmartImage";
 import MONTH_PICTURE_DATA from "../modules/monthPictures.json";
 
+/** Pictures stored as "folder::word": they belong to one folder's word. */
+const FOLDER_WORD_PICTURES = new Set(Object.entries(UNIQUE_PICTURES as Record<string, string>).filter(([k]) => k.includes("::") && !k.startsWith("folder::")).map(([, v]) => v));
+
 interface Props {
   child: ChildProfile;
   tab: TabScreen;
@@ -321,6 +324,8 @@ function CardPic({
     ["🔡", "🔠", "🔤", "🔢", "🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦", "🇵🇰"].includes(emoji);
   const uri = useMemo(() => {
     if (isLetterOrNumTile) return null;
+    // a picture made for the word in its folder beats the word's plain picture
+    if (imageUri && FOLDER_WORD_PICTURES.has(imageUri)) return imageUri;
     const lowerEn = enLabel.trim().toLowerCase();
     const up = (UNIQUE_PICTURES as Record<string, string>)[lowerEn];
     if (up) return up;
