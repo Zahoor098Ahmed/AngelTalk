@@ -305,6 +305,8 @@ export interface CustomWord {
 }
 
 export interface CustomCategory {
+  /** The family picked this picture; it shows everywhere, over the built-in one. */
+  pictureChosen?: boolean;
   id: string;
   name: string;
   createdAt: number;

@@ -28,7 +28,7 @@ import {
   createBlankCategory,
   bottomTabCategories,
   verbFolderLetter,
-  folderPictureFor,
+  categoryPictureFor,
   coreWords,
   setSeedLanguage,
   retranslateSeedBoard,
@@ -304,11 +304,14 @@ function MonthCalendar({ month, size }: { month: number; size: number }) {
 function CardPic({
   label,
   imageUri,
+  exact,
   emoji,
   size = 44,
 }: {
   label: string;
   imageUri?: string;
+  /** Show imageUri as given (a category's picture), never the word's own picture. */
+  exact?: boolean;
   emoji: string;
   size?: number;
 }) {
@@ -325,7 +328,7 @@ function CardPic({
   const uri = useMemo(() => {
     if (isLetterOrNumTile) return null;
     // a picture made for the word in its folder beats the word's plain picture
-    if (imageUri && FOLDER_WORD_PICTURES.has(imageUri)) return imageUri;
+    if (imageUri && (exact || FOLDER_WORD_PICTURES.has(imageUri))) return imageUri;
     const lowerEn = enLabel.trim().toLowerCase();
     const up = (UNIQUE_PICTURES as Record<string, string>)[lowerEn];
     if (up) return up;
@@ -337,7 +340,7 @@ function CardPic({
       getPictogramUrl(label) ||
       (!imgError ? dictUrl(enLabel) || dictUrl(label) : null)
     );
-  }, [imageUri, label, enLabel, imgError, isLetterOrNumTile]);
+  }, [imageUri, exact, label, enLabel, imgError, isLetterOrNumTile]);
 
   // days of the week draw their own English strip (the stock pictures are the Spanish L M X J V S D);
   // a photo a parent chose still wins
@@ -1400,16 +1403,17 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                               {verbFolderLetter(f)}
                             </Text>
                           </View>
-                        ) : folderPictureFor(f).text ? (
+                        ) : categoryPictureFor(f).text ? (
                           <View style={[styles.letterBadge, { width: folderPicSize, height: folderPicSize, borderRadius: folderPicSize * 0.24, borderColor: c }]}>
                             <Text style={[styles.letterBadgeText, { color: c, fontSize: Math.round(folderPicSize * 0.36) }]}>
-                              {folderPictureFor(f).text}
+                              {categoryPictureFor(f).text}
                             </Text>
                           </View>
-                        ) : folderPictureFor(f).uri ? (
+                        ) : categoryPictureFor(f).uri ? (
                           <CardPic
                             label={f.name}
-                            imageUri={folderPictureFor(f).uri}
+                            imageUri={categoryPictureFor(f).uri}
+                            exact
                             emoji={f.icon ?? "📁"}
                             size={folderPicSize}
                           />
@@ -1716,6 +1720,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
         >
           {bottomTabs.map((bt) => {
             const active = currentId === bt.id;
+            const stripCat = bt.id ? getCategory(bt.id) : undefined;
             return (
               <Pressable
                 key={bt.name}
@@ -1729,7 +1734,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                     active && { backgroundColor: (bt.color || colors.forest) + "28" },
                   ]}
                 >
-                  <CardPic label={bt.name} emoji={bt.icon} size={64} />
+                  <CardPic label={bt.name} imageUri={stripCat ? categoryPictureFor(stripCat).uri : undefined} exact emoji={bt.icon} size={64} />
                 </View>
                 <Text
                   style={[

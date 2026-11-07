@@ -4308,7 +4308,7 @@ export const CLIENT_SHELVES: ClientShelf[] = [
           "bus shelter",
           "bus stop",
           "bus ticket",
-          "car horn",
+          "car steering",
           "car seat",
           "depart",
           "drive-thru",

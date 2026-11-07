@@ -26,6 +26,7 @@ import {
   createBlankCategory,
   createBlankCategoriesBulk,
   updateCategory,
+  categoryPictureFor,
   addWord,
   addWordsBulk,
   updateWord,
@@ -1174,7 +1175,7 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
     setEditCatName(cat.name);
     setEditCatIcon(cat.icon || "📁");
     setEditCatColor(cat.color || PASTEL_PALETTE[0]);
-    setEditCatImageUri(cat.imageUri);
+    setEditCatImageUri(categoryPictureFor(cat).uri);
     setEditCatOpen(true);
   }
 
@@ -1878,9 +1879,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                               { backgroundColor: cat.color || "#4A7FE6" },
                             ]}
                           />
-                          {cat.imageUri ? (
+                          {categoryPictureFor(cat).uri ? (
                             <SmartImage
-                              source={{ uri: cat.imageUri }}
+                              source={{ uri: categoryPictureFor(cat).uri }}
                               style={{ width: 30, height: 30, borderRadius: 6, marginRight: 6 }}
                             />
                           ) : (
@@ -2353,9 +2354,9 @@ export default function MyCategoriesScreen({ onBack, onCreate, initialCategoryId
                           { backgroundColor: cat.color || "#4A7FE6" },
                         ]}
                       />
-                      {cat.imageUri ? (
+                      {categoryPictureFor(cat).uri ? (
                         <SmartImage
-                          source={{ uri: cat.imageUri }}
+                          source={{ uri: categoryPictureFor(cat).uri }}
                           style={{ width: 20, height: 20, borderRadius: 4, marginRight: 4 }}
                         />
                       ) : (

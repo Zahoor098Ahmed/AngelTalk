@@ -14,12 +14,10 @@ import LangBadge from "../components/LangBadge";
 import SoftBackdrop from "../components/SoftBackdrop";
 import TabBar from "../components/TabBar";
 import { colors } from "../theme";
-import { ensureCategoriesLoaded, bottomTabCategories, getCategory, folderPictureFor, folderEnglishName, subscribeCategories } from "../modules/customCategories";
-import HOME_PICTURES from "../modules/homeCategoryPictures.json";
+import { ensureCategoriesLoaded, bottomTabCategories, getCategory, categoryPictureFor, subscribeCategories } from "../modules/customCategories";
 import Mascot from "../components/Mascot";
 
 /** Hand-drawn 3D pictures (Microsoft Fluent Emoji, MIT) for the main categories on the Home screen. */
-const homePictures: Record<string, string> = HOME_PICTURES as Record<string, string>;
 
 interface Props {
   child: ChildProfile;
@@ -189,9 +187,7 @@ export default function HomeScreen(props: Props) {
               <Text style={styles.catTitle}>{tr("Categories", "الفئات", "زمرے")}</Text>
               <View style={styles.catGrid}>
                 {categories.map(({ tab, cat: c }) => {
-                  const en = folderEnglishName(c).toLowerCase();
-                  const home = homePictures[en === "actions" ? "verbs" : en];
-                  const pic = home ? { uri: home } : folderPictureFor(c);
+                  const pic = categoryPictureFor(c);
                   return (
                     <Pressable
                       key={c.id}
@@ -203,7 +199,7 @@ export default function HomeScreen(props: Props) {
                       style={({ pressed }) => [styles.catCard, isTablet && styles.catCardTablet, pressed && { transform: [{ scale: 0.97 }] }]}
                       accessibilityLabel={tab.name}
                     >
-                      <View style={[styles.catPicBox, { backgroundColor: (c.color || colors.forest) + "18" }]}>
+                      <View style={[styles.catPicBox, !pic.uri && { backgroundColor: (c.color || colors.forest) + "18" }]}>
                         {pic.uri ? (
                           <SmartImage source={{ uri: pic.uri }} style={styles.catPic} />
                         ) : pic.text ? (
@@ -339,8 +335,8 @@ const styles = StyleSheet.create({
     shadowColor: "#7a5c3e", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
   },
   catCardTablet: { width: "18%", maxWidth: "19.2%" },
-  catPicBox: { width: "100%", aspectRatio: 1.2, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  catPic: { width: "78%", height: "84%", resizeMode: "contain" },
+  catPicBox: { width: "100%", aspectRatio: 1.295, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  catPic: { width: "100%", height: "100%", resizeMode: "contain" },
   catPicText: { fontSize: 26, fontWeight: "800" },
   catName: { fontSize: 13, fontWeight: "800", textAlign: "center" },
   statCard: {
