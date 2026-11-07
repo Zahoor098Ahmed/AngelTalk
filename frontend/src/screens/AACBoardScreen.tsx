@@ -29,7 +29,6 @@ import {
   bottomTabCategories,
   verbFolderLetter,
   categoryPictureFor,
-  coreWords,
   setSeedLanguage,
   retranslateSeedBoard,
   recordWordUseByWordId,
@@ -479,7 +478,7 @@ const NOUN_FORMS_ENABLED = false;
 
 /** Shelves whose tiles are not nouns (no Apple / Apples / Apple's / Apples' popup). */
 const NOT_NOUN_SHELVES = new Set([
-  "core", "say it for me", "subjects", "sentence starters & phrases", "attributes", "feelings", "alphabet & numerals",
+  "say it for me", "subjects", "sentence starters & phrases", "attributes", "feelings", "alphabet & numerals",
   "verbs", "actions", "songs & stories", "red", "calendar",
 ]);
 
@@ -583,16 +582,12 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     void ensurePredictionLoaded();
     ensureCategoriesLoaded().then(() => {
       setReady(true);
-      // Auto-select "Core" (or first category) on load so communication cards appear immediately
+      // Auto-select the first category on load so communication cards appear immediately
       const tabs = bottomTabCategories(lang);
-      const coreTab =
-        tabs.find((t) => {
-          const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
-          return en === "core" || t.name === "بنیادی" || t.name === "أساسي";
-        }) ?? tabs[0];
+      const firstTab = tabs[0];
       // a category picked on the Home screen wins over the default
       if (initialCategoryId && getCategory(initialCategoryId)) setPath([initialCategoryId]);
-      else if (coreTab?.id) setPath([coreTab.id]);
+      else if (firstTab?.id) setPath([firstTab.id]);
     });
   }, []);
 
@@ -620,23 +615,9 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     () => (currentId ? visibleChildCategories(currentId) : visibleTopLevelCategories()),
     [currentId, ready, tick],
   );
-  const isCoreGridMode = child.pageSetStyle === "core-grid";
-
-  const isCore = useMemo(() => {
-    if (!current) return true;
-    const en = (canonicalWordEn(current.name) || current.name).toLowerCase();
-    return en === "core" || current.name === "أساسي" || current.name === "بنیادی";
-  }, [current]);
-
   const rawWords: CustomWord[] = useMemo(() => {
-    if (isCoreGridMode && (!currentId || isCore)) {
-      // Fixed-position core words locked at top slots for motor-memory
-      const cores = coreWords();
-      const nonCores = current ? current.words.filter((w: CustomWord) => !w.hidden && !cores.some((c) => canonicalWordEn(c.label).toLowerCase() === canonicalWordEn(w.label).toLowerCase())) : [];
-      return [...cores, ...nonCores];
-    }
     return current ? [...current.words].filter((w) => !w.hidden).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)) : [];
-  }, [current, currentId, isCoreGridMode, isCore, ready, tick]);
+  }, [current, currentId, ready, tick]);
 
   const isActionsCategory = useMemo(() => {
     if (!current) return false;
@@ -821,12 +802,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       const cat = getCategory(currentId);
       if (!cat || cat.hidden) {
         const tabs = bottomTabCategories(lang);
-        const coreTab =
-          tabs.find((t) => {
-            const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
-            return en === "core" || t.name === "بنیادی" || t.name === "أساسي";
-          }) ?? tabs[0];
-        setPath(coreTab?.id ? [coreTab.id] : []);
+        const firstTab = tabs[0];
+        setPath(firstTab?.id ? [firstTab.id] : []);
       }
     }
   }, [currentId, ready, tick, lang]);
@@ -1032,16 +1009,6 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       setPath((p) => p.slice(0, -1));
       return;
     }
-    const tabs = bottomTabCategories(lang);
-    // back from a shelf lands on Core when the board has one, otherwise on Home (never the first shelf)
-    const coreTab = tabs.find((t) => {
-      const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
-      return en === "core" || t.name === "بنیادی" || t.name === "أساسي";
-    });
-    if (coreTab?.id && path[0] !== coreTab.id) {
-      setPath([coreTab.id]);
-      return;
-    }
     onTabChange("home");
   }
 
@@ -1077,12 +1044,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
             onPress={() => {
               tapFeedback();
               const tabs = bottomTabCategories(lang);
-              const coreTab =
-                tabs.find((t) => {
-                  const en = (canonicalWordEn(t.name) || t.name).toLowerCase();
-                  return en === "core" || t.name === "بنیادی" || t.name === "أساسي";
-                }) ?? tabs[0];
-              if (coreTab?.id) setPath([coreTab.id]);
+              const firstTab = tabs[0];
+              if (firstTab?.id) setPath([firstTab.id]);
               else setPath([]);
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -1588,7 +1551,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       onPress={() => tapVerbForm(verbOpen, r.text, r.tile)}
                       style={({ pressed }) => [
                         styles.verbModalTile,
-                        { width: verbTileW, minHeight: Math.round(verbTileW * 1.1) },
+                        { width: verbTileW, minHeight: Math.round(verbTileW * 1.3) },
                         pressed && styles.tilePressed,
                       ]}
                     >
@@ -1621,7 +1584,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                           label={pic.label}
                           imageUri={pic.imageUri || base.imageUri}
                           emoji={pic.emoji}
-                          size={Math.round(Math.min(verbTileW * 0.62, 110))}
+                          size={Math.round(Math.min(verbTileW * 0.86, 190))}
                         />
                       </View>
                       <View style={styles.verbModalTileLabelBar}>
@@ -1669,7 +1632,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                   <Pressable
                     key={r.key}
                     onPress={() => tapNounForm(nounOpen, r.key, r.text)}
-                    style={({ pressed }) => [styles.verbModalTile, { width: verbTileW, minHeight: Math.round(verbTileW * 1.1) }, pressed && styles.tilePressed]}
+                    style={({ pressed }) => [styles.verbModalTile, { width: verbTileW, minHeight: Math.round(verbTileW * 1.3) }, pressed && styles.tilePressed]}
                   >
                     <View
                       style={[
@@ -1694,7 +1657,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       </Text>
                     </View>
                     <View style={styles.verbModalTilePicWrap}>
-                      <CardPic label={nounOpen.label} imageUri={nounOpen.imageUri} emoji={nounOpen.emoji} size={Math.round(Math.min(verbTileW * 0.62, 110))} />
+                      <CardPic label={nounOpen.label} imageUri={nounOpen.imageUri} emoji={nounOpen.emoji} size={Math.round(Math.min(verbTileW * 0.86, 190))} />
                     </View>
                     <View style={styles.verbModalTileLabelBar}>
                       <Text

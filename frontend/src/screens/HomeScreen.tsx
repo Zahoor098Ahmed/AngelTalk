@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   catPicBox: { width: "100%", aspectRatio: 1.295, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   catPic: { width: "100%", height: "100%", resizeMode: "contain" },
   catPicText: { fontSize: 26, fontWeight: "800" },
-  catName: { fontSize: 13, fontWeight: "800", textAlign: "center" },
+  catName: { fontSize: 16, lineHeight: 21, fontWeight: "800", textAlign: "center" },
   statCard: {
     flex: 1,
     backgroundColor: "#ffffff",

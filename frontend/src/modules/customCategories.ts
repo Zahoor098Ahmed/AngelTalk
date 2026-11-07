@@ -86,11 +86,11 @@ const RESTORED_HOLIDAY_WORDS = "kiddocare_restored_holiday_words_v1";
 const RESTORED_PREPOSITIONS = "kiddocare_restored_prepositions_v2";
 const RESTORED_ATTRIBUTE_PLACE_WORDS = "kiddocare_restored_attribute_place_words_v1";
 const RESTORED_SCHOOL_WORDS = "kiddocare_restored_school_words_v1";
-const PICTURES_RENEWED = "kiddocare_pictures_renewed_v66";
+const PICTURES_RENEWED = "kiddocare_pictures_renewed_v84";
 /** Folders recoloured to matte: their folder pictures reach customised boards too, once per renewal. */
 const MATTE_FOLDERS = ["sentence starters, phrases and questions", "preposition", "pronouns"];
 /** Words whose picture was renewed by hand; shown once even where the family's board kept an older one. */
-const RENEWED_PICTURE_WORDS = ["castle", "hotel", "gurdwara", "mosque", "store", "temple", "tennis court", "cemetery", "bakery", "changing room", "mobile home", "sensory room", "community", "museum", "fair", "airport", "mall", "train station", "father", "mother", "uranus", "seeds", "haystack", "stars", "market", "barber shop", "circus", "cafe", "igloo", "plant room", "savannah", "fire station", "art", "assembly", "board rubber", "colored pencils", "spelling", "geography", "bears-counting", "dramatic play", "morning circle", "pe", "school bag", "show and tell", "story time", "worksheet", "quiet time", "gross motor", "activity schedule", "centers", "folder work", "gross motor game", "hiragana letters", "flash cards", "badminton", "baseball", "basketball", "boomerang", "bow and arrow", "bowling", "canoe", "cricket bat", "cycling", "dart board", "fishing pole", "fitness tracker", "frisbee", "golf", "golf ball", "gymnastics", "hockey", "ice skates", "karate", "kayak", "parachute", "ping pong", "pool ball", "punch ball", "rock climbing", "rugby ball", "scooter", "skateboard", "ski poles", "sled", "snowboard", "soccer ball", "softball", "touchdown", "volleyball", "weight lifting", "baseball diamond", "tent", "racket", "bow", "checkers", "fishing", "foosball", "golf tee", "horseshoes", "ice skates - figure", "jump rope", "skipping rope", "pool billiards", "pool cue", "ring toss", "rings", "score basket", "skee ball", "sleeping bag", "tae kwon do", "trampoline", "whistle", "bicycle pump", "figure skates", "hockey skates", "hockey stick", "sledding", "football", "soccer", "frisbee-play", "t-ball", "bear walk", "bicycle crunches", "crab walk", "downward dog pose", "dragon pose", "frog pose", "groin stretch", "group warm-up", "jumping jacks", "leg extension", "obstacle course", "overhead arm stretch", "reverse warrior pose", "rope net", "seated toe stretch", "side leg lift", "snake crawl", "snake pose", "step exercise", "squat", "plank pose", "chin ups", "cricket ball", "hockey puck", "airplane pose", "butterfly stretch", "sit-up", "crunch", "yoga", "skateboarding", "treadmill", "ice skating rink", "hop ball", "tennis ball", "balance beam", "australian football", "backhand", "beach paddles", "ice skates - hockey", "soccer net", "sports", "exercise bike", "arrow", "final cheer", "score soccer", "hockey goal", "footy", "three legged dog pose", "push up", "golf club", "hoop", "ice skating", "football helmet", "darts", "standing side leg lift", "watering can", "canteen", "darts game", "boogie board", "flip flops", "flippers", "jet ski", "surfboard", "swim shorts", "swimming goggles", "snorkel", "swim cap", "airplane", "atv", "balancing scooter", "bicycle", "boat", "bus", "car", "crane", "dump truck", "excavator", "ferry boat", "fire engine", "fire truck", "formula one car", "helicopter", "hot air balloon", "jet", "jet fighter", "moped", "motorcycle", "pickup truck", "18-wheeler truck", "police car", "public bus", "quad bike", "racing car", "rocket", "ship", "space shuttle", "submarine", "subway", "suv", "taxi", "tractor", "train engine", "bus stop", "passport", "ride in bus", "ride in car", "seatbelt", "siren", "tyre", "wheel", "concrete mixer truck", "booster car seat", "car steering", "side bend", "he", "her", "hers", "herself", "him", "himself", "his", "i", "it", "its", "itself", "me", "mine", "my", "myself", "our", "ours", "ourselves", "she", "that", "their", "theirs", "them", "themselves", "they", "us", "we", "who", "whom", "whose", "you", "your", "yours", "yourself", "yourselves", "activity table", "ball popper", "ball-face", "ball-inside out", "ball-net", "ball-spiky", "ball-squishy", "ball-urchin", "bangers", "bean bag toss", "beanbag chair", "big wheel", "bingo-game", "bounce horse", "bracelet loom", "bricks", "bubble wall", "bubbles", "bucket and spade", "pail and shovel", "sand play", "buggy", "carousel", "caterpillar toy", "chalk-sidewalk", "coil toy", "dice", "doll", "doll house", "dvd", "expanding ball", "eyeball toy", "fidget spinner", "finger puppet", "gear toy", "gears", "kite", "laser sword", "magnetic tiles", "magnetic wand", "nesting dolls", "newton's cradle", "octopus toy", "paint", "playing cards", "poker chips", "pool toys", "pop up toy", "puzzle", "race track", "reversi game", "ride-on toy", "rubber band loom", "rubber duck", "shield", "slime", "snap bricks", "spinner", "spin toy", "light spinner", "stacking ring", "stroller", "stuffed animals", "stuffed toys", "string toys", "sword", "tangle toy", "tornado tube", "tri ball spinner", "train", "pull toy", "tricycle", "turtles", "video game", "viewer", "traintrack", "toy box", "wind up toy", "wheel toy", "action toy", "ball-bumpy", "ball-hive", "ball-frog", "ball-fuzzy rainbow", "ball-grape", "ball-mesh", "ball-orbiter", "ball-prickly", "ball-rattle", "ball-ribbon", "ball-spaghetti", "ball-squish", "ball-stress", "ball-wacky", "ballbath", "bendy toy", "board games", "bubble tower", "cartoons", "chewy tube", "chinese yo-yo", "diablo", "clatterpillar", "comic book", "draw toy", "dress up", "echo mic", "ferris wheel", "figure toys", "finger trap", "fun foam", "fun snaps", "games", "giggle pen", "giggle sticks", "glitter cone", "glitter wand", "gravity tube", "gyroscope", "hammer toy", "hand clapper", "jacks", "jewelry box", "kaleidoscope", "kiddie pool", "klacker", "laser fan", "laser spin disk", "lasertop", "leisure", "light bright", "light bright pegs", "lava lamp", "light pendant", "light toy", "light up toy", "little people", "marble ring", "marble run", "marbles", "multi-sided dice", "noisy book", "paddle ball", "pinwheel", "play foam", "play people", "pom poms", "pop beads", "pop tubes", "popper", "puppet", "push toy", "puzzle piece", "rec-leisure", "rocking horse", "sand tray", "see and talk toy", "sit and spin", "sit on spinner", "snap blocks", "spaghetti toy", "sparking spinner", "spinner tube", "spinning ball", "spinning light", "spinning top", "spring pen", "squishy pyramid", "squishy toys", "stick toys", "stickers", "sticky slinker", "stretchy string", "swirlsticks", "tea set", "tech top", "tornado bottle", "tower toy", "toys", "viewer disk", "wagon", "wand", "water snake", "water toy", "watertable", "whoopee cushion", "wiggle pen", "potato toy", "buzz toys", "pin toy", "play clay", "activity cube", "number puzzle", "bath toys", "bean bag", "bubble machine", "backstroke", "body board", "breaststroke", "butterfly stroke", "deep end", "diving board", "floaties", "freestyle", "inflatable ring", "kickboard", "life jacket", "lifeguard", "lockers", "pool", "pool cover", "pool ladder", "pool towel", "rubber ring", "shallow end", "surf", "swim float", "swim noodle", "swim ring", "swimming lesson", "tubing", "water ski", "water slide", "water wings", "caboose", "dust cart", "snowmobile", "tractor wagon", "train-bullet", "train-high speed", "train car", "trash truck", "trolley", "tram", "underground", "van", "monorail", "motor scooter", "motorized scooter", "ice cream truck", "vehicles", "car seat", "bus pass", "bus shelter", "depart", "drive-thru", "motorway", "street sign", "booster seat", "highway", "hooter", "travel card", "ride in plane", "conductor"];
+const RENEWED_PICTURE_WORDS = ["castle", "hotel", "gurdwara", "mosque", "store", "temple", "tennis court", "cemetery", "bakery", "changing room", "mobile home", "sensory room", "community", "museum", "fair", "airport", "mall", "train station", "father", "mother", "uranus", "seeds", "haystack", "stars", "market", "barber shop", "circus", "cafe", "igloo", "plant room", "savannah", "fire station", "art", "assembly", "board rubber", "colored pencils", "spelling", "geography", "bears-counting", "dramatic play", "morning circle", "pe", "school bag", "show and tell", "story time", "worksheet", "quiet time", "gross motor", "activity schedule", "centers", "folder work", "gross motor game", "hiragana letters", "flash cards", "badminton", "baseball", "basketball", "boomerang", "bow and arrow", "bowling", "canoe", "cricket bat", "cycling", "dart board", "fishing pole", "fitness tracker", "frisbee", "golf", "golf ball", "gymnastics", "hockey", "ice skates", "karate", "kayak", "parachute", "ping pong", "pool ball", "punch ball", "rock climbing", "rugby ball", "scooter", "skateboard", "ski poles", "sled", "snowboard", "soccer ball", "softball", "touchdown", "volleyball", "weight lifting", "baseball diamond", "tent", "racket", "bow", "checkers", "fishing", "foosball", "golf tee", "horseshoes", "ice skates - figure", "jump rope", "skipping rope", "pool billiards", "pool cue", "ring toss", "rings", "score basket", "skee ball", "sleeping bag", "tae kwon do", "trampoline", "whistle", "bicycle pump", "figure skates", "hockey skates", "hockey stick", "sledding", "football", "soccer", "frisbee-play", "t-ball", "bear walk", "bicycle crunches", "crab walk", "downward dog pose", "dragon pose", "frog pose", "groin stretch", "group warm-up", "jumping jacks", "leg extension", "obstacle course", "overhead arm stretch", "reverse warrior pose", "rope net", "seated toe stretch", "side leg lift", "snake crawl", "snake pose", "step exercise", "squat", "plank pose", "chin ups", "cricket ball", "hockey puck", "airplane pose", "butterfly stretch", "sit-up", "crunch", "yoga", "skateboarding", "treadmill", "ice skating rink", "hop ball", "tennis ball", "balance beam", "australian football", "backhand", "beach paddles", "ice skates - hockey", "soccer net", "sports", "exercise bike", "arrow", "final cheer", "score soccer", "hockey goal", "footy", "three legged dog pose", "push up", "golf club", "hoop", "ice skating", "football helmet", "darts", "standing side leg lift", "watering can", "canteen", "darts game", "boogie board", "flip flops", "flippers", "jet ski", "surfboard", "swim shorts", "swimming goggles", "snorkel", "swim cap", "airplane", "atv", "balancing scooter", "bicycle", "boat", "bus", "car", "crane", "dump truck", "excavator", "ferry boat", "fire engine", "fire truck", "formula one car", "helicopter", "hot air balloon", "jet", "jet fighter", "moped", "motorcycle", "pickup truck", "18-wheeler truck", "police car", "public bus", "quad bike", "racing car", "rocket", "ship", "space shuttle", "submarine", "subway", "suv", "taxi", "tractor", "train engine", "bus stop", "passport", "ride in bus", "ride in car", "seatbelt", "siren", "tyre", "wheel", "concrete mixer truck", "booster car seat", "car steering", "side bend", "he", "her", "hers", "herself", "him", "himself", "his", "i", "it", "its", "itself", "me", "mine", "my", "myself", "our", "ours", "ourselves", "she", "that", "their", "theirs", "them", "themselves", "they", "us", "we", "who", "whom", "whose", "you", "your", "yours", "yourself", "yourselves", "activity table", "ball popper", "ball-face", "ball-inside out", "ball-net", "ball-spiky", "ball-squishy", "ball-urchin", "bangers", "bean bag toss", "beanbag chair", "big wheel", "bingo-game", "bounce horse", "bracelet loom", "bricks", "bubble wall", "bubbles", "bucket and spade", "pail and shovel", "sand play", "buggy", "carousel", "caterpillar toy", "chalk-sidewalk", "coil toy", "dice", "doll", "doll house", "dvd", "expanding ball", "eyeball toy", "fidget spinner", "finger puppet", "gear toy", "gears", "kite", "laser sword", "magnetic tiles", "magnetic wand", "nesting dolls", "newton's cradle", "octopus toy", "paint", "playing cards", "poker chips", "pool toys", "pop up toy", "puzzle", "race track", "reversi game", "ride-on toy", "rubber band loom", "rubber duck", "shield", "slime", "snap bricks", "spinner", "spin toy", "light spinner", "stacking ring", "stroller", "stuffed animals", "stuffed toys", "string toys", "sword", "tangle toy", "tornado tube", "tri ball spinner", "train", "pull toy", "tricycle", "turtles", "video game", "viewer", "traintrack", "toy box", "wind up toy", "wheel toy", "action toy", "ball-bumpy", "ball-hive", "ball-frog", "ball-fuzzy rainbow", "ball-grape", "ball-mesh", "ball-orbiter", "ball-prickly", "ball-rattle", "ball-ribbon", "ball-spaghetti", "ball-squish", "ball-stress", "ball-wacky", "ballbath", "bendy toy", "board games", "bubble tower", "cartoons", "chewy tube", "chinese yo-yo", "diablo", "clatterpillar", "comic book", "draw toy", "dress up", "echo mic", "ferris wheel", "figure toys", "finger trap", "fun foam", "fun snaps", "games", "giggle pen", "giggle sticks", "glitter cone", "glitter wand", "gravity tube", "gyroscope", "hammer toy", "hand clapper", "jacks", "jewelry box", "kaleidoscope", "kiddie pool", "klacker", "laser fan", "laser spin disk", "lasertop", "leisure", "light bright", "light bright pegs", "lava lamp", "light pendant", "light toy", "light up toy", "little people", "marble ring", "marble run", "marbles", "multi-sided dice", "noisy book", "paddle ball", "pinwheel", "play foam", "play people", "pom poms", "pop beads", "pop tubes", "popper", "puppet", "push toy", "puzzle piece", "rec-leisure", "rocking horse", "sand tray", "see and talk toy", "sit and spin", "sit on spinner", "snap blocks", "spaghetti toy", "sparking spinner", "spinner tube", "spinning ball", "spinning light", "spinning top", "spring pen", "squishy pyramid", "squishy toys", "stick toys", "stickers", "sticky slinker", "stretchy string", "swirlsticks", "tea set", "tech top", "tornado bottle", "tower toy", "toys", "viewer disk", "wagon", "wand", "water snake", "water toy", "watertable", "whoopee cushion", "wiggle pen", "potato toy", "buzz toys", "pin toy", "play clay", "activity cube", "number puzzle", "bath toys", "bean bag", "bubble machine", "backstroke", "body board", "breaststroke", "butterfly stroke", "deep end", "diving board", "floaties", "freestyle", "inflatable ring", "kickboard", "life jacket", "lifeguard", "lockers", "pool", "pool cover", "pool ladder", "pool towel", "rubber ring", "shallow end", "surf", "swim float", "swim noodle", "swim ring", "swimming lesson", "tubing", "water ski", "water slide", "water wings", "caboose", "dust cart", "snowmobile", "tractor wagon", "train-bullet", "train-high speed", "train car", "trash truck", "trolley", "tram", "underground", "van", "monorail", "motor scooter", "motorized scooter", "ice cream truck", "vehicles", "car seat", "bus pass", "bus shelter", "depart", "drive-thru", "motorway", "street sign", "booster seat", "highway", "hooter", "travel card", "ride in plane", "conductor", "book", "briefcase", "business card", "easel", "envelopes", "eraser", "fax machine", "felt tip pens", "file", "filing cabinet", "folder", "globe", "glue stick", "hole punch", "label", "magnifying glass", "manila folder", "map", "newspaper", "notebook", "office chair", "paper clips", "paper cutter", "pencil", "pencil sharpener", "pens", "photocopier", "projector", "rubber band", "ruler", "shredder", "staff room", "staple remover", "tape dispenser", "thumbtack", "water cooler", "in tray", "lanyard", "letter", "name badge", "office", "paper clamp", "staples", "tape", "desk lamp", "telephone book", "receptionist", "white board", "markers", "stapler", "3-ring binder", "diary", "ink pad", "magazine", "photo", "bulletin board", "catalog", "document file", "meeting room", "reception", "bidet", "cleaning cloth", "dryer sheet", "measuring cups", "measuring spoons", "oven mitt", "play house", "potty", "rice cooker", "mirror", "hand held vacuum", "toaster oven", "chair-cushion", "espresso cup", "paper towel dispenser", "trash bags", "cleaning spray", "cutting board", "dishwasher soap", "espresso maker", "sink", "soap", "toilet", "towel", "drawer", "laundry detergent", "bathroom", "bedroom", "kitchen", "play pen", "bread bin", "placemat", "tablespoon", "teaspoon", "whisk", "den", "living room", "dining room", "doorknob", "driveway", "lid", "storage shed", "storage bags", "clean glasses", "cold", "cramps", "fever", "headache", "hot", "hungry", "hurt", "bleeding", "it hurts", "migraine", "stomach ache", "thirsty", "tired", "tummy ache", "wheezy", "frayed", "landscape", "baby shower", "celebration", "christmas decoration", "confetti", "congratulations", "cornucopia", "decorations", "diwali", "easter", "easter basket", "easter eggs", "eid ul adha", "engagement", "guests", "halloween", "holi", "holiday", "invitation", "jack-o-lantern", "lantern", "mehndi", "memorial day", "my birthday is", "new year", "pilgrims", "pinata", "ramadan", "seder plate", "st. patrick's day", "stocking", "suhoor", "thanksgiving", "valentine's day", "we three kings", "eid", "eid ul fitr", "iftar", "quran", "eidi", "fasting"];
 let renewPictures = false;
 let deletedItemKeys: Set<string> = new Set();
 let deletedKeysLoaded = false;
@@ -265,19 +265,6 @@ async function loadCategories(): Promise<void> {
   if (cache.length === 0) {
     seedStarterBoard();
   } else {
-    // If Core was deleted by user, record in deletedItemKeys so it never resurrects
-    const hasCore = cache.some(
-      (c) =>
-        (c.name || "").toLowerCase() === "core" ||
-        c.name === "بنیادی" ||
-        c.name === "أساسي"
-    );
-    if (!hasCore) {
-      deletedItemKeys.add("cat::core");
-      deletedItemKeys.add("cat::بنیادی");
-      deletedItemKeys.add("cat::أساسي");
-      persistDeletedKeys();
-    }
   }
   // Also on a fresh install: the starter board only holds the top-level folders,
   // their sub-folders and words (Family, Drinks, Verbs A–Z…) are filled in here.
@@ -337,7 +324,7 @@ function refreshGuessedPictures() {
       }
       if (renewPictures) {
         const k = (canonicalWordEn(w.label) || w.label).trim().toLowerCase();
-        const own = MATTE_FOLDERS.includes(folderEnglishName(c).toLowerCase()) ? folderWordPicture(folderEnglishName(c), k) : undefined;
+        const own = MATTE_FOLDERS.includes(folderEnglishName(c).toLowerCase()) || /^verbs? [a-z]$/i.test(folderEnglishName(c)) ? folderWordPicture(folderEnglishName(c), k) : undefined;
         const now = own || (UNIQUE_PICTURES as Record<string, string>)[k];
         if ((own || RENEWED_PICTURE_WORDS.includes(k)) && now && w.imageUri !== now) {
           w.imageUri = now;
@@ -424,12 +411,8 @@ function refreshSayItForMeImages() {
 
 // --- starter board -------------------------------------------------------
 
-const STARTER: { name: string; icon: string; color?: string; words: [string, string][] }[] = [
-  {
-    name: "Core",
-    icon: "💬",
-    color: "#2f6d62",
-    words: [
+/** Words of the old starter board: kept only so old Arabic and Urdu boards can still be read back to English. */
+const OLD_STARTER_WORDS: [string, string][] = [
       ["I", "🧒"],
       ["am", "✨"],
       ["is", "✨"],
@@ -451,8 +434,9 @@ const STARTER: { name: string; icon: string; color?: string; words: [string, str
       ["Go", "🚶"],
       ["to", "➡️"],
       ["the", "🔹"],
-    ],
-  },
+];
+
+const STARTER: { name: string; icon: string; color?: string; words: [string, string][] }[] = [
   {
     name: "People",
     icon: "♡",
@@ -872,6 +856,13 @@ const pecsVerbLeftovers: string[] = [];
  * The 1st form is the PDF's own words, so each stays in its letter's folder.
  */
 const PECS_PHRASE_FORMS: Record<string, [string, string, string, string, string]> = {
+  "kneel": ["kneel", "kneels", "knelt", "knelt", "kneeling"],
+  "lead": ["lead", "leads", "led", "led", "leading"],
+  "light": ["light", "lights", "lit", "lit", "lighting"],
+  "slide": ["slide", "slides", "slid", "slid", "sliding"],
+  "undo": ["undo", "undoes", "undid", "undone", "undoing"],
+  "kayak": ["kayak", "kayaks", "kayaked", "kayaked", "kayaking"],
+  "yoga": ["yoga", "does yoga", "did yoga", "done yoga", "doing yoga"],
   "back rub": ["back rub", "back rubs", "back rubbed", "back rubbed", "back rubbing"],
   "back stroke": ["back stroke", "back strokes", "back stroked", "back stroked", "back stroking"],
   "breast stroke": ["breast stroke", "breast strokes", "breast stroked", "breast stroked", "breast stroking"],
@@ -1021,6 +1012,13 @@ export function folderPictureFor(c: CustomCategory): { text?: string; uri?: stri
   const enOf = (x: CustomCategory) =>
     (x.seedName || FOLDER_EN_BY_LANG[(x.name || "").toLowerCase()] || canonicalWordEn(x.name) || x.name || "").trim();
   const en = enOf(c).toLowerCase();
+  // every sub-category has its own icon in the Home category style, unless the family picked one
+  {
+    const pics = UNIQUE_PICTURES as Record<string, string>;
+    const up = c.parentCategoryId ? cache.find((x) => x.id === c.parentCategoryId) : undefined;
+    const own = (up && pics[`folder::${enOf(up).toLowerCase()} ${en}`]) || pics[`folder::${en}`];
+    if (own && !familyPicture(c)) return { uri: own };
+  }
   // letters and numbers show themselves
   if (en === "lower case" || en === "english alphabets lowercase") return { text: "abc" };
   if (en === "upper case" || en === "english alphabets uppercase") return { text: "ABC" };
@@ -1034,11 +1032,6 @@ export function folderPictureFor(c: CustomCategory): { text?: string; uri?: stri
   const calendarParent = c.parentCategoryId ? cache.find((x) => x.id === c.parentCategoryId) : undefined;
   if (en === "dates" && (!c.isCustom || (calendarParent && /calendar/i.test(enOf(calendarParent))))) return { uri: "https://static.arasaac.org/pictograms/34799/34799_500.png" };
   if (c.imageUri) return { uri: c.imageUri };
-  // a folder picture made for it (People and Characters' Relationships, Characters, People, Professions: soft colours)
-  {
-    const own = (UNIQUE_PICTURES as Record<string, string>)[`folder::${en}`];
-    if (own) return { uri: own };
-  }
   // "General" or "Animals" looks like its shelf (Animals / Animals -> the animals picture)
   const parent = c.parentCategoryId ? cache.find((x) => x.id === c.parentCategoryId) : undefined;
   // Calendar / Others (day, week, year, today...) is about time: an hourglass, not a second calendar next to Months
@@ -1548,7 +1541,7 @@ const LEGACY_SUBCATEGORIES = [...STARTER_SUBCATEGORIES];
   // words with two meanings the client's list puts in two places, each with its own picture (folderWordPicture)
   // (an animal in Animals is also its meat in Meats and fish: "chicken", "turkey"…)
   // a word that is a place word (Preposition) and a describing word (Attributes) shows in both
-  const TWO_MEANINGS = new Set(["down", "from", "inside", "left", "off", "on", "outside", "right", "to", "up", "bottom", "heart", "calf", "chicken", "crab", "duck", "fish", "goat", "lamb", "lobster", "tuna", "turkey"]);
+  const TWO_MEANINGS = new Set(["down", "from", "inside", "left", "off", "on", "outside", "right", "to", "up", "bottom", "heart", "calf", "chicken", "crab", "duck", "fish", "goat", "lamb", "lobster", "tuna", "turkey", "bow", "box", "break", "brush", "clean", "comb", "dress", "drink", "dry", "empty", "face", "fan", "give", "group", "hand", "help", "iron", "jab", "jam", "kayak", "light", "march", "mop", "paint", "ring", "scoop", "slide", "stop", "taste", "tie", "train", "watch", "whistle", "wrap", "yoga", "zigzag"]);
   const take = (words: string[], keepCase = false): string[] => {
     const out: string[] = [];
     for (const raw of words) {
@@ -1560,7 +1553,7 @@ const LEGACY_SUBCATEGORIES = [...STARTER_SUBCATEGORIES];
         continue;
       }
       const key = norm(label);
-      if ((seen.has(key) && !TWO_MEANINGS.has(key)) || (verbBases.has(key) && !describing)) continue;
+      if ((seen.has(key) && !TWO_MEANINGS.has(key)) || (verbBases.has(key) && !describing && !TWO_MEANINGS.has(key))) continue;
       seen.add(key);
       out.push(label);
     }
@@ -1609,7 +1602,7 @@ const LEGACY_SUBCATEGORIES = [...STARTER_SUBCATEGORIES];
 // Built-in folder names (starter board + bulk-build seed lists), by language.
 const FOLDER_NAMES: Partial<Record<LanguageCode, Record<string, string>>> = {
   "ar-SA": {
-    Core: "أساسي", Food: "طعام", Feelings: "مشاعر", People: "أشخاص", Actions: "أفعال",
+    Food: "طعام", Feelings: "مشاعر", People: "أشخاص", Actions: "أفعال",
     Places: "أماكن", Things: "أشياء", Red: "أحمر", Subjects: "الضمائر",
     Schools: "مدرسة", Sentences: "جمل", Tools: "أدوات", Emotion: "عاطفة", Attributes: "صفات",
     Sports: "رياضة", Hygiene: "نظافة", Music: "موسيقى", "Say It For Me": "قلها لي",
@@ -1638,7 +1631,7 @@ const FOLDER_NAMES: Partial<Record<LanguageCode, Record<string, string>>> = {
     ...Object.fromEntries("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((L) => [`Verbs ${L}`, `أفعال ${L}`])),
   },
   "ur-PK": {
-    Core: "بنیادی", Food: "کھانا", Feelings: "احساسات", People: "لوگ", Actions: "کام",
+    Food: "کھانا", Feelings: "احساسات", People: "لوگ", Actions: "کام",
     Places: "مقامات", Things: "چیزیں", Red: "لال", Subjects: "ضمیریں",
     Schools: "اسکول", Sentences: "جملے", Tools: "اوزار", Emotion: "جذبات", Attributes: "خصوصیات",
     Sports: "کھیل", Hygiene: "صفائی", Music: "موسیقی", "Say It For Me": "میرے لیے کہو",
@@ -1770,8 +1763,6 @@ const FOLDER_EN_BY_LANG: Record<string, string> = (() => {
   m["مقامات"] = "Places";
   m["أشياء"] = "Things";
   m["چیزیں"] = "Things";
-  m["أساسي"] = "Core";
-  m["بنیادی"] = "Core";
   m["قلها لي"] = "Say It For Me";
   m["میرے لیے کہو"] = "Say It For Me";
   return m;
@@ -1841,6 +1832,7 @@ function englishOfWord(w: CustomWord, cat: CustomCategory): string {
   const seedLists: [string, string][][] = [
     ...STARTER.map((st) => st.words),
     ...STARTER_SUBCATEGORIES.map((sub) => sub.words.map(([l, e]) => [l, e] as [string, string])),
+    OLD_STARTER_WORDS,
     ...LEGACY_STARTER.map((st) => st.words),
     ...LEGACY_SUBCATEGORIES.map((sub) => sub.words.map(([l, e]) => [l, e] as [string, string])),
   ];
@@ -2349,25 +2341,6 @@ function ensureAllStandardCategories() {
       // shown as "Verbs" now
       hit.name = folderName("Actions");
       changed = true;
-    } else if (s.name === "Core") {
-      // Ensure Core has all the key starter words from the screenshot
-      s.words.forEach(([label, emoji], wi) => {
-        if (!isDeletedWord(hit.id, label) && !hit.words.some((w) => w.label.toLowerCase() === label.toLowerCase())) {
-          hit.words.push({
-            id: uid("w"),
-            label,
-            phrase: label,
-            emoji,
-            imageUri: getPictogramUrl(label) || undefined,
-            useTextToSpeech: true,
-            size: "md" as TileSize,
-            order: hit.words.length,
-            useCount: label === "I want" || label === "Yes" ? 2 : label === "All done" ? 1 : 0,
-            lastUsedAt: label === "I want" || label === "Yes" || label === "All done" ? Date.now() : undefined,
-          });
-          changed = true;
-        }
-      });
     } else if (s.name === "Subjects") {
       // Keep the pronoun list complete and in its A–Z order on existing installs too
       const used = new Set<string>();
@@ -4325,7 +4298,6 @@ export function groupIntoAlphaRanges(words: CustomWord[], bucketSize = 5): { lab
 // --- board helpers (feature-additive) ------------------------------------
 
 export const BOTTOM_CATEGORIES: { key: string; icon: string; label: string; enFallback: string; color: string }[] = [
-  { key: "Core", icon: "💬", label: "Core", enFallback: "Core", color: "#2f6d62" },
   { key: "Actions", icon: "⚡", label: "Verbs", enFallback: "Actions", color: "#c98a3d" },
   { key: "Color", icon: "🎨", label: "Color", enFallback: "Red", color: "#d9534f" },
   { key: "Feelings", icon: "😊", label: "Feelings", enFallback: "Feelings", color: "#e67e22" },
@@ -4400,27 +4372,6 @@ export function bottomTabCategories(lang?: LanguageCode): { id: string; name: st
   });
 
   return out;
-}
-
-export function coreWords(): CustomWord[] {
-  const coreCat = topLevelCategories().find((c) => {
-    const en = (canonicalWordEn(c.name) || FOLDER_EN_BY_LANG[c.name.toLowerCase()] || c.name).toLowerCase();
-    return en === "core" || c.name === "أساسي" || c.name === "بنیادی";
-  });
-  if (!coreCat) return [];
-  const priority = ["I", "am", "want", "is", "are", "you", "more", "stop", "help", "yes", "no", "go", "like"];
-  const sorted = coreCat.words.filter((w) => !w.hidden).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  const p = [...sorted].sort((a, b) => {
-    const aEn = canonicalWordEn(a.label);
-    const bEn = canonicalWordEn(b.label);
-    const ai = priority.indexOf(aEn);
-    const bi = priority.indexOf(bEn);
-    if (ai === -1 && bi === -1) return 0;
-    if (ai === -1) return 1;
-    if (bi === -1) return -1;
-    return ai - bi;
-  });
-  return p.slice(0, 12);
 }
 
 // --- Backup / export -------------------------------------------------------
