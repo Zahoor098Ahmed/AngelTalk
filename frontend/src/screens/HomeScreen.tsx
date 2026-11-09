@@ -55,6 +55,10 @@ export default function HomeScreen(props: Props) {
   );
   const child = getChild(propChild.id) ?? propChild;
   const { isTablet } = useResponsive();
+  // categories per row chosen in Settings (0 = automatic); the card width follows the grid width
+  const perRow = Math.min(settings.homeTilesPerRow ?? 0, 7);
+  const [gridW, setGridW] = useState(0);
+  const cardW = perRow > 0 && gridW > 0 ? Math.floor((gridW - 10 * (perRow - 1)) / perRow) : 0;
   const lang = settings.language;
   const hour = new Date().getHours();
   const greeting = hour < 12 ? t("morning", lang) : hour < 17 ? t("afternoon", lang) : t("evening", lang);
@@ -185,7 +189,7 @@ export default function HomeScreen(props: Props) {
           {categories.length > 0 && (
             <>
               <Text style={styles.catTitle}>{tr("Categories", "الفئات", "زمرے")}</Text>
-              <View style={styles.catGrid}>
+              <View style={styles.catGrid} onLayout={(e) => setGridW(e.nativeEvent.layout.width)}>
                 {categories.map(({ tab, cat: c }) => {
                   const pic = categoryPictureFor(c);
                   return (
@@ -196,7 +200,7 @@ export default function HomeScreen(props: Props) {
                         if (onOpenCategory) onOpenCategory(c.id);
                         else onTabChange("speak");
                       }}
-                      style={({ pressed }) => [styles.catCard, isTablet && styles.catCardTablet, pressed && { transform: [{ scale: 0.97 }] }]}
+                      style={({ pressed }) => [styles.catCard, isTablet && styles.catCardTablet, cardW > 0 && { width: cardW - 3, minWidth: 0, maxWidth: cardW, flexGrow: 1 }, pressed && { transform: [{ scale: 0.97 }] }]}
                       accessibilityLabel={tab.name}
                     >
                       <View style={[styles.catPicBox, !pic.uri && { backgroundColor: (c.color || colors.forest) + "18" }]}>
@@ -208,7 +212,7 @@ export default function HomeScreen(props: Props) {
                           <Text style={{ fontSize: 34 }}>{tab.icon || "📁"}</Text>
                         )}
                       </View>
-                      <Text style={[styles.catName, { color: c.color || colors.textDark }]} numberOfLines={2}>
+                      <Text style={[styles.catName, { color: settings.categoryNameColors?.[c.id] || c.color || colors.textDark }]} numberOfLines={2}>
                         {tab.name}
                       </Text>
                     </Pressable>

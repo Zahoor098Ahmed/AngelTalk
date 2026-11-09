@@ -1360,7 +1360,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                         )}
                       </View>
                       <View style={[styles.folderBody, { backgroundColor: c + "10" }]}>
-                        {verbFolderLetter(f) ? (
+                        {verbFolderLetter(f) && !categoryPictureFor(f).uri ? (
                           <View style={[styles.letterBadge, { width: folderPicSize, height: folderPicSize, borderRadius: folderPicSize * 0.24, borderColor: c }]}>
                             <Text style={[styles.letterBadgeText, { color: c, fontSize: Math.round(folderPicSize * 0.66) }]}>
                               {verbFolderLetter(f)}
@@ -1684,6 +1684,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
           {bottomTabs.map((bt) => {
             const active = currentId === bt.id;
             const stripCat = bt.id ? getCategory(bt.id) : undefined;
+            // the same name colour as on Home (the parent's pick, else the category's own)
+            const nameColor = (bt.id && settings.categoryNameColors?.[bt.id]) || stripCat?.color || bt.color || colors.textDark;
             return (
               <Pressable
                 key={bt.name}
@@ -1694,7 +1696,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 <View
                   style={[
                     styles.bottomTabIcon,
-                    active && { backgroundColor: (bt.color || colors.forest) + "28" },
+                    active && { backgroundColor: nameColor + "28" },
                   ]}
                 >
                   <CardPic label={bt.name} imageUri={stripCat ? categoryPictureFor(stripCat).uri : undefined} exact emoji={bt.icon} size={64} />
@@ -1702,7 +1704,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 <Text
                   style={[
                     styles.bottomTabLabel,
-                    active && { color: bt.color || colors.forest, fontWeight: "800" },
+                    { color: nameColor, fontWeight: "800" },
                     !bt.id && { color: colors.textLight },
                   ]}
                   numberOfLines={1}
@@ -1713,7 +1715,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                   <View
                     style={[
                       styles.activeIndicator,
-                      { backgroundColor: bt.color || colors.forest },
+                      { backgroundColor: nameColor },
                     ]}
                   />
                 )}

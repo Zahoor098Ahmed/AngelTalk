@@ -210,6 +210,10 @@ export interface AppSettings {
   visibleNounForms?: NounFormKey[];
   /** Talk board tiles per row; 0 = automatic (fits the screen). */
   tilesPerRow?: number;
+  /** Home page: name colour a parent picked for a category (category id -> colour). Unset = the category's own colour. */
+  categoryNameColors?: Record<string, string>;
+  /** Home page categories per row; 0 = automatic (fits the screen). */
+  homeTilesPerRow?: number;
 }
 
 export type VerbFormKey = "1st" | "s" | "2nd" | "3rd" | "4th";

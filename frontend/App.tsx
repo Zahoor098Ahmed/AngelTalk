@@ -31,6 +31,14 @@ import QuickOnboardingScreen from "./src/screens/QuickOnboardingScreen";
 import SocialStoriesScreen from "./src/screens/SocialStoriesScreen";
 import { startCloudConnect } from "./src/modules/cloudConnect";
 
+// web: no browser focus outline (black box) around text boxes; every app box already shows its own border
+if (Platform.OS === "web" && typeof document !== "undefined" && !document.getElementById("no-focus-outline")) {
+  const s = document.createElement("style");
+  s.id = "no-focus-outline";
+  s.textContent = "input:focus, textarea:focus, input:focus-visible, textarea:focus-visible { outline: none !important; box-shadow: none !important; }";
+  document.head.appendChild(s);
+}
+
 type Screen =
   | "landing"
   | "onboarding-quick"
@@ -45,7 +53,9 @@ type Screen =
   | "phrase-library"
   | "review-queue"
   | "voice-command"
-  | "accessibility";
+  | "accessibility"
+  | "pin-progress"
+  | "pin-face";
 
 const TAB_LABEL: Record<TabScreen, string> = {
   home: "Home",
@@ -240,6 +250,8 @@ function AppInner() {
         childName={currentChild?.name}
         lang={lang}
         onSelectTab={(t) => {
+          // Doctor & Progress Reports asks for the parent password first, like Settings
+          if (t === "progress") return go("pin-progress");
           setCurrentTab(t);
           go("main");
         }}
@@ -251,6 +263,8 @@ function AppInner() {
           if (targetScreen === "enroll-child") {
             setEnrollReturnScreen("more");
           }
+          // Switch Child / Face Login asks for the parent password first, like Settings
+          if (targetScreen === "face-scan") return go("pin-face");
           go(targetScreen);
         }}
         onBack={() => go(currentChild ? "main" : "face-scan")}
@@ -294,6 +308,23 @@ function AppInner() {
     );
   } else if (screen === "voice-command") {
     body = <VoiceCommandMatchScreen onBack={() => go("more")} />;
+  } else if (screen === "pin-progress") {
+    body = (
+      <PinGate title={t("doctorProgressReports", lang)} onCancel={() => go("more")}>
+        <AfterPin
+          run={() => {
+            setCurrentTab("progress");
+            go("main");
+          }}
+        />
+      </PinGate>
+    );
+  } else if (screen === "pin-face") {
+    body = (
+      <PinGate title={t("switchChildFaceTitle", lang)} onCancel={() => go("more")}>
+        <AfterPin run={() => go("face-scan")} />
+      </PinGate>
+    );
   } else if (screen === "accessibility") {
     body = (
       <PinGate title={t("settings", lang)} onCancel={() => go("more")}>
@@ -316,6 +347,14 @@ function AppInner() {
   }
 
   return <View style={{ flex: 1 }}>{body}</View>;
+}
+
+/** Runs once the password gate opens (then the app moves on to the screen behind it). */
+function AfterPin({ run }: { run: () => void }) {
+  useEffect(() => {
+    run();
+  }, []);
+  return null;
 }
 
 function MoreMenu({

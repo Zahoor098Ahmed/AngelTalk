@@ -1166,7 +1166,10 @@ const styles = StyleSheet.create({
   subTabs: {
     flexDirection: "row",
     width: "100%",
-    paddingHorizontal: 12,
+    // same width as the name and the page below, never past the screen
+    maxWidth: 860,
+    alignSelf: "center",
+    paddingHorizontal: 20,
     paddingVertical: 10,
     gap: 8,
     borderBottomWidth: 1,
@@ -1178,6 +1181,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
+    minWidth: 0,
     paddingHorizontal: 6,
     paddingVertical: 8,
     borderRadius: 16,
