@@ -86,7 +86,7 @@ const RESTORED_HOLIDAY_WORDS = "kiddocare_restored_holiday_words_v1";
 const RESTORED_PREPOSITIONS = "kiddocare_restored_prepositions_v2";
 const RESTORED_ATTRIBUTE_PLACE_WORDS = "kiddocare_restored_attribute_place_words_v1";
 const RESTORED_SCHOOL_WORDS = "kiddocare_restored_school_words_v1";
-const PICTURES_RENEWED = "kiddocare_pictures_renewed_v131";
+const PICTURES_RENEWED = "kiddocare_pictures_renewed_v144";
 /** Folders recoloured to matte: their folder pictures reach customised boards too, once per renewal. */
 const MATTE_FOLDERS = ["sentence starters, phrases and questions", "preposition", "pronouns"];
 /** Words whose picture was renewed by hand; shown once even where the family's board kept an older one. */

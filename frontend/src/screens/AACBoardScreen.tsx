@@ -392,6 +392,16 @@ function CardPic({
   }
 
   if (uri && !imgError) {
+    // a symbol from the web (transparent background) sits on the same pastel panel as the app's own pictures
+    if (/^https?:/.test(uri)) {
+      const PANELS = ["#D9DFFA", "#D6EBCB", "#E3D9F6", "#CFE4F8", "#CDEBE1", "#FBE3BC", "#F8D3DF", "#FBD9C8"];
+      const bg = PANELS[[...lowerEn].reduce((n, ch) => n + ch.charCodeAt(0), 0) % PANELS.length];
+      return (
+        <View style={{ width: size, height: size, borderRadius: size * 0.1, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
+          <SmartImage source={{ uri }} style={{ width: size * 0.78, height: size * 0.78 }} onError={() => setImgError(true)} />
+        </View>
+      );
+    }
     return (
       <SmartImage
         source={{ uri }}
