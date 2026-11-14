@@ -300,6 +300,9 @@ function MonthCalendar({ month, size }: { month: number; size: number }) {
 }
 
 /** Card pictogram illustration with automatic ARASAAC lookup and emoji fallback */
+/** Pictures from the web sit on plain white (the client asked for white behind every picture). */
+const WEB_PICTURE_PANEL = false;
+
 function CardPic({
   label,
   imageUri,
@@ -393,7 +396,7 @@ function CardPic({
 
   if (uri && !imgError) {
     // a symbol from the web (transparent background) sits on the same pastel panel as the app's own pictures
-    if (/^https?:/.test(uri)) {
+    if (uri && WEB_PICTURE_PANEL && /^https?:/.test(uri)) {
       const PANELS = ["#D9DFFA", "#D6EBCB", "#E3D9F6", "#CFE4F8", "#CDEBE1", "#FBE3BC", "#F8D3DF", "#FBD9C8"];
       const bg = PANELS[[...lowerEn].reduce((n, ch) => n + ch.charCodeAt(0), 0) % PANELS.length];
       return (
@@ -1092,7 +1095,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
         </View>
 
         {/* Top Sentence Strip (Miniature Cards + Orange Trash Button + Green Speak Button) */}
-        <View style={styles.msgBar}>
+        <View style={[styles.msgBar, width < 560 && { minHeight: 96, paddingVertical: 6 }]}>
           <View style={{ flex: 1 }}>
             {sentence.length > 0 && (
               <View style={styles.liveSentenceTextWrap}>
@@ -1115,11 +1118,11 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 </View>
               ) : (
                 sentence.map((c, idx) => (
-                  <View key={c.id} style={styles.miniCard}>
+                  <View key={c.id} style={[styles.miniCard, width < 560 && { width: 78, height: 90 }]}>
                     <View style={styles.miniCardMedia}>
-                      <CardPic label={c.label} imageUri={c.imageUri} emoji={c.emoji} size={76} />
+                      <CardPic label={c.label} imageUri={c.imageUri} emoji={c.emoji} size={width < 560 ? 54 : 76} />
                     </View>
-                    <Text style={styles.miniCardText} numberOfLines={1}>
+                    <Text style={[styles.miniCardText, width < 560 && { fontSize: 11 }]} numberOfLines={1}>
                       {wordLabel(c.label, lang)}
                     </Text>
                     <Pressable
@@ -1135,7 +1138,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
               )}
             </ScrollView>
             {/* Type or search a word */}
-            <View style={styles.typeRow}>
+            <View style={[styles.typeRow, width < 560 && { paddingVertical: 4, minHeight: 40 }]}>
               <Ionicons name="search" size={20} color={colors.textLight} />
               <TextInput
                 value={typed}
@@ -1146,7 +1149,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 }}
                 placeholder={lang === "ar-SA" ? "اكتب كلمة أو ابحث…" : lang === "ur-PK" ? "لفظ لکھیں یا تلاش کریں…" : "Type or search a word…"}
                 placeholderTextColor={colors.textLight}
-                style={styles.typeInput}
+                style={[styles.typeInput, width < 560 && { fontSize: 14 }]}
                 autoCapitalize="none"
                 autoCorrect={false}
                 returnKeyType="done"
@@ -1161,7 +1164,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
           </View>
 
           {/* Action buttons matching the tablet photo */}
-          <View style={styles.msgActions}>
+          <View style={[styles.msgActions, width < 560 && { flexDirection: "column", gap: 6, marginLeft: 6 }]}>
             <Pressable
               onPress={() => {
                 if (sentence.length === 0) return;
@@ -1170,7 +1173,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 setSentence([]);
               }}
               disabled={sentence.length === 0}
-              style={[styles.trashBtn, sentence.length === 0 && styles.btnDisabled]}
+              style={[styles.trashBtn, width < 560 && { width: 42, height: 38 }, sentence.length === 0 && styles.btnDisabled]}
               accessibilityLabel={t("clearSentence", lang)}
             >
               <Ionicons name="trash" size={20} color="#ffffff" />
@@ -1181,6 +1184,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
               disabled={sentence.length === 0 || speaking}
               style={[
                 styles.speakBtn,
+                width < 560 && { width: 42, height: 38 },
                 sentence.length === 0 && styles.btnDisabled,
                 speaking && styles.speakBtnActive,
               ]}
@@ -1359,11 +1363,11 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       <View style={styles.folderTopTab}>
                         <View style={[styles.folderTabPill, { backgroundColor: c }]}>
                           <Ionicons name="folder-open" size={13} color="#ffffff" />
-                          <Text style={styles.folderTabPillText}>{wordLabel("Folder", lang)}</Text>
+                          {width >= 560 && <Text style={styles.folderTabPillText}>{wordLabel("Folder", lang)}</Text>}
                         </View>
                         {childCount > 0 && (
                           <View style={[styles.folderCountPill, { borderColor: c + "40" }]}>
-                            <Text style={[styles.folderCountText, { color: c }]}>
+                            <Text style={[styles.folderCountText, width < 560 && { fontSize: 12 }, { color: c }]}>
                               {childCount}
                             </Text>
                           </View>
@@ -1395,7 +1399,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                         )}
                       </View>
                       <View style={[styles.folderLabelBar, { backgroundColor: c }]}>
-                        <Text style={styles.folderLabelText} numberOfLines={1}>
+                        <Text style={[styles.folderLabelText, width < 560 && { fontSize: 12, lineHeight: 15 }]} numberOfLines={width < 560 ? 2 : 1}>
                           {wordLabel(f.name, lang)}
                         </Text>
                       </View>
@@ -1700,20 +1704,22 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
               <Pressable
                 key={bt.name}
                 onPress={() => openBottomTab(bt.id)}
-                style={[styles.bottomTab, active && styles.bottomTabActive]}
+                style={[styles.bottomTab, width < 560 && { width: 84 }, active && styles.bottomTabActive]}
                 disabled={!bt.id}
               >
                 <View
                   style={[
                     styles.bottomTabIcon,
+                    width < 560 && { width: 54, height: 54 },
                     active && { backgroundColor: nameColor + "28" },
                   ]}
                 >
-                  <CardPic label={bt.name} imageUri={stripCat ? categoryPictureFor(stripCat).uri : undefined} exact emoji={bt.icon} size={64} />
+                  <CardPic label={bt.name} imageUri={stripCat ? categoryPictureFor(stripCat).uri : undefined} exact emoji={bt.icon} size={width < 560 ? 48 : 64} />
                 </View>
                 <Text
                   style={[
                     styles.bottomTabLabel,
+                    width < 560 && { fontSize: 11.5 },
                     { color: nameColor, fontWeight: "800" },
                     !bt.id && { color: colors.textLight },
                   ]}

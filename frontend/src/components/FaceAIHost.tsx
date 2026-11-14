@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, type ComponentRef } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { EXPOSE_FACEAPI, FACE_AI_RUNTIME, handleFaceAIMessage, registerFaceAIHost } from "../modules/faceAI";
@@ -45,7 +45,7 @@ window.ReactNativeWebView.postMessage(JSON.stringify({ booted: true }));
 </script></body></html>`;
 
 export default function FaceAIHost() {
-  const ref = useRef<WebView>(null);
+  const ref = useRef<ComponentRef<typeof WebView>>(null);
   if (Platform.OS === "web") return null;
   return (
     <View style={styles.hidden} pointerEvents="none">
@@ -54,7 +54,7 @@ export default function FaceAIHost() {
         originWhitelist={["*"]}
         source={{ html: PAGE }}
         javaScriptEnabled
-        onMessage={(e) => {
+        onMessage={(e: { nativeEvent: { data: string } }) => {
           const data = e.nativeEvent.data;
           if (data.includes('"booted"')) {
             registerFaceAIHost((msg) => ref.current?.postMessage(JSON.stringify(msg)));

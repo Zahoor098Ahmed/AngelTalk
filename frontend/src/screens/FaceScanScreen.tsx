@@ -247,7 +247,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
     <SafeAreaView style={styles.container}>
       <ScrollView style={{ flex: 1, width: "100%" }} contentContainerStyle={[styles.body, { gap: 20 * s }]}>
       <View style={{ alignItems: "center" }}>
-        <Text style={[styles.greeting, { fontSize: 15 * s }]}>{greeting} 👋</Text>
+        <Text style={[styles.greeting, { fontSize: 15 * s }]}>{greeting}</Text>
         <Text style={[styles.title, { fontSize: 32 * s }]}>{t("appName", lang)}</Text>
       </View>
 
@@ -298,7 +298,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
 
         {phase === "nomatch" && (
           <View style={[styles.overlay, { backgroundColor: "rgba(30,41,59,0.85)" }]}>
-            <Text style={{ fontSize: 42 * s }}>😊</Text>
+            <Ionicons name="happy-outline" size={42 * s} color="white" />
             <Text style={[styles.overlayText, { fontSize: 14 * s }]}>{t("didntCatchFace", lang)}</Text>
           </View>
         )}
@@ -324,12 +324,12 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
 
       <Mascot mood={phase === "found" ? "excited" : phase === "nomatch" ? "love" : "thinking"} size={Math.round(84 * s)} />
 
-      <View style={{ alignItems: "center", paddingHorizontal: 20 }}>
+      <View style={styles.statusCard}>
         <Text style={[styles.statusText, { fontSize: 20 * s }]}>
           {phase === "scanning"
             ? t("scanningFaceEllipsis", lang)
             : phase === "found"
-            ? `${t("matchFound", lang)} 🎉`
+            ? t("matchFound", lang)
             : phase === "nomatch"
             ? t("lookedEverywhere", lang)
             : t("cameraUnavailableMsg", lang)}
@@ -439,9 +439,9 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
       {/* Footer controls */}
       <View style={styles.footer}>
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-          {phase !== "nomatch" && phase !== "error" && !cameraUnavailable && (
+          {false && (
             <Pressable onPress={onEnrollChild ?? onParentArea} style={styles.parentBtn}>
-              <Text style={[styles.parentBtnText, { fontSize: 13 * s }]}>➕ {t("addChild", lang)}</Text>
+              <Text style={[styles.parentBtnText, { fontSize: 13 * s }]}>{t("addChild", lang)}</Text>
             </Pressable>
           )}
           {/* {childrenList.length > 0 && (
@@ -452,11 +452,12 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
               }}
               style={styles.parentBtn}
             >
-              <Text style={styles.parentBtnText}>👤 {t("selectChildProfileBtn", lang)}</Text>
+              <Text style={styles.parentBtnText}>{t("selectChildProfileBtn", lang)}</Text>
             </Pressable>
           )} */}
           <Pressable onPress={onParentArea} style={styles.parentBtn}>
-            <Text style={[styles.parentBtnText, { fontSize: 13 * s }]}>🔒 {t("parentPin", lang)}</Text>
+            <Ionicons name="lock-closed" size={15 * s} color={colors.forest} />
+            <Text style={[styles.parentBtnText, { fontSize: 14 * s }]}>{t("parentPin", lang)}</Text>
           </Pressable>
           {onAdminPortal && (
             <Pressable
@@ -498,7 +499,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
                       <Image source={{ uri: child.photoUrl }} style={styles.childAvatar} />
                     ) : (
                       <View style={[styles.childAvatar, styles.avatarPlaceholder]}>
-                        <Text style={{ fontSize: 28 }}>👦</Text>
+                        <Ionicons name="person" size={28} color={colors.forest} />
                       </View>
                     )}
                     <View style={{ flex: 1 }}>
@@ -519,7 +520,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
               ))}
               {childrenList.length === 0 && (
                 <View style={{ alignItems: "center", paddingVertical: 18, gap: 8 }}>
-                  <Text style={{ fontSize: 32 }}>👶</Text>
+                  <Ionicons name="person-add" size={30} color={colors.forest} />
                   <Text style={{ color: colors.textLight, fontSize: 14 }}>{t("noChildEnrolled", lang)}</Text>
                 </View>
               )}
@@ -569,8 +570,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 12,
   },
-  greeting: { fontSize: 15, color: colors.textLight },
-  title: { fontSize: 32, fontWeight: "800", color: colors.textDark, marginTop: 4 },
+  greeting: { fontSize: 15, color: colors.forest, fontWeight: "700", backgroundColor: "rgba(45,95,79,0.08)", paddingHorizontal: 14, paddingVertical: 5, borderRadius: 14, overflow: "hidden" },
+  title: { fontSize: 32, fontWeight: "900", color: colors.forest, marginTop: 8, letterSpacing: 0.5 },
   cameraWrap: {
     width: 260,
     height: 260,
@@ -638,6 +639,7 @@ const styles = StyleSheet.create({
   },
   overlayName: { color: "white", fontSize: 22, fontWeight: "800" },
   overlayText: { color: "white", fontSize: 14, textAlign: "center", paddingHorizontal: 16 },
+  statusCard: { alignItems: "center", backgroundColor: "white", borderRadius: 24, paddingVertical: 18, paddingHorizontal: 26, width: "88%", maxWidth: 380, shadowColor: "#7a5c3e", shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   statusText: { fontSize: 20, color: colors.textDark, fontWeight: "800", textAlign: "center" },
   statusSub: { color: colors.textLight, fontSize: 14, marginTop: 4, textAlign: "center" },
   actionRow: {
@@ -648,9 +650,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   btnText: { color: "white", fontWeight: "700", fontSize: 15 },
-  footer: { paddingTop: 12, paddingBottom: 16 },
-  parentBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 12, backgroundColor: "rgba(0,0,0,0.04)" },
-  parentBtnText: { color: colors.textLight, fontSize: 13, fontWeight: "600" },
+  footer: { paddingTop: 12, paddingBottom: 20, width: "100%", alignItems: "center" },
+  parentBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 11, paddingHorizontal: 20, borderRadius: 24, backgroundColor: "white", borderWidth: 1.5, borderColor: "rgba(45,95,79,0.25)", shadowColor: "#2d5f4f", shadowOpacity: 0.1, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
+  parentBtnText: { color: colors.forest, fontSize: 14, fontWeight: "800" },
   modalBg: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",

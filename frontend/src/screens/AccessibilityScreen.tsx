@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Share, TextInput, Modal, Platform, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/SettingsContext";
@@ -50,7 +50,7 @@ export default function AccessibilityScreen({ onBack }: Props) {
   const win = useWindowDimensions();
   /** phone-size screen: tighter picker */
   const cmSmall = win.width < 560;
-  const cmScroll = useRef<ScrollView>(null);
+  const cmScroll = useRef<ComponentRef<typeof ScrollView>>(null);
   /** pick a category: show its colours at the top right away */
   function pickColorCat(id: string) {
     setColorOpen(id);
