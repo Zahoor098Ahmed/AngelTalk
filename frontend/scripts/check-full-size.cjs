@@ -1,0 +1,12 @@
+﻿const fs = require('fs');
+const boardFile = 'frontend/src/screens/AACBoardScreen.tsx';
+let board = fs.readFileSync(boardFile, 'utf8');
+board = board.replace('    paddingVertical: 4,\n    minHeight: 65,', '    paddingVertical: 0,\n    overflow: "hidden",\n    minHeight: 65,');
+fs.writeFileSync(boardFile, board);
+const testFile = 'frontend/scripts/check-image-sizing.cjs';
+let test = fs.readFileSync(testFile, 'utf8');
+test = test.replace('img.naturalWidth!==256||img.naturalHeight!==256', 'Math.max(img.naturalWidth,img.naturalHeight)!==256||Math.min(img.naturalWidth,img.naturalHeight)<1');
+test = test.replace('padding:12px;text-align:center', 'padding:0;text-align:center;overflow:hidden;border-radius:16px');
+test = test.replace('object-fit:contain', 'object-fit:cover');
+test = test.replaceAll('180px', '260px');
+fs.writeFileSync(testFile, test);

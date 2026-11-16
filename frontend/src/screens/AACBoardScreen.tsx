@@ -50,6 +50,7 @@ import AddByVoiceScreen from "./AddByVoiceScreen";
 import { colors } from "../theme";
 import { getVerbForms, detectVerbForm, isContinuousForm, generateAllVerbForms, sFormOf, type VerbForms } from "../modules/verbForms";
 import SmartImage from "../components/SmartImage";
+import { zoomedBoardColumns } from "../modules/boardZoom";
 import MONTH_PICTURE_DATA from "../modules/monthPictures.json";
 
 /** Pictures stored as "folder::word": they belong to one folder's word. */
@@ -409,6 +410,7 @@ function CardPic({
       <SmartImage
         source={{ uri }}
         style={{ width: size, height: size }}
+        resizeMode="contain"
         onError={() => setImgError(true)}
       />
     );
@@ -538,9 +540,12 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   const bilingual = settings.bilingualDisplay || false;
   const voiceType = settings.voiceType || "boy";
   const { width } = useWindowDimensions();
+  const windowWidth = Platform.OS === "web" && typeof window !== "undefined" && window.outerWidth > 0
+    ? window.outerWidth
+    : width;
 
   // Responsive columns: supports density levels (1, 2, 4, 8, 16, 28, 35+) or window dimensions
-  const cols = useMemo(() => {
+  const baseCols = useMemo(() => {
     if (child.buttonDensity) {
       if (child.buttonDensity === 1) return 1;
       if (child.buttonDensity === 2) return 2;
@@ -551,13 +556,17 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       return 7;
     }
     // Settings > Tiles per row (0 = automatic); a small phone never gets more than 4
-    if (settings.tilesPerRow && settings.tilesPerRow > 0) return width < 480 ? Math.min(4, settings.tilesPerRow) : settings.tilesPerRow;
+    if (settings.tilesPerRow && settings.tilesPerRow > 0) return windowWidth < 480 ? Math.min(4, settings.tilesPerRow) : settings.tilesPerRow;
     // Fewer, bigger tiles so pictures stay clear for the child
-    if (width >= 1100) return 6;
-    if (width >= 820) return 5;
-    if (width >= 560) return 4;
+    if (windowWidth >= 1100) return 6;
+    if (windowWidth >= 820) return 5;
+    if (windowWidth >= 560) return 4;
     return Math.min(4, Math.max(3, settings.boardColumns || 4));
-  }, [width, settings.boardColumns, settings.tilesPerRow, child.buttonDensity]);
+  }, [windowWidth, settings.boardColumns, settings.tilesPerRow, child.buttonDensity]);
+
+  const cols = Platform.OS === "web"
+    ? zoomedBoardColumns(baseCols, width, windowWidth)
+    : baseCols;
 
   // Scale the picture to the tile's actual box size instead of a fixed
   // constant — on wide screens with few columns a hardcoded small icon was
@@ -2101,7 +2110,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#ffffff",
-    padding: 3,
+    padding: 0,
+    overflow: "hidden",
   },
   wordLabelBar: {
     paddingVertical: 6,
@@ -2326,7 +2336,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 4,
+    paddingVertical: 0,
+    overflow: "hidden",
     minHeight: 65,
   },
   verbModalTileLabelBar: {

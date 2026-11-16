@@ -1,0 +1,17 @@
+﻿const fs = require('fs');
+const file = 'frontend/src/screens/AACBoardScreen.tsx';
+let s = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+s = s.replace('  size = 44,\n}: {', '  size = 44,\n  fullSize = false,\n}: {');
+s = s.replace('  size?: number;\n}) {', '  size?: number;\n  fullSize?: boolean;\n}) {');
+s = s.replace('        style={{ width: size, height: size }}\n        onError={() => setImgError(true)}', '        style={fullSize ? StyleSheet.absoluteFill : { width: size, height: size }}\n        resizeMode={fullSize ? "cover" : "contain"}\n        onError={() => setImgError(true)}');
+s = s.replace('                          size={cardPicSize}', '                          size={cardPicSize}\n                          fullSize');
+s = s.replace('                          size={Math.round(Math.min(verbTileW * 0.86, 190))}', '                          size={Math.round(Math.min(verbTileW * 0.86, 190))}\n                          fullSize');
+s = s.replace('emoji={nounOpen.emoji} size={Math.round(Math.min(verbTileW * 0.86, 190))} />', 'emoji={nounOpen.emoji} size={Math.round(Math.min(verbTileW * 0.86, 190))} fullSize />');
+s = s.replace('    padding: 3,\n  },\n  wordLabelBar:', '    padding: 0,\n    overflow: "hidden",\n  },\n  wordLabelBar:');
+if (!s.includes('fullSize = false') || !s.includes('style={fullSize ?')) throw Error('Replacement failed');
+fs.writeFileSync(file, s);
+const normalizeFile = 'frontend/src/modules/normalizeWordImage.ts';
+let t = fs.readFileSync(normalizeFile, 'utf8').replace(/\r\n/g, '\n');
+t = t.replace('          const fit = 256 / Math.max(bounds.width, bounds.height);\n          const width = bounds.width * fit, height = bounds.height * fit;', '          const width = output.width, height = output.height;');
+fs.writeFileSync(normalizeFile, t);
+console.log('Applied full-area word pictures.');

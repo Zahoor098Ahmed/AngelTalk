@@ -1,0 +1,17 @@
+﻿const fs = require('fs');
+const file = 'frontend/src/screens/AACBoardScreen.tsx';
+let s = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+s = s.replace('import SmartImage from "../components/SmartImage";', 'import SmartImage from "../components/SmartImage";\nimport { zoomedBoardColumns } from "../modules/boardZoom";');
+s = s.replace('  const { width } = useWindowDimensions();\n\n  // Responsive columns:', '  const { width } = useWindowDimensions();\n  const windowWidth = Platform.OS === "web" && typeof window !== "undefined" && window.outerWidth > 0\n    ? window.outerWidth\n    : width;\n\n  // Responsive columns:');
+s = s.replace('  const cols = useMemo(() => {', '  const baseCols = useMemo(() => {');
+const start = s.indexOf('  const baseCols = useMemo(() => {');
+const end = s.indexOf('  // Scale the picture', start);
+if (start < 0 || end < 0) throw Error('Grid block missing');
+let block = s.slice(start, end);
+block = block.replaceAll('width <', 'windowWidth <').replaceAll('width >=', 'windowWidth >=');
+block = block.replace('[width, settings.boardColumns, settings.tilesPerRow, child.buttonDensity]', '[windowWidth, settings.boardColumns, settings.tilesPerRow, child.buttonDensity]');
+block += '  const cols = Platform.OS === "web"\n    ? zoomedBoardColumns(baseCols, width, windowWidth)\n    : baseCols;\n\n';
+s = s.slice(0, start) + block + s.slice(end);
+if (!s.includes('zoomedBoardColumns(baseCols, width, windowWidth)')) throw Error('Zoom sizing failed');
+fs.writeFileSync(file, s);
+console.log('Board boxes, images and labels now shrink/grow together with browser zoom.');

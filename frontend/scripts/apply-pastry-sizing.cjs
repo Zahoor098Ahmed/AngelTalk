@@ -1,0 +1,24 @@
+﻿const fs = require('fs');
+const file = 'frontend/src/screens/AACBoardScreen.tsx';
+let s = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n');
+s = s.replace('  folderEnglishName,\n', '');
+s = s.replace(/  \/\/ Food photos keep their original framing[\s\S]*?  }, \[current, tick\]\);\n/, '');
+s = s.replace('  originalPhoto = false,\n', '').replace('  originalPhoto?: boolean;\n', '');
+s = s.replaceAll('fullSize', 'uniformSize');
+s = s.replace('style={uniformSize ? StyleSheet.absoluteFill : { width: size, height: size }}', 'style={{ width: size, height: size }}');
+s = s.replace('        original={originalPhoto}\n', '');
+s = s.replaceAll('uniformSize={!originalFoodPhotos}', 'uniformSize');
+s = s.replaceAll('                          originalPhoto={originalFoodPhotos}\n', '');
+s = s.replaceAll(' originalPhoto={originalFoodPhotos}', '');
+s = s.replaceAll('style={[styles.wordBody, originalFoodPhotos && { padding: 3 }]}', 'style={styles.wordBody}');
+// Every word image uses the same square size already used by Pastry, with no inner letterboxing.
+s = s.replace('  uniformSize = false,', '  uniformSize = true,');
+if (s.includes('originalFoodPhotos') || s.includes('originalPhoto')) throw Error('Food sizing exception remains');
+fs.writeFileSync(file, s);
+const smartFile = 'frontend/src/components/SmartImage.tsx';
+let smart = fs.readFileSync(smartFile, 'utf8').replace(/\r\n/g, '\n');
+smart = smart.replace('resizeMode = "contain", original = false, ...rest }: ImageProps & { original?: boolean }', 'resizeMode = "contain", ...rest }: ImageProps');
+smart = smart.replace(' || original) return;', ') return;').replace('[uri, original]', '[uri]');
+smart = smart.replace('const displaySource = !original && uri', 'const displaySource = uri');
+fs.writeFileSync(smartFile, smart.trimEnd()+'\n');
+console.log('All word pictures now share the Pastry square sizing; original photo assets preserved.');

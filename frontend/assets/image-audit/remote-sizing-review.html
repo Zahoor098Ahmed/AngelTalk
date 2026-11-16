@@ -1,0 +1,114 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial;background:#eef2f6}#samples{display:flex;flex-wrap:wrap;gap:12px}figure{background:white;margin:0;padding:12px;text-align:center}img{width:180px;height:180px;object-fit:contain}figcaption{font-weight:bold}</style></head><body><pre id="result">RUNNING</pre><div id="samples"></div><script src="remote-sizing-data.js"></script><script>
+const boundsModule={exports:{}};(function(exports){"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.imageContentBounds = imageContentBounds;
+/** Ignore only empty white/transparent margins, keeping every visible part of a picture. */
+function imageContentBounds(pixels, width, height) {
+    let left = width, top = height, right = -1, bottom = -1;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const i = (y * width + x) * 4;
+            const alpha = pixels[i + 3] / 255;
+            // Compare against white after alpha compositing, so transparent RGB noise is ignored.
+            const darkness = alpha * (255 - Math.min(pixels[i], pixels[i + 1], pixels[i + 2]));
+            if (darkness < 10)
+                continue;
+            left = Math.min(left, x);
+            right = Math.max(right, x);
+            top = Math.min(top, y);
+            bottom = Math.max(bottom, y);
+        }
+    }
+    if (right < left || bottom < top)
+        return { x: 0, y: 0, width, height };
+    // One pixel of breathing room preserves antialiased edges.
+    left = Math.max(0, left - 1);
+    top = Math.max(0, top - 1);
+    right = Math.min(width - 1, right + 1);
+    bottom = Math.min(height - 1, bottom + 1);
+    return { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
+}
+})(boundsModule.exports);
+const normalizeModule={exports:{}};(function(exports,require){"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.normalizeWordImage = normalizeWordImage;
+const imageContentBounds_1 = require("./imageContentBounds");
+const CACHE_LIMIT = 256;
+const cache = new Map();
+const queue = [];
+let active = 0;
+function pump() {
+    while (active < 4 && queue.length) {
+        active++;
+        queue.shift()();
+    }
+}
+/** All web word pictures share one square canvas, regardless of their source or margins. */
+function normalizeWordImage(uri) {
+    const existing = cache.get(uri);
+    if (existing) {
+        cache.delete(uri);
+        cache.set(uri, existing);
+        return existing;
+    }
+    const pending = new Promise((resolve) => {
+        queue.push(() => {
+            const img = new window.Image();
+            let settled = false;
+            const finish = (result) => {
+                if (settled)
+                    return;
+                settled = true;
+                clearTimeout(timer);
+                img.onload = null;
+                img.onerror = null;
+                active--;
+                resolve(result);
+                pump();
+            };
+            const timer = setTimeout(() => finish(uri), 12000);
+            // Public symbol CDNs allow CORS. If a custom host does not, retain the original image.
+            if (/^https?:/i.test(uri))
+                img.crossOrigin = "anonymous";
+            img.onload = () => {
+                try {
+                    const scale = Math.min(1, 512 / Math.max(img.naturalWidth, img.naturalHeight));
+                    const scan = document.createElement("canvas");
+                    scan.width = Math.max(1, Math.round(img.naturalWidth * scale));
+                    scan.height = Math.max(1, Math.round(img.naturalHeight * scale));
+                    const ctx = scan.getContext("2d", { willReadFrequently: true });
+                    if (!ctx)
+                        return finish(uri);
+                    ctx.drawImage(img, 0, 0, scan.width, scan.height);
+                    const bounds = (0, imageContentBounds_1.imageContentBounds)(ctx.getImageData(0, 0, scan.width, scan.height).data, scan.width, scan.height);
+                    const output = document.createElement("canvas");
+                    output.width = output.height = 256;
+                    const out = output.getContext("2d");
+                    if (!out)
+                        return finish(uri);
+                    const fit = 256 / Math.max(bounds.width, bounds.height);
+                    const width = bounds.width * fit, height = bounds.height * fit;
+                    out.imageSmoothingEnabled = true;
+                    out.imageSmoothingQuality = "high";
+                    out.drawImage(img, bounds.x * img.naturalWidth / scan.width, bounds.y * img.naturalHeight / scan.height, bounds.width * img.naturalWidth / scan.width, bounds.height * img.naturalHeight / scan.height, (256 - width) / 2, (256 - height) / 2, width, height);
+                    finish(output.toDataURL("image/png"));
+                }
+                catch {
+                    finish(uri);
+                }
+            };
+            img.onerror = () => finish(uri);
+            img.src = uri;
+        });
+        pump();
+    });
+    cache.set(uri, pending);
+    if (cache.size > CACHE_LIMIT)
+        cache.delete(cache.keys().next().value);
+    return pending;
+}
+})(normalizeModule.exports,()=>boundsModule.exports);
+(async()=>{const rows=window.auditPictures;let passed=0;const failures=[];const sampleWords=['naan','paratha','pastry','pita bread','roll-sandwich','roti'];
+for(let start=0;start<rows.length;start+=24){await Promise.all(rows.slice(start,start+24).map(async([word,uri])=>{const result=await normalizeModule.exports.normalizeWordImage(uri);if(result===uri){failures.push(word);return;}const img=new Image();await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=result;});if(img.naturalWidth!==256||img.naturalHeight!==256){failures.push(word+':size');return;}passed++;if(sampleWords.includes(word)){const figure=document.createElement('figure');img.style.width='180px';img.style.height='180px';figure.append(img);const label=document.createElement('figcaption');label.textContent=word;figure.append(label);document.getElementById('samples').append(figure);}}));}
+document.getElementById('result').textContent=JSON.stringify({total:rows.length,passed,failures});document.title='COMPLETE';})().catch(e=>document.getElementById('result').textContent='ERROR '+e.stack);
+</script></body></html>
