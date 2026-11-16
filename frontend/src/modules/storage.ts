@@ -180,7 +180,6 @@ export function saveChildren(children: ChildProfile[]): void {
 
 export function addChild(child: ChildProfile): void {
   saveChildren([...childrenCache, child]);
-  import("./backendSync").then((m) => m.syncChildBioData(child)).catch(() => {});
   import("./cloudConnect").then((m) => m.syncNow()).catch(() => {});
 }
 
@@ -190,7 +189,6 @@ export function updateChild(updated: ChildProfile): void {
   const next = [...childrenCache];
   next[idx] = updated;
   saveChildren(next);
-  import("./backendSync").then((m) => m.syncChildBioData(updated)).catch(() => {});
   import("./cloudConnect").then((m) => m.syncNow()).catch(() => {});
 }
 

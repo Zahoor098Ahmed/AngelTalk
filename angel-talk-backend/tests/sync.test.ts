@@ -37,7 +37,7 @@ describe("Sync Engine Integration Tests", () => {
     expect(pullRes.body.data.hasMore).toBe(false);
   });
 
-  it("should push shelf and word mutations and pull them back", async () => {
+  it("rejects personal shelf and word uploads and never returns boards in profile sync", async () => {
     // 1. Register parent & create child
     const regRes = await request(app).post("/api/v1/auth/register").send({
       email: "syncparent2@test.com",
@@ -98,8 +98,8 @@ describe("Sync Engine Integration Tests", () => {
     expect(pushRes.status).toBe(200);
     expect(pushRes.body.success).toBe(true);
     expect(pushRes.body.data.results.length).toBe(2);
-    expect(pushRes.body.data.results[0].status).toBe("applied");
-    expect(pushRes.body.data.results[1].status).toBe("applied");
+    expect(pushRes.body.data.results[0].status).toBe("rejected");
+    expect(pushRes.body.data.results[1].status).toBe("rejected");
 
     // 3. Pull sync and verify both records are returned
     const pullRes = await request(app)
@@ -107,10 +107,8 @@ describe("Sync Engine Integration Tests", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(pullRes.status).toBe(200);
-    expect(pullRes.body.data.tables.shelves).toBeDefined();
-    expect(pullRes.body.data.tables.shelves.some((s: { _id: string }) => s._id === shelfId)).toBe(true);
-    expect(pullRes.body.data.tables.words).toBeDefined();
-    expect(pullRes.body.data.tables.words.some((w: { _id: string }) => w._id === wordId)).toBe(true);
+    expect(pullRes.body.data.tables.shelves).toBeUndefined();
+    expect(pullRes.body.data.tables.words).toBeUndefined();
   });
 
   it("should reject push mutations targeting another user's child", async () => {
@@ -142,8 +140,8 @@ describe("Sync Engine Integration Tests", () => {
       .send({
         mutations: [
           {
-            table: "shelves",
-            id: uuidv4(),
+            table: "children",
+            id: childId,
             action: "upsert",
             clientUpdatedAt: new Date().toISOString(),
             data: { childId, name: "Hacked Shelf" },
@@ -157,3 +155,58 @@ describe("Sync Engine Integration Tests", () => {
   });
 });
 
+
+describe("Local-only personal content policy", () => {
+  async function register() {
+    const response = await request(app).post("/api/v1/auth/register").send({
+      email: "private-board@test.com", password: "Password123!", fullName: "Private Board Parent", role: "parent",
+    });
+    expect(response.status).toBe(201);
+    return response.body.data.accessToken as string;
+  }
+
+  it("syncs the basic child profile without private settings, activity or board data", async () => {
+    const token = await register();
+    const childId = uuidv4();
+    const result = await request(app).post("/api/v1/sync/push").set("Authorization", `Bearer ${token}`).send({
+      mutations: [{ table: "children", id: childId, action: "UPSERT", clientUpdatedAt: new Date().toISOString(), data: {
+        name: "Local Board Child", age: 5, diagnoses: ["general"],
+        settings: { privateWord: "PRIVATE_WORD" }, rewards: { stars: 99 }, careLogs: [{ notes: "PRIVATE_NOTE" }],
+      } }],
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.data.results[0].status).toBe("applied");
+    const pull = await request(app).get("/api/v1/sync/pull").set("Authorization", `Bearer ${token}`);
+    expect(Object.keys(pull.body.data.tables)).toEqual(["children"]);
+    expect(pull.body.data.tables.children[0].name).toBe("Local Board Child");
+    expect(pull.body.data.tables.children[0].settings).toBeUndefined();
+    expect(JSON.stringify(pull.body)).not.toContain("PRIVATE_WORD");
+    expect(JSON.stringify(pull.body)).not.toContain("PRIVATE_NOTE");
+  });
+
+  it("rejects all old personal-content sync tables without storing records", async () => {
+    const token = await register();
+    const privateTables = ["shelves", "words", "usagesummaries", "sentencelogs", "carelogs", "socialstories", "scheduletasks", "passcards", "gamesprogress"];
+    const result = await request(app).post("/api/v1/sync/push").set("Authorization", `Bearer ${token}`).send({
+      mutations: privateTables.map(table => ({ table, id: uuidv4(), action: "UPSERT", clientUpdatedAt: new Date().toISOString(), data: { childId: uuidv4(), label: "PRIVATE_WORD", words: ["PRIVATE_WORD"] } })),
+    });
+    expect(result.status).toBe(200);
+    expect(result.body.data.results).toHaveLength(privateTables.length);
+    expect(result.body.data.results.every((item: { status: string }) => item.status === "rejected")).toBe(true);
+    const { Word } = await import("../src/models/Word");
+    const { Shelf } = await import("../src/models/Shelf");
+    const { SentenceLog } = await import("../src/models/SentenceLog");
+    expect(await Word.countDocuments()).toBe(0);
+    expect(await Shelf.countDocuments()).toBe(0);
+    expect(await SentenceLog.countDocuments()).toBe(0);
+  });
+
+  it("blocks legacy direct word and sentence upload routes", async () => {
+    const token = await register();
+    for (const endpoint of ["/shelves/legacy/words", "/children/legacy/sentence-logs", "/children/legacy/apply-template/seed"]) {
+      const response = await request(app).post(`/api/v1${endpoint}`).set("Authorization", `Bearer ${token}`).send({ label: "PRIVATE_WORD", words: ["PRIVATE_WORD"] });
+      expect(response.status).toBe(410);
+      expect(response.body.code).toBe("LOCAL_ONLY_CONTENT");
+    }
+  });
+});

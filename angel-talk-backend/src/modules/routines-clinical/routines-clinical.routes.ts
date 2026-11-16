@@ -1,3 +1,4 @@
+import { rejectLocalOnlyContent } from "../../middleware/local-only-content";
 import { Router, Request, Response, NextFunction } from "express";
 import { v4 as uuidv4 } from "uuid";
 import PDFDocument from "pdfkit";
@@ -37,6 +38,7 @@ routinesClinicalRouter.get(
 routinesClinicalRouter.post(
   "/children/:childId/schedule",
   authenticate,
+  rejectLocalOnlyContent,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = (req as AuthenticatedRequest).user;
@@ -64,6 +66,7 @@ routinesClinicalRouter.post(
 routinesClinicalRouter.put(
   "/scheduletasks/:id",
   authenticate,
+  rejectLocalOnlyContent,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = (req as AuthenticatedRequest).user;
@@ -88,6 +91,7 @@ routinesClinicalRouter.put(
 routinesClinicalRouter.delete(
   "/scheduletasks/:id",
   authenticate,
+  rejectLocalOnlyContent,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = (req as AuthenticatedRequest).user;
@@ -127,6 +131,7 @@ routinesClinicalRouter.get(
 routinesClinicalRouter.post(
   "/children/:childId/stories",
   authenticate,
+  rejectLocalOnlyContent,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = (req as AuthenticatedRequest).user;
@@ -171,6 +176,7 @@ routinesClinicalRouter.get(
 routinesClinicalRouter.post(
   "/children/:childId/care-logs",
   authenticate,
+  rejectLocalOnlyContent,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = (req as AuthenticatedRequest).user;
@@ -216,6 +222,7 @@ routinesClinicalRouter.get(
 routinesClinicalRouter.post(
   "/children/:childId/therapy-goals",
   authenticate,
+  rejectLocalOnlyContent,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = (req as AuthenticatedRequest).user;
@@ -245,6 +252,7 @@ routinesClinicalRouter.post(
 routinesClinicalRouter.put(
   "/therapy-goals/:id",
   authenticate,
+  rejectLocalOnlyContent,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = (req as AuthenticatedRequest).user;
@@ -286,6 +294,7 @@ routinesClinicalRouter.get(
 routinesClinicalRouter.post(
   "/children/:childId/clinical-notes",
   authenticate,
+  rejectLocalOnlyContent,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = (req as AuthenticatedRequest).user;
@@ -337,6 +346,7 @@ routinesClinicalRouter.get(
 routinesClinicalRouter.put(
   "/children/:childId/passcard",
   authenticate,
+  rejectLocalOnlyContent,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = (req as AuthenticatedRequest).user;
@@ -374,6 +384,7 @@ routinesClinicalRouter.get(
 routinesClinicalRouter.post(
   "/children/:childId/games",
   authenticate,
+  rejectLocalOnlyContent,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = (req as AuthenticatedRequest).user;
@@ -413,6 +424,7 @@ routinesClinicalRouter.get(
 routinesClinicalRouter.post(
   "/children/:childId/sentence-logs",
   authenticate,
+  rejectLocalOnlyContent,
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = (req as AuthenticatedRequest).user;

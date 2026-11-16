@@ -1,12 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  listCategories,
-  restoreBackup,
-  notifyListeners,
-  cleanAndDeduplicateCategories,
-} from "./customCategories";
-import { loadChildren, saveChildren } from "./storage";
-import type { ChildProfile, CustomCategory, CustomWord, DiagnosisType } from "../types";
+import { cloudProfile } from "./cloudProfiles";
+import type { ChildProfile } from "../types";
 
 export const BACKEND_URL =
   (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_BACKEND_URL) || "http://localhost:4000";
@@ -14,7 +8,6 @@ export const BACKEND_URL =
 const ACCESS_TOKEN_KEY = "angeltalk_access_token";
 const REFRESH_TOKEN_KEY = "angeltalk_refresh_token";
 const PIN_TOKEN_KEY = "angeltalk_pin_token";
-const LAST_SYNC_KEY = "angeltalk_last_sync_timestamp";
 
 export interface SyncStatus {
   isSyncing: boolean;
@@ -183,220 +176,25 @@ export async function backendLogin(email: string, pass: string) {
   return json.data;
 }
 
-/**
- * Perform bidirectional delta sync:
- * 1. Push local changes to cloud
- * 2. Pull server changes to local
- */
+/** Kept for older callers; private boards are never uploaded or pulled. */
 export async function syncBidirectional(): Promise<{ pushed: number; pulled: number }> {
-  const token = await getAccessToken();
-  if (!token) {
-    return { pushed: 0, pulled: 0 };
-  }
-
-  syncStatus.isSyncing = true;
-  syncStatus.error = null;
-  emitStatus();
-
-  try {
-    const children = loadChildren();
-    const activeChild = children[0];
-    if (!activeChild) {
-      syncStatus.isSyncing = false;
-      emitStatus();
-      return { pushed: 0, pulled: 0 };
-    }
-
-    const categories = listCategories();
-    const mutations: Array<{
-      table: string;
-      id: string;
-      action: "upsert" | "delete";
-      clientUpdatedAt: string;
-      data: Record<string, unknown>;
-    }> = [];
-
-    const now = new Date().toISOString();
-
-    // 1. Prepare shelf and word mutations from local categories
-    for (let cIdx = 0; cIdx < categories.length; cIdx++) {
-      const cat = categories[cIdx];
-      mutations.push({
-        table: "shelves",
-        id: cat.id,
-        action: "upsert",
-        clientUpdatedAt: now,
-        data: {
-          childId: activeChild.id,
-          name: cat.name,
-          color: cat.color,
-          icon: cat.icon,
-          parentId: cat.parentCategoryId || null,
-          order: cIdx,
-        },
-      });
-
-      for (let wIdx = 0; wIdx < cat.words.length; wIdx++) {
-        const w = cat.words[wIdx];
-        mutations.push({
-          table: "words",
-          id: w.id,
-          action: "upsert",
-          clientUpdatedAt: now,
-          data: {
-            childId: activeChild.id,
-            shelfId: cat.id,
-            label: w.label,
-            phrase: w.phrase || w.label,
-            imageUri: w.imageUri,
-            color: w.color,
-            order: wIdx,
-          },
-        });
-      }
-    }
-
-    let pushedCount = 0;
-    // Push in chunks of 50
-    for (let i = 0; i < mutations.length; i += 50) {
-      const batch = mutations.slice(i, i + 50);
-      const pushRes = await authFetch("/api/v1/sync/push", {
-        method: "POST",
-        body: JSON.stringify({ mutations: batch }),
-      });
-      if (pushRes.ok) {
-        const resJson = await pushRes.json();
-        pushedCount += (resJson.data?.results?.filter((r: { status: string }) => r.status === "applied")?.length || 0);
-      }
-    }
-
-    // 2. Pull delta updates
-    const lastSync = await AsyncStorage.getItem(LAST_SYNC_KEY);
-    const pullUrl = lastSync ? `/api/v1/sync/pull?since=${encodeURIComponent(lastSync)}` : "/api/v1/sync/pull";
-    const pullRes = await authFetch(pullUrl);
-
-    let pulledCount = 0;
-    if (pullRes.ok) {
-      const pullJson = await pullRes.json();
-      const tables = pullJson.data?.tables || {};
-
-      // Merge remote children if any
-      if (tables.children && tables.children.length > 0) {
-        const remoteChildren: ChildProfile[] = tables.children.map((rc: { _id: string; name: string; age: number; diagnoses?: DiagnosisType[] }) => ({
-          id: rc._id,
-          name: rc.name,
-          age: rc.age,
-          diagnoses: rc.diagnoses || ["general"],
-          allowedTags: ["aac"],
-          embedding: [],
-          enrolledAt: Date.now(),
-          stars: 10,
-          badges: [],
-        }));
-        saveChildren(remoteChildren);
-      }
-
-      // Merge remote shelves and words if present
-      if (tables.shelves && tables.shelves.length > 0) {
-        const remoteShelves = tables.shelves;
-        const remoteWords = tables.words || [];
-
-        const incomingCategories: CustomCategory[] = remoteShelves.map((rShelf: { _id: string; name: string; color?: string; icon?: string; parentId?: string | null }) => {
-          const shelfWords: CustomWord[] = remoteWords
-            .filter((rw: { shelfId: string }) => rw.shelfId === rShelf._id)
-            .map((rw: { _id: string; label: string; phrase?: string; imageUri?: string; color?: string }) => ({
-              id: rw._id,
-              label: rw.label,
-              phrase: rw.phrase || rw.label,
-              imageUri: rw.imageUri,
-              color: rw.color,
-            }));
-
-          return {
-            id: rShelf._id,
-            name: rShelf.name,
-            color: rShelf.color || "#4CAF50",
-            icon: rShelf.icon,
-            parentCategoryId: rShelf.parentId || null,
-            words: shelfWords,
-          };
-        });
-
-        restoreBackup({ categories: incomingCategories }, "merge");
-        cleanAndDeduplicateCategories();
-        notifyListeners();
-        pulledCount += incomingCategories.length;
-      }
-
-      if (pullJson.data?.syncedAt) {
-        await AsyncStorage.setItem(LAST_SYNC_KEY, pullJson.data.syncedAt);
-        syncStatus.lastSyncedAt = pullJson.data.syncedAt;
-      }
-    }
-
-    syncStatus.isSyncing = false;
-    syncStatus.serverConnected = true;
-    emitStatus();
-
-    return { pushed: pushedCount, pulled: pulledCount };
-  } catch (err: unknown) {
-    syncStatus.isSyncing = false;
-    syncStatus.error = err instanceof Error ? err.message : "Sync error";
-    emitStatus();
-    throw err;
-  }
+  const { syncNow } = await import("./cloudConnect");
+  await syncNow();
+  return { pushed: 0, pulled: 0 };
 }
 
-/**
- * Persists child bio data and clinical contact updates directly to MongoDB Atlas
- */
+/** Only the basic profile is eligible for the central users/children directory. */
 export async function syncChildBioData(child: ChildProfile): Promise<void> {
-  const token = await getAccessToken();
-  if (!token) return;
-
+  if (!(await getAccessToken())) return;
   try {
-    const now = new Date().toISOString();
-    const mutations: Array<{
-      table: string;
-      id: string;
-      action: "upsert";
-      clientUpdatedAt: string;
-      data: Record<string, unknown>;
-    }> = [
-      {
-        table: "children",
-        id: child.id,
-        action: "upsert",
-        clientUpdatedAt: now,
-        data: {
-          name: child.name,
-          age: child.age,
-          diagnoses: child.diagnoses || ["general"],
-          photoUrl: child.photoUrl,
-        },
-      },
-    ];
-
-    if (child.doctorContact) {
-      mutations.push({
-        table: "passcards",
-        id: `passcard_${child.id}`,
-        action: "upsert",
-        clientUpdatedAt: now,
-        data: {
-          childId: child.id,
-          name: child.name,
-          emergencyContact: child.doctorContact.phone || "",
-          physicianName: child.doctorContact.doctorName || "",
-        },
-      });
-    }
-
     await authFetch("/api/v1/sync/push", {
       method: "POST",
-      body: JSON.stringify({ mutations }),
+      body: JSON.stringify({ mutations: [{
+        table: "children", id: child.id, action: "UPSERT",
+        clientUpdatedAt: new Date().toISOString(), data: cloudProfile(child),
+      }] }),
     });
-  } catch (err) {
-    console.warn("Auto-sync bio data to Atlas deferred:", err);
+  } catch (error) {
+    console.warn("Profile sync deferred:", error);
   }
 }

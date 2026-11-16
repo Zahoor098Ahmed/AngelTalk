@@ -4,6 +4,7 @@ import { Server } from "http";
 import { createApp } from "./app";
 import { env } from "./config/env";
 import { logger } from "./common/logger";
+import { encryptedBackups } from "./modules/backups/backups.service";
 import { seedAll } from "../scripts/seed";
 
 let memoryServer: { stop: () => Promise<boolean | void> } | null = null;
@@ -31,6 +32,7 @@ async function bootstrap() {
     }
 
     const app = createApp();
+    await encryptedBackups.start();
 
     const server: Server = app.listen(env.PORT, () => {
       logger.info(`Angel Talk Backend API listening on port ${env.PORT} (${env.NODE_ENV})`);

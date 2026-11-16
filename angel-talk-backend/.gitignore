@@ -23,3 +23,6 @@ logs/
 npm-debug.log*
 .DS_Store
 Thumbs.db
+
+# Encrypted user backups live on a persistent volume, never in source control.
+.data/

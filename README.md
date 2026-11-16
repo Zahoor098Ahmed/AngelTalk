@@ -64,3 +64,25 @@ npm run typecheck # Strict TypeScript compilation (0 errors)
    - High-definition Google Cloud Neural Wavenet voices (`ar-XA`, `ur-PK`, `en-US`) when configured.
    - Seamless, zero-timeout sovereign fallback to Google Translate TTS with browser headers when keys are absent.
    - In-memory LRU + Redis caching for sub-millisecond audio delivery.
+
+## Device-local personal content
+
+New installations load the complete board bundled with the app. Personal word/folder additions, edits, deletions, custom pictures, settings and activity remain on the device. Web boards and deletion markers use IndexedDB, with compatibility for existing local storage; native boards use AsyncStorage. Bundled pictures are stored as compact references while custom pictures are retained locally.
+
+Background sync registers the installation and uploads only basic child/profile directory fields (`name`, `age`, `diagnoses`, and an existing public profile photo URL). Personal boards, word usage, sentences and care notes are not uploaded or downloaded through account sync. Shared admin catalog updates may still reach devices and respect local word deletions. Legacy personal-content upload endpoints return `410 LOCAL_ONLY_CONTENT`; private sync tables are rejected. Existing server records are not deleted by this change.
+
+Clearing local app data removes its local copy. The encrypted recovery-backup feature below can restore customizations using the saved recovery code; ordinary account/profile sync does not transfer personal boards.
+
+Validation: `node frontend/scripts/test-local-board-privacy.cjs`, `node frontend/scripts/test-board-reload.cjs`, frontend/backend typechecks, and the backend Jest suite.
+
+## Encrypted recovery backups
+
+Settings includes automatic backups, **Back up now**, **Save recovery code**, and **Find my backup / Restore this backup**. Automatic backup is enabled by default. Keep the recovery code outside the app: a newly installed app cannot find or decrypt an old backup without it. Manual JSON export/import remains available.
+
+Expo Crypto AES-256-GCM encrypts the whole-app snapshot before upload: words, categories, deletions, settings, profiles, activity and embedded custom image/audio files. Bundled pictures use compact references. Original family sign-in credentials are included only inside this encrypted snapshot so restore reconnects the existing family. Authentication tokens, the recovery key and parent PIN are excluded. The server receives ciphertext and scheduling metadata, never the recovery/encryption key. Personal word tables remain disabled.
+
+The latest encrypted state is saved while the app is used and after edits. The backend archives the last successful upload at local midnight using the device IANA time zone, including DST, even while the mobile app is closed. Offline/closed phones cannot send unsent changes; those retry when the app resumes online. Backend restarts catch up missed daily copies. Retention is 30 daily restore points plus the latest save.
+
+Configure `BACKUP_STORAGE_DIR` as a persistent private backend volume (default `.data/encrypted-backups`). It is outside MongoDB and must survive backend deployments/restarts. Use HTTPS and infrastructure disaster-recovery protection in production. An ephemeral hosting filesystem cannot provide durable recovery. Deploy the new backend with the updated app; native builds need the added `expo-crypto` module.
+
+Checks: `node frontend/scripts/test-encrypted-backups.cjs`, the existing local-board tests, and the backend Jest suite.

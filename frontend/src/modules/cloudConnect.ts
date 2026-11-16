@@ -2,8 +2,7 @@
  * Connects the app to the Angel Talk server (and so to the admin panel), quietly in the background:
  *
  *  - every install gets its own family account on the server automatically (no sign-up screen)
- *  - the children, their board (folders + words), word usage and care-journal entries are sent up,
- *    only what changed since the last time
+ *  - only basic child/account profiles are sent up; personal words, boards and activity stay local
  *  - words, folders and verbs that were added in the admin panel come down and join the board
  *
  * Works offline-first: with no internet or no server nothing happens, and it simply tries again later.
@@ -18,17 +17,16 @@ import {
   ensureCategoriesLoaded,
   getCategory,
   isDeletedWord,
-  listCategories,
-  subscribeCategories,
   topLevelCategories,
 } from "./customCategories";
-import { getUsage, loadChildren, loadSettings } from "./storage";
+import { loadChildren } from "./storage";
+import { buildProfileRecords } from "./cloudProfiles";
 import { canonicalWordEn, registerTranslations } from "./i18n";
 import { registerVerbForms, sFormOf, type VerbForms } from "./verbForms";
 import type { CustomCategory, CustomWord } from "../types";
 
 const ACCOUNT_KEY = "angeltalk_cloud_account";
-const SENT_KEY = "angeltalk_cloud_sent";
+const SENT_KEY = "angeltalk_cloud_profiles_sent_v1";
 const CONTENT_SINCE_KEY = "angeltalk_cloud_content_since";
 const ADMIN_VERBS_KEY = "angeltalk_cloud_admin_verbs";
 const SYNC_EVERY_MS = 5 * 60 * 1000;
@@ -94,12 +92,8 @@ async function ensureSignedIn(): Promise<boolean> {
 
 // ---------- sending ----------
 
-const FORM_TO_SERVER: Record<string, string> = { "1st": "first", s: "s_es", "2nd": "second", "3rd": "third", "4th": "fourth" };
 const FORM_FROM_SERVER: Record<string, CustomWord["verbFormTag"]> = { first: "1st", s_es: "s", second: "2nd", third: "3rd", fourth: "4th" };
 
-/** Pictures picked from the phone (data:/file: URIs) stay on the device. */
-const webUri = (u?: string) => (u && /^https?:\/\//.test(u) && u.length < 2000 ? u : undefined);
-const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 const hashOf = (v: unknown) => {
   const s = JSON.stringify(v);
   let h = 5381;
@@ -107,97 +101,10 @@ const hashOf = (v: unknown) => {
   return String(h >>> 0);
 };
 
-function buildRecords(): { key: string; table: string; id: string; data: Record<string, unknown> }[] {
-  const out: { key: string; table: string; id: string; data: Record<string, unknown> }[] = [];
-  const add = (table: string, id: string, data: Record<string, unknown>) => out.push({ key: `${table}:${id}`, table, id, data });
-  const children = loadChildren();
-  // the app settings of this device (Settings screen) are saved with each child
-  const app = loadSettings();
-
-  for (const c of children) {
-    const usage = getUsage(c.id);
-    add("children", c.id, {
-      name: c.name || "Child",
-      age: clamp(Math.round(c.age || 5), 1, 25),
-      diagnoses: c.diagnoses?.length ? c.diagnoses : ["general"],
-      settings: {
-        voiceType: c.voiceType ?? "boy",
-        boardMode: c.boardMode ?? "phrase",
-        simpleMode: !!c.simpleMode,
-        bilingualDisplay: !!c.bilingualDisplay,
-        language: app.language,
-        speechRate: clamp(app.speechRate ?? 0.9, 0.5, 1.5),
-        visibleVerbForms: app.visibleVerbForms,
-        visibleNounForms: app.visibleNounForms,
-        tilesPerRow: clamp(app.tilesPerRow ?? 0, 0, 12),
-      },
-      rewards: { stars: c.stars ?? 0, badges: c.badges ?? [], consecutiveDays: usage.consecutiveDays ?? 0 },
-    });
-    add("usagesummaries", `usage_${c.id}`, {
-      childId: c.id,
-      wordTotals: usage.wordTotals ?? {},
-      wordsByDay: usage.wordsByDay,
-      scheduleByDay: usage.scheduleByDay,
-      lastPlayedDate: usage.lastPlayedDate,
-      longestSentenceLength: usage.longestSentenceLength ?? 0,
-      longestSentenceWords: usage.longestSentenceWords ?? [],
-      sentencesSpoken: usage.sentencesSpoken ?? 0,
-      correctionsUsed: usage.correctionsUsed ?? 0,
-    });
-    for (const log of c.careLogs ?? []) {
-      add("carelogs", log.id, {
-        childId: c.id,
-        date: log.date,
-        mood: log.mood,
-        sensoryTriggers: log.sensoryTriggers ?? [],
-        meltdownDurationMin: log.meltdownDurationMin ?? 0,
-        communicationWins: log.communicationWins ?? "",
-        notes: log.notes ?? "",
-      });
-    }
-  }
-
-  // the board is shared by everyone on this device; it is stored with the first child
-  const owner = children[0];
-  if (owner) {
-    const cats = listCategories();
-    cats.forEach((cat: CustomCategory, ci) => {
-      add("shelves", cat.id, {
-        childId: owner.id,
-        name: cat.name,
-        icon: cat.icon,
-        imageUri: webUri(cat.imageUri),
-        color: cat.color,
-        order: cat.order ?? ci,
-        hidden: !!cat.hidden,
-        parentId: cat.parentCategoryId ?? null,
-        source: "manual",
-      });
-      cat.words.forEach((w, wi) => {
-        add("words", w.id, {
-          childId: owner.id,
-          shelfId: cat.id,
-          label: w.label,
-          phrase: w.phrase || w.label,
-          emoji: w.emoji,
-          imageUri: webUri(w.imageUri),
-          color: w.color,
-          order: w.order ?? wi,
-          hidden: !!w.hidden,
-          isCustom: !!w.isCustom,
-          useCount: w.useCount ?? 0,
-          useTextToSpeech: w.useTextToSpeech ?? true,
-          verbFormTag: w.verbFormTag ? FORM_TO_SERVER[w.verbFormTag] ?? null : null,
-        });
-      });
-    });
-  }
-  return out;
-}
 
 async function pushChanges(): Promise<number> {
   const sent = await readJson<Record<string, string>>(SENT_KEY, {});
-  const records = buildRecords();
+  const records = buildProfileRecords(loadChildren());
   const now = new Date().toISOString();
   const mutations: (Mutation & { key: string; hash: string })[] = [];
   const present = new Set<string>();
@@ -207,15 +114,8 @@ async function pushChanges(): Promise<number> {
     const hash = hashOf(r.data);
     if (sent[r.key] !== hash) mutations.push({ key: r.key, hash, table: r.table, id: r.id, action: "UPSERT", clientUpdatedAt: now, data: r.data });
   }
-  // removed on the device -> removed on the server
-  for (const key of Object.keys(sent)) {
-    if (present.has(key)) continue;
-    const [table, ...rest] = key.split(":");
-    const id = rest.join(":");
-    if (table === "children" || table === "usagesummaries") continue; // child removal is handled by the server
-    const owner = loadChildren()[0];
-    mutations.push({ key, hash: "", table, id, action: "DELETE", clientUpdatedAt: now, data: { childId: owner?.id } });
-  }
+  // Forget obsolete local bookkeeping without ever uploading old board tombstones.
+  for (const key of Object.keys(sent)) if (!present.has(key)) delete sent[key];
   if (mutations.length === 0) return 0;
 
   // children first: everything else belongs to a child
@@ -389,17 +289,12 @@ export function syncNow(): Promise<void> {
   return running;
 }
 
-/** Start background syncing: now, every few minutes, and shortly after the board changes. */
+/** Register this device and sync basic profiles; board changes never trigger a cloud upload. */
 export function startCloudConnect(): void {
   if (started) return;
   started = true;
   // admin verbs learned earlier are known even when offline
   readJson<VerbForms[]>(ADMIN_VERBS_KEY, []).then((list) => list.length && registerVerbForms(list));
-  void ensureCategoriesLoaded().then(() => syncNow());
+  void syncNow();
   setInterval(() => void syncNow(), SYNC_EVERY_MS);
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  subscribeCategories(() => {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => void syncNow(), 15000);
-  });
 }

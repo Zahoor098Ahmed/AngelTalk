@@ -34,10 +34,14 @@ services:
       NODE_ENV: production
       PORT: 4000
       REDIS_URL: redis://redis:6379
+      BACKUP_STORAGE_DIR: /app/.data/encrypted-backups
+    volumes:
+      - encrypted_backup_data:/app/.data/encrypted-backups
     depends_on:
       - mongodb
       - redis
 
 volumes:
+  encrypted_backup_data:
   mongo_data:
 

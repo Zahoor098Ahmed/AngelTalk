@@ -113,6 +113,7 @@ export class SyncService {
 
       const records = await config.model
         .find(queryFilter)
+        .select([...config.allowedFields, "ownerId", "clientUpdatedAt", "updatedAt", "deletedAt"].join(" "))
         .sort({ updatedAt: 1 })
         .limit(PULL_LIMIT - totalItemsFetched);
 
@@ -161,7 +162,7 @@ export class SyncService {
     const prepared: Prepared[] = [];
     mutations.forEach((m, i) => {
       if (!SYNC_TABLE_REGISTRY[m.table]) {
-        reject(i, `Unknown sync table: ${m.table}`);
+        reject(i, "Only basic profiles sync; personal app content stays on the device.");
         return;
       }
       const clientTime = new Date(m.clientUpdatedAt);
@@ -176,6 +177,8 @@ export class SyncService {
       }
       prepared.push({ i, m, childId, clientTime });
     });
+
+    if (prepared.length === 0) return { results: results as SyncMutationResult[], syncedAt: new Date().toISOString() };
 
     // 2. access: all children of this batch in one query
     const childIds = [...new Set(prepared.map((p) => p.childId))];

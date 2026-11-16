@@ -29,6 +29,7 @@ import ContentReviewQueueScreen from "./src/screens/ContentReviewQueueScreen";
 import VoiceCommandMatchScreen from "./src/screens/VoiceCommandMatchScreen";
 import QuickOnboardingScreen from "./src/screens/QuickOnboardingScreen";
 import SocialStoriesScreen from "./src/screens/SocialStoriesScreen";
+import { startAutomaticBackups } from "./src/modules/automaticBackup";
 import { startCloudConnect } from "./src/modules/cloudConnect";
 
 // web: no browser focus outline (black box) around text boxes; every app box already shows its own border
@@ -69,7 +70,7 @@ function AppInner() {
   const { ready, settings } = useSettings();
   // Connect to the Angel Talk server / admin panel in the background once local data is loaded
   useEffect(() => {
-    if (ready) startCloudConnect();
+    if (ready) { startCloudConnect(); startAutomaticBackups(); }
   }, [ready]);
 
   useEffect(() => {

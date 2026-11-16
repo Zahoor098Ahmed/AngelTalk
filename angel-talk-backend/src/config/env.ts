@@ -32,6 +32,7 @@ const envSchema = z.object({
   AWS_ACCESS_KEY_ID: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string().optional(),
   S3_BUCKET_NAME: z.string().default("angel-talk-media"),
+  BACKUP_STORAGE_DIR: z.string().default(".data/encrypted-backups"),
   
   // External Provider Keys
   GOOGLE_TTS_API_KEY: z.string().optional(),

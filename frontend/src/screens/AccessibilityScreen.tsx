@@ -10,6 +10,7 @@ import { playWord } from "../modules/audio";
 import { colors, radius } from "../theme";
 import { Ionicons } from "@expo/vector-icons";
 import SmartImage from "../components/SmartImage";
+import BackupSettings from "../components/BackupSettings";
 
 interface Props {
   onBack: () => void;
@@ -322,6 +323,7 @@ export default function AccessibilityScreen({ onBack }: Props) {
           </Pressable>
           {/* ---- backup ---- */}
           <Text style={styles.sectionTitle}>{t("setBackup", lang)}</Text>
+          <BackupSettings />
           <View style={styles.segRow}>
             <Pressable onPress={exportBoard} style={[styles.seg, { backgroundColor: colors.forestLight }]}>
               <Text style={[styles.segText, { color: colors.forestDark }]}>{t("setExport", lang)}</Text>

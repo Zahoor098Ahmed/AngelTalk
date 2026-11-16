@@ -13,7 +13,7 @@ export async function setupTestDb(): Promise<Express> {
   process.env.JWT_PIN_SECRET = "test_jwt_pin_secret_1234567890_32bytes!";
 
   if (!mongoServer) {
-    mongoServer = await MongoMemoryServer.create();
+    mongoServer = await MongoMemoryServer.create({ instance: { launchTimeout: 60000 } });
     const uri = mongoServer.getUri();
     await mongoose.connect(uri);
   }

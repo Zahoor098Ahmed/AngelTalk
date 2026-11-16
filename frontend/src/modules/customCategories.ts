@@ -1,4 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { deviceDataStorage } from "./deviceDataStorage";
+import { serializeLocalBoard, parseLocalBoard } from "./localBoardCodec";
 import type { CustomCategory, CustomWord, TileSize, LanguageCode } from "../types";
 import { starterLabel, wordLabel, canonicalWordEn, translateDynamic } from "./i18n";
 import { getPictogramUrl, isOneWordGuess, pictureFixFor, hasSymbolPicture } from "./aacPictograms";
@@ -43,7 +44,7 @@ async function removeOldBoards(): Promise<void> {
     try {
       if (typeof window !== "undefined" && window.localStorage) window.localStorage.removeItem(k);
     } catch { /* storage blocked */ }
-    await AsyncStorage.removeItem(k).catch(() => { });
+    await deviceDataStorage.removeItem(k).catch(() => { });
   }
 }
 const BACKUP_VERSION = 2;
@@ -98,7 +99,7 @@ let deletedKeysLoaded = false;
 async function ensureDeletedKeysLoaded() {
   if (deletedKeysLoaded) return;
   try {
-    const raw = await AsyncStorage.getItem(DELETED_KEYS_STORAGE);
+    const raw = await deviceDataStorage.getItem(DELETED_KEYS_STORAGE);
     if (raw) {
       const arr = JSON.parse(raw);
       if (Array.isArray(arr)) {
@@ -124,23 +125,23 @@ async function ensureDeletedKeysLoaded() {
       [RESTORED_FOOD_WORDS, (CLIENT_SHELVES.find((s) => s.name === "Food and Drinks")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
       [RESTORED_BODY_LIST, (CLIENT_SHELVES.find((s) => s.name === "Body")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
     ];
-    if (!(await AsyncStorage.getItem(PICTURES_RENEWED))) {
+    if (!(await deviceDataStorage.getItem(PICTURES_RENEWED))) {
       renewPictures = true;
-      AsyncStorage.setItem(PICTURES_RENEWED, "1").catch(() => { });
+      deviceDataStorage.setItem(PICTURES_RENEWED, "1").catch(() => { });
     }
     for (const [marker, back] of comeBack) {
-      if (await AsyncStorage.getItem(marker)) continue;
+      if (await deviceDataStorage.getItem(marker)) continue;
       const before = deletedItemKeys.size;
       deletedItemKeys = new Set([...deletedItemKeys].filter((k) => !(k.startsWith("word::") && back.includes(k.slice(k.lastIndexOf("::") + 2)))));
       if (deletedItemKeys.size !== before) persistDeletedKeys();
-      AsyncStorage.setItem(marker, "1").catch(() => { });
+      deviceDataStorage.setItem(marker, "1").catch(() => { });
     }
   } catch { }
   deletedKeysLoaded = true;
 }
 
 function persistDeletedKeys() {
-  AsyncStorage.setItem(DELETED_KEYS_STORAGE, JSON.stringify([...deletedItemKeys])).catch(() => { });
+  deviceDataStorage.setItem(DELETED_KEYS_STORAGE, JSON.stringify([...deletedItemKeys])).catch(() => { });
 }
 
 export function isDeletedCategory(name: string, parentId?: string | null): boolean {
@@ -252,19 +253,21 @@ async function loadCategories(): Promise<void> {
   await removeOldBoards();
   await ensureDeletedKeysLoaded();
   if (loaded) return;
+  let hasSavedBoard = false;
   try {
-    let raw = await AsyncStorage.getItem(KEY);
+    let raw = await deviceDataStorage.getItem(KEY);
     if (!raw && typeof window !== "undefined" && window.localStorage) {
       raw = window.localStorage.getItem(KEY);
     }
-    cache = migrate(raw ? (JSON.parse(raw) as CustomCategory[]) : []);
+    const saved = raw ? parseLocalBoard(raw) : null;
+    hasSavedBoard = Array.isArray(saved);
+    cache = migrate(hasSavedBoard ? saved as CustomCategory[] : []);
   } catch {
     cache = [];
   }
   loaded = true;
-  if (cache.length === 0) {
+  if (!hasSavedBoard) {
     seedStarterBoard();
-  } else {
   }
   // Also on a fresh install: the starter board only holds the top-level folders,
   // their sub-folders and words (Family, Drinks, Verbs A–Z…) are filled in here.
@@ -2596,38 +2599,20 @@ function seedStarterBoard() {
 
 function persist(): void {
   try {
-    const raw = JSON.stringify(cache);
-    if (typeof window !== "undefined" && window.localStorage) {
-      try {
-        window.localStorage.setItem(KEY, raw);
-      } catch (e) {
-        console.warn("[customCategories] window.localStorage.setItem failed:", e);
-      }
-    }
-    AsyncStorage.setItem(KEY, raw).catch((err) => {
-      console.warn("[customCategories] AsyncStorage setItem failed:", err);
-      try {
-        const leanCache = cache.map((cat) => ({
-          ...cat,
-          imageUri: cat.imageUri && cat.imageUri.startsWith("data:") && cat.imageUri.length > 50000 ? undefined : cat.imageUri,
-          words: cat.words.map((w) => {
-            if (w.imageUri && w.imageUri.startsWith("data:") && w.imageUri.length > 50000) {
-              return { ...w, imageUri: getPictogramUrl(w.label) || undefined };
-            }
-            return w;
-          }),
-        }));
-        const leanRaw = JSON.stringify(leanCache);
-        if (typeof window !== "undefined" && window.localStorage) {
-          try { window.localStorage.setItem(KEY, leanRaw); } catch { }
-        }
-        AsyncStorage.setItem(KEY, leanRaw).catch(() => { });
-      } catch { }
+    const raw = serializeLocalBoard(cache);
+    deviceDataStorage.setItem(KEY, raw).catch((error) => {
+      console.error("[customCategories] Could not save the local board:", error);
     });
-  } catch (e) {
-    console.error("[customCategories] persist serialization failed:", e);
+  } catch (error) {
+    console.error("[customCategories] Could not serialize the local board:", error);
   }
   notifyListeners();
+}
+
+/** Reload a restored device database, including deletion markers. */
+export async function reloadCategoriesFromDevice(): Promise<void> {
+  cache = []; loaded = false; loadingPromise = null; deletedKeysLoaded = false; deletedItemKeys = new Set();
+  await ensureCategoriesLoaded();
 }
 
 export function listCategories(): CustomCategory[] {

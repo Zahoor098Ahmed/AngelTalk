@@ -18,6 +18,7 @@ import { routinesClinicalRouter } from "./modules/routines-clinical/routines-cli
 import { syncRouter } from "./modules/sync/sync.routes";
 import { pdplRouter } from "./modules/pdpl/pdpl.routes";
 import { adminRouter } from "./modules/admin/admin.routes";
+import { backupsRouter } from "./modules/backups/backups.routes";
 import { contentRouter } from "./modules/content/content.routes";
 
 export function createApp(): Express {
@@ -40,6 +41,9 @@ export function createApp(): Express {
     })
   );
 
+  // Backup endpoint accepts only sealed ciphertext and needs room for custom pictures/audio.
+  app.use("/api/v1/backups", express.json({ limit: "48mb" }));
+
   // Body Parsing (Strict 2MB limit)
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ extended: true, limit: "2mb" }));
@@ -58,6 +62,7 @@ export function createApp(): Express {
 
   // Mount API Routers (Prefix /api/v1)
   const apiPrefix = "/api/v1";
+  app.use(`${apiPrefix}/backups`, backupsRouter);
   app.use(apiPrefix, authRouter);
   app.use(apiPrefix, devicesRouter);
   app.use(apiPrefix, consentsRouter);
