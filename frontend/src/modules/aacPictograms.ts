@@ -9,7 +9,7 @@ import { getVerbForms } from "./verbForms";
 import PECS_PICTURES from "./pecsPictograms.json";
 import PICTURE_FIXES from "./pictureFixes.json";
 import SYMBOL_PICTURES from "./symbolPictures.json";
-import UNIQUE_PICTURES from "./uniquePictures.json";
+import UNIQUE_PICTURES from "./uniquePictures";
 
 /** Pictures picked from ARASAAC for the PECS words that have no exact dictionary entry. */
 const pecsPictures: Record<string, number> = PECS_PICTURES as Record<string, number>;

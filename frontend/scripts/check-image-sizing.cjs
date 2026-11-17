@@ -7,7 +7,7 @@ const root = 'frontend/src/modules/';
 const compile = name => ts.transpile(fs.readFileSync(root + name + '.ts', 'utf8'), { module: ts.ModuleKind.CommonJS });
 const bounds = compile('imageContentBounds');
 const normalize = compile('normalizeWordImage');
-const pictures = JSON.parse(fs.readFileSync(root + 'uniquePictures.json', 'utf8'));
+const pictures = require('./load-word-pictures.cjs');
 const embedded = Object.entries(pictures).filter(([, uri]) => remote ? uri.startsWith('http') : uri.startsWith('data:'));
 fs.writeFileSync(dir + '/' + prefix + '-data.js', 'window.auditPictures=' + JSON.stringify(embedded) + ';');
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial;background:#eef2f6}#samples{display:flex;flex-wrap:wrap;gap:12px}figure{background:white;margin:0;padding:0;text-align:center;overflow:hidden;border-radius:16px}img{width:260px;height:260px;object-fit:cover}figcaption{font-weight:bold}</style></head><body><pre id="result">RUNNING</pre><div id="samples"></div><script src="${prefix}-data.js"></script><script>

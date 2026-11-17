@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from "expo-file-system/legacy";
-import { Platform } from "react-native";
+import { Image as NativeImage, Platform } from "react-native";
 
 /**
  * Internet image sources for the admin "add a picture" flow.
@@ -234,8 +234,8 @@ export async function saveGeneratedImage(source: string, wordId: string): Promis
 }
 
 /**
- * Compresses an image for AAC tile use (down to max 256x256, JPEG 0.75).
- * On Web: uses HTML5 Canvas to scale down large data URLs or blobs to ~20KB.
+ * Preserves clear AAC tile images up to 1024 pixels with transparency.
+ * On Web: uses HTML5 Canvas to resize large data URLs or blobs without JPEG artifacts.
  * On Native: uses expo-image-manipulator.
  */
 export async function compressImageForTile(uri: string): Promise<string> {
@@ -258,7 +258,7 @@ export async function compressImageForTile(uri: string): Promise<string> {
         img.crossOrigin = "anonymous";
         img.onload = () => {
           try {
-            const maxDim = 256;
+            const maxDim = 1024;
             let w = img.naturalWidth || img.width;
             let h = img.naturalHeight || img.height;
             if (w > maxDim || h > maxDim) {
@@ -275,8 +275,10 @@ export async function compressImageForTile(uri: string): Promise<string> {
             canvas.height = h;
             const ctx = canvas.getContext("2d");
             if (!ctx) return resolve(uri);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
             ctx.drawImage(img, 0, 0, w, h);
-            const compressed = canvas.toDataURL("image/jpeg", 0.75);
+            const compressed = canvas.toDataURL("image/png");
             resolve(compressed);
           } catch {
             resolve(uri);
@@ -292,10 +294,15 @@ export async function compressImageForTile(uri: string): Promise<string> {
 
   try {
     const ImageManipulator = await import("expo-image-manipulator");
+    const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) =>
+      NativeImage.getSize(uri, (width, height) => resolve({ width, height }), reject));
+    const resize = Math.max(dimensions.width, dimensions.height) > 1024
+      ? [{ resize: dimensions.width >= dimensions.height ? { width: 1024 } : { height: 1024 } }]
+      : [];
     const manip = await ImageManipulator.manipulateAsync(
       uri,
-      [{ resize: { width: 256, height: 256 } }],
-      { compress: 0.75, format: ImageManipulator.SaveFormat.JPEG }
+      resize,
+      { compress: 1, format: ImageManipulator.SaveFormat.PNG }
     );
     return manip.uri;
   } catch {

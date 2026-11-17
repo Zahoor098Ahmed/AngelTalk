@@ -5,7 +5,7 @@ import { starterLabel, wordLabel, canonicalWordEn, translateDynamic } from "./i1
 import { getPictogramUrl, isOneWordGuess, pictureFixFor, hasSymbolPicture } from "./aacPictograms";
 import { VERB_FORMS_LIST, getVerbForms, generateAllVerbForms, isContinuousForm, sFormOf, conjugateRegularVerb, KNOWN_REGULAR_VERBS, registerVerbForms, registerSForm, type VerbForms } from "./verbForms";
 import PECS_EMOJI from "./pecsEmoji.json";
-import UNIQUE_PICTURES from "./uniquePictures.json";
+import UNIQUE_PICTURES from "./uniquePictures";
 import HOME_PICTURES from "./homeCategoryPictures.json";
 import { CLIENT_SHELVES, CLIENT_VERBS } from "./clientVocabulary";
 import { PECS_SHELVES, PECS_SUBS, PECS_VERBS, PECS_FOLDER_NAMES_AR, cleanPecsWord, capFirst } from "./pecsVocabulary";

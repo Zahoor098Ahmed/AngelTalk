@@ -40,7 +40,7 @@ function endpointFor(path: string): { url: string; headers: Record<string, strin
 
 export const SENSORY_STYLE_GUIDE =
   "Flat matte children's book illustration. Single clear centred subject. " +
-  "Plain white background, no scene clutter. Soft calm colours, gentle outlines. " +
+  "Plain white background, no ground shadow, no cast shadow, no grey oval underneath, no scene clutter. Soft calm colours, gentle outlines. " +
   "No gloss, no reflections, no 3D shine, no text. Consistent simple style suitable " +
   "for a child with autism.";
 

@@ -3,7 +3,7 @@ import { Image, Platform, StyleSheet, View, type ImageProps } from "react-native
 import { SvgUri } from "react-native-svg";
 import { normalizeWordImage } from "../modules/normalizeWordImage";
 
-/** Shared image frame; word cards request cover to fill their entire picture area. */
+/** Shared, shadow-free picture frame for word images throughout the app. */
 export default function SmartImage({ source, style, resizeMode = "contain", ...rest }: ImageProps) {
   const uri = (source as { uri?: string } | undefined)?.uri;
   const [normalized, setNormalized] = useState<{ original: string; uri: string }>();
@@ -24,7 +24,7 @@ export default function SmartImage({ source, style, resizeMode = "contain", ...r
         {uri && Platform.OS !== "web" && /\.svg(\?|$)/i.test(uri) ? (
           <SvgUri uri={uri} width="100%" height="100%" onError={() => rest.onError?.({} as never)} />
         ) : (
-          <Image {...rest} source={displaySource} style={StyleSheet.absoluteFill} resizeMode={resizeMode} />
+          <Image {...rest} source={displaySource} style={StyleSheet.absoluteFill} resizeMode={resizeMode} fadeDuration={0} />
         )}
       </View>
     </View>
@@ -32,6 +32,6 @@ export default function SmartImage({ source, style, resizeMode = "contain", ...r
 }
 
 const styles = StyleSheet.create({
-  frame: { overflow: "hidden", alignItems: "center", justifyContent: "center" },
+  frame: { shadowOpacity: 0, shadowRadius: 0, elevation: 0, boxShadow: "none", overflow: "hidden", alignItems: "center", justifyContent: "center" },
   picture: { width: "100%", height: "100%" },
 });

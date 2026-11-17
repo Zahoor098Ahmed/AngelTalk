@@ -2725,3 +2725,184 @@
     - `.gitattributes`
     - `frontend/scripts/finish-backup-storage.cjs`
     - `frontend/src/components/BackupSettings.tsx`
+
+- **16:38:22 – 16:38:22** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+## 2026-11-17
+
+- **09:53:32 – 12:30:18** ⏱️ Active Coding Session (**157 min**)
+  - 📁 **Files Worked On (3):**
+    - `.gitignore`
+    - `.gitattributes`
+    - `docker-compose.yml`
+
+- **12:31:07 – 12:58:17** ⏱️ Active Coding Session (**27 min**)
+  - 📁 **Files Worked On (6):**
+    - `.gitattributes`
+    - `frontend/src/modules/normalizeWordImage.ts`
+    - `frontend/src/components/SmartImage.tsx`
+    - `frontend/src/modules/imageSearch.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/HomeScreen.tsx`
+
+- **13:15:33 – 13:32:51** ⏱️ Active Coding Session (**17 min**)
+  - 📁 **Files Worked On (30):**
+    - `frontend/assets/image-edits/vehicles-no-shadow/bus.png`
+    - `frontend/assets/image-edits/vehicles-no-shadow/caboose.png`
+    - `frontend/assets/image-edits/vehicles-no-shadow/car.png`
+    - `frontend/assets/image-edits/vehicles-no-shadow/concrete mixer truck.png`
+    - `frontend/assets/image-edits/vehicles-no-shadow/crane.png`
+    - `frontend/assets/image-edits/vehicles-no-shadow/dump truck.png`
+    - `frontend/src/modules/uniquePictures.json`
+    - `frontend/src/modules/aiImage.ts`
+    - `frontend/src/modules/wordImage.ts`
+    - `frontend/scripts/remove-library-shadows.py`
+    - `frontend/assets/image-edits/library-no-shadow/audit.json`
+    - `frontend/assets/image-edits/library-no-shadow/sample-review.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-00.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-01.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-02.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-03.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-04.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-05.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-06.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-07.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-08.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-09.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-10.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-11.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-12.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-00.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-01.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-02.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-03.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-04.jpg`
+
+- **13:50:52 – 14:51:00** ⏱️ Active Coding Session (**60 min**)
+  - 📁 **Files Worked On (30):**
+    - `frontend/scripts/remove-library-shadows.py`
+    - `frontend/assets/image-edits/library-no-shadow/changed-00.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-01.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-02.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-03.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-04.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-05.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-06.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-07.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-08.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-09.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-10.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-11.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/changed-12.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-00.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-01.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-02.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-03.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-04.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-05.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-06.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/unchanged-07.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/audit.json`
+    - `frontend/assets/image-edits/library-no-shadow/sample-review.jpg`
+    - `frontend/scripts/__pycache__/remove-library-shadows.cpython-312.pyc`
+    - `frontend/assets/image-edits/library-no-shadow/connected-review.jpg`
+    - `frontend/assets/image-edits/library-no-shadow/a424c53c292695ac.png`
+    - `frontend/assets/image-edits/library-no-shadow/27e14a932e023f1f.png`
+    - `frontend/assets/image-edits/library-no-shadow/acc89a2ca56bfbe3.png`
+    - `frontend/assets/image-edits/library-no-shadow/e562662d95911a10.png`
+
+- **15:29:47 – 15:45:06** ⏱️ Active Coding Session (**15 min**)
+  - 📁 **Files Worked On (30):**
+    - `get_fruits_drinks.js`
+    - `fruits_words.json`
+    - `drinks_words.json`
+    - `inspect_fruits_drinks.js`
+    - `dump_fd.js`
+    - `inspect_fd/Drinks_arabic_coffee.jpg`
+    - `inspect_fd/Drinks_babyccino.jpg`
+    - `inspect_fd/Drinks_black_tea.jpg`
+    - `inspect_fd/Drinks_bubble_tea.jpg`
+    - `inspect_fd/Drinks_cappuccino.jpg`
+    - `inspect_fd/Drinks_chocolate_milk.jpg`
+    - `inspect_fd/Drinks_coconut_water.jpg`
+    - `inspect_fd/Drinks_coffee.jpg`
+    - `inspect_fd/Drinks_coffee_beans.jpg`
+    - `inspect_fd/Drinks_cola.jpg`
+    - `inspect_fd/Drinks_cordial.jpg`
+    - `inspect_fd/Drinks_drink.jpg`
+    - `inspect_fd/Drinks_drinking_fountain.jpg`
+    - `inspect_fd/Drinks_energy_drink.jpg`
+    - `inspect_fd/Drinks_flavored_milk.jpg`
+    - `inspect_fd/Drinks_fresh_juice.jpg`
+    - `inspect_fd/Drinks_fruit_punch.jpg`
+    - `inspect_fd/Drinks_green_tea.jpg`
+    - `inspect_fd/Drinks_ground_coffee.jpg`
+    - `inspect_fd/Drinks_horchata.jpg`
+    - `inspect_fd/Drinks_hot_chocolate.jpg`
+    - `inspect_fd/Drinks_ice.jpg`
+    - `inspect_fd/Drinks_iced_coffee.jpg`
+    - `inspect_fd/Drinks_iced_tea.jpg`
+    - `inspect_fd/Drinks_juice.jpg`
+
+- **16:03:02 – 16:53:14** ⏱️ Active Coding Session (**50 min**)
+  - 📁 **Files Worked On (30):**
+    - `get_breads.js`
+    - `breads_words.json`
+    - `inspect_breads/arabic_bread.jpg`
+    - `inspect_breads/bagel.jpg`
+    - `inspect_breads/baguette_roll.jpg`
+    - `inspect_breads/biscuit.jpg`
+    - `inspect_breads/bread.jpg`
+    - `inspect_breads/bread_roll.jpg`
+    - `inspect_breads/breadsticks.jpg`
+    - `inspect_breads/brioche.jpg`
+    - `inspect_breads/bun.jpg`
+    - `inspect_breads/challah.jpg`
+    - `inspect_breads/chapati.jpg`
+    - `inspect_breads/croissant.jpg`
+    - `inspect_breads/croutons.jpg`
+    - `inspect_breads/crumpet.jpg`
+    - `inspect_breads/english_muffin.jpg`
+    - `inspect_breads/focaccia.jpg`
+    - `inspect_breads/fried_dough.jpg`
+    - `inspect_breads/garlic_bread.jpg`
+    - `inspect_breads/ka_ak.jpg`
+    - `inspect_breads/kulcha.jpg`
+    - `inspect_breads/lavash.jpg`
+    - `inspect_breads/malt_loaf.jpg`
+    - `inspect_breads/matzah.jpg`
+    - `inspect_breads/multigrain_bread.jpg`
+    - `inspect_breads/naan.jpg`
+    - `inspect_breads/paratha.jpg`
+    - `inspect_breads/pastry.jpg`
+    - `inspect_breads/pita_bread.jpg`
+
+- **17:05:53 – 17:20:46** ⏱️ Active Coding Session (**15 min**)
+  - 📁 **Files Worked On (25):**
+    - `process_real_breads.py`
+    - `real_clean_breads/brioche.jpg`
+    - `real_clean_breads/bun.jpg`
+    - `real_clean_breads/challah.jpg`
+    - `real_clean_breads/chapati.jpg`
+    - `real_clean_breads/croissant.jpg`
+    - `real_clean_breads/croutons.jpg`
+    - `real_clean_breads/crumpet.jpg`
+    - `real_clean_breads/kulcha.jpg`
+    - `real_clean_breads/lavash.jpg`
+    - `real_clean_breads/matzah.jpg`
+    - `real_clean_breads/multigrain_bread.jpg`
+    - `real_clean_breads/naan.jpg`
+    - `real_clean_breads/pastry.jpg`
+    - `real_clean_breads/scones.jpg`
+    - `real_clean_breads/sourdough_bread.jpg`
+    - `real_clean_breads/taftan.jpg`
+    - `real_clean_breads/toast.jpg`
+    - `real_clean_breads/tortilla.jpg`
+    - `real_clean_breads/whole_wheat_bread.jpg`
+    - `update_breads_with_real_photos.py`
+    - `frontend/src/modules/uniquePictures.json`
+    - `daf_breads`
+    - `real_clean_breads`
+    - `cmp_commits_food.py`

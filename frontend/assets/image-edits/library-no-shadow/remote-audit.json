@@ -1,0 +1,22 @@
+{
+  "scanned": 465,
+  "changed": [],
+  "errors": [
+    {
+      "uri": "https://globalsymbols.com/uploads/production/image/imagefile/6154/13_6154_6c385fc1-ba37-4d73-a585-62535dc827b6.svg",
+      "error": "cannot identify image file 'D:\\\\Angel Talk\\\\frontend\\\\.cache\\\\shadow-remote\\\\4af2231723b6a7b780e6.source'"
+    },
+    {
+      "uri": "https://globalsymbols.com/uploads/production/image/imagefile/5151/13_5151_b2ca0b8c-2fc1-4298-84cc-dc7cfb39b190.svg",
+      "error": "cannot identify image file 'D:\\\\Angel Talk\\\\frontend\\\\.cache\\\\shadow-remote\\\\c6c44f1450a57eb0bd52.source'"
+    },
+    {
+      "uri": "https://globalsymbols.com/uploads/production/image/imagefile/6020/13_6020_b3a2bebc-5057-426f-8db2-8a0895f15f3a.svg",
+      "error": "cannot identify image file 'D:\\\\Angel Talk\\\\frontend\\\\.cache\\\\shadow-remote\\\\54b5fe9e68a859b6aa24.source'"
+    },
+    {
+      "uri": "https://globalsymbols.com/uploads/production/image/imagefile/5599/13_5599_1965b25b-f25f-4a65-9060-818a2708475c.svg",
+      "error": "cannot identify image file 'D:\\\\Angel Talk\\\\frontend\\\\.cache\\\\shadow-remote\\\\afb8eda3d3fe66f3a48e.source'"
+    }
+  ]
+}

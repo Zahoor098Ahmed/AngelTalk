@@ -38,7 +38,7 @@ import {
 import { playWord, playSentence, stopSentence, preloadTTS, type SpokenWord } from "../modules/audio";
 import { dictUrl } from "../modules/imageLibrary";
 import { getPictogramUrl, pictureFixFor } from "../modules/aacPictograms";
-import UNIQUE_PICTURES from "../modules/uniquePictures.json";
+import UNIQUE_PICTURES from "../modules/uniquePictures";
 import { recordWordUsage, recordSentencePlayed, recordCorrectionUsed } from "../modules/storage";
 import { ensurePredictionLoaded, learnSentence, predictNext, predictPhrases, searchWords, suggestionTiles, tileForText } from "../modules/wordPrediction";
 import { tapFeedback, selectFeedback } from "../modules/haptics";
@@ -2090,11 +2090,8 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
     backgroundColor: "#ffffff",
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   tilePressed: {
     transform: [{ scale: 0.95 }],

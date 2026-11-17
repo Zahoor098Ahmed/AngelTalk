@@ -1,4 +1,4 @@
-﻿import UNIQUE_PICTURES from "./uniquePictures.json";
+﻿import UNIQUE_PICTURES from "./uniquePictures";
 import HOME_PICTURES from "./homeCategoryPictures.json";
 
 const PREFIX = "angeltalk-builtin-image:";

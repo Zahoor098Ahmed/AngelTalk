@@ -164,7 +164,7 @@ export function setImageProvider(p: ImageProvider | null) {
 }
 
 export const SENSORY_STYLE_GUIDE =
-  "Flat matte children's illustration, single centered subject, plain white background, " +
+  "Flat matte children's illustration, single centered subject, plain white background, no ground shadow, no cast shadow, no grey oval underneath, " +
   "soft calm colors, no gloss, no reflections, no 3D shine, no background scene, consistent style.";
 
 /** Cache-first image lookup. Returns undefined when no provider is configured. */

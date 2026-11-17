@@ -12,11 +12,13 @@ function loadModule(name, mocks) {
   return exports;
 }
 (async () => {
-  const unique = require('../src/modules/uniquePictures.json');
+  const unique = require('./load-word-pictures.cjs');
   const home = require('../src/modules/homeCategoryPictures.json');
-  const codec = loadModule('localBoardCodec',{'./uniquePictures.json':{__esModule:true,default:unique},'./homeCategoryPictures.json':{__esModule:true,default:home}});
+  const codec = loadModule('localBoardCodec',{'./uniquePictures':{__esModule:true,default:unique},'./homeCategoryPictures.json':{__esModule:true,default:home}});
+  const builtInPicture=Object.values(unique).find(uri=>uri.startsWith('data:'));
+  assert.ok(builtInPicture,'The complete bundled dictionary must contain embedded images');
   const customPicture='data:image/png;base64,CUSTOM_LOCAL_PICTURE';
-  const board=[{id:'food',name:'Food',words:[{id:'bake',label:'Bake',imageUri:unique.bake},{id:'my-word',label:'My private word',imageUri:customPicture}]}];
+  const board=[{id:'food',name:'Food',words:[{id:'bake',label:'Bake',imageUri:builtInPicture},{id:'my-word',label:'My private word',imageUri:customPicture}]}];
   const raw=codec.serializeLocalBoard(board);
   assert.deepEqual(codec.parseLocalBoard(raw),board);
   assert.deepEqual(codec.parseLocalBoard(JSON.stringify(board)),board);

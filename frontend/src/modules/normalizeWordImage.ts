@@ -43,7 +43,11 @@ export function normalizeWordImage(uri: string): Promise<string> {
           ctx.drawImage(img, 0, 0, scan.width, scan.height);
           const bounds = imageContentBounds(ctx.getImageData(0, 0, scan.width, scan.height).data, scan.width, scan.height);
           const output = document.createElement("canvas");
-          const fit = 256 / Math.max(bounds.width, bounds.height);
+          const sourceWidth = bounds.width * img.naturalWidth / scan.width;
+          const sourceHeight = bounds.height * img.naturalHeight / scan.height;
+          // Preserve source detail for large cards and high-density screens.
+          const maxSize = Math.min(1024, Math.max(sourceWidth, sourceHeight));
+          const fit = maxSize / Math.max(bounds.width, bounds.height);
           output.width = Math.max(1, Math.round(bounds.width * fit));
           output.height = Math.max(1, Math.round(bounds.height * fit));
           const out = output.getContext("2d");

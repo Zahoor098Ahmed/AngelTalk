@@ -42,3 +42,6 @@ coverage/
 *.vsix
 .DS_Store
 Thumbs.db
+
+# Python image maintenance scripts
+__pycache__/

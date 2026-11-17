@@ -1,8 +1,8 @@
 ﻿const fs=require('fs'),ts=require('../node_modules/typescript'),assert=require('node:assert/strict');
 function load(name,mocks={}){const result={};new Function('require','exports',ts.transpile(fs.readFileSync('frontend/src/modules/'+name+'.ts','utf8'),{module:ts.ModuleKind.CommonJS}))(id=>{if(!(id in mocks))throw Error('Unexpected import '+id);return mocks[id];},result);return result;}
-const unique=require('../src/modules/uniquePictures.json');
+const unique=require('./load-word-pictures.cjs');
 const home=require('../src/modules/homeCategoryPictures.json');
-const codec=load('localBoardCodec',{'./uniquePictures.json':unique,'./homeCategoryPictures.json':home});
+const codec=load('localBoardCodec',{'./uniquePictures':unique,'./homeCategoryPictures.json':home});
 const verbs=load('verbForms');
 const vocabulary=load('clientVocabulary');
 const pecs=load('pecsVocabulary');
@@ -11,7 +11,7 @@ function boardSession(data){const local={getItem:async k=>data.get(k)??null,setI
 './i18n':{starterLabel:s=>s,wordLabel:s=>s,canonicalWordEn:s=>s,translateDynamic:async s=>s},
 './aacPictograms':{getPictogramUrl:s=>unique[s.toLowerCase()]||null,isOneWordGuess:()=>false,pictureFixFor:()=>undefined,hasSymbolPicture:s=>!!unique[s.toLowerCase()]},
 './verbForms':verbs,'./pecsEmoji.json':require('../src/modules/pecsEmoji.json'),
-'./uniquePictures.json':unique,'./homeCategoryPictures.json':home,'./clientVocabulary':vocabulary,'./pecsVocabulary':pecs,
+'./uniquePictures':unique,'./homeCategoryPictures.json':home,'./clientVocabulary':vocabulary,'./pecsVocabulary':pecs,
 });}
 const snapshot=board=>board.listCategories().map(c=>({name:c.name,words:c.words.map(w=>w.label).sort()})).sort((a,b)=>a.name.localeCompare(b.name));
 (async()=>{

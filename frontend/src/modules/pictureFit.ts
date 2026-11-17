@@ -1,4 +1,4 @@
-import UNIQUE_PICTURES from "./uniquePictures.json";
+import UNIQUE_PICTURES from "./uniquePictures";
 
 /**
  * How a word picture should fill its square box.

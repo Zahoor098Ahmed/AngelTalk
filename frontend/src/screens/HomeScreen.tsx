@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
   catCard: {
     width: "31%", flexGrow: 1, maxWidth: "32%", minWidth: 96, backgroundColor: "#ffffff", borderRadius: 20,
     borderWidth: 1, borderColor: "#efe9e1", padding: 10, alignItems: "center", gap: 8,
-    shadowColor: "#7a5c3e", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
+    shadowOpacity: 0, elevation: 0,
   },
   catCardTablet: { width: "18%", maxWidth: "19.2%" },
   catPicBox: { width: "100%", aspectRatio: 1.295, borderRadius: 16, alignItems: "center", justifyContent: "center" },
