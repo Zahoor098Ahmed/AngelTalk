@@ -308,6 +308,8 @@ function CardPic({
   label,
   imageUri,
   exact,
+  crisp,
+  softenRed,
   emoji,
   size = 44,
 }: {
@@ -315,6 +317,8 @@ function CardPic({
   imageUri?: string;
   /** Show imageUri as given (a category's picture), never the word's own picture. */
   exact?: boolean;
+  crisp?: boolean;
+  softenRed?: boolean | "all" | "health";
   emoji: string;
   size?: number;
 }) {
@@ -411,6 +415,8 @@ function CardPic({
         source={{ uri }}
         style={{ width: size, height: size }}
         resizeMode="contain"
+        crisp={crisp}
+        softenRed={softenRed}
         onError={() => setImgError(true)}
       />
     );
@@ -633,6 +639,19 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
 
   const currentId = path[path.length - 1] ?? null;
   const current = currentId ? getCategory(currentId) : null;
+  const folderName = (current?.seedName || current?.name)?.toLowerCase();
+  const softenBrightColors = folderName === "places" ||
+    !!folderName?.startsWith("hygiene and ") ||
+    !!folderName?.startsWith("money and ") ||
+    !!folderName?.startsWith("music, instruments");
+  const openFolderNames = path.map((id) => {
+    const category = getCategory(id);
+    return (category?.seedName || category?.name)?.toLowerCase();
+  });
+  const inFoodAndDrinks = openFolderNames.includes("food and drinks");
+  const inHealthAndMedical = openFolderNames.includes("health and medical");
+  const inAlphabets = openFolderNames.includes("alphabets and numerals");
+  const redTreatment = inHealthAndMedical ? "health" : softenBrightColors ? "all" : true;
   const folders: CustomCategory[] = useMemo(
     () => (currentId ? visibleChildCategories(currentId) : visibleTopLevelCategories()),
     [currentId, ready, tick],
@@ -1499,6 +1518,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                           imageUri={w.imageUri}
                           emoji={w.emoji}
                           size={cardPicSize}
+                          crisp={!inFoodAndDrinks && !inAlphabets}
+                          softenRed={redTreatment}
                         />
                       </View>
                       <View style={styles.wordLabelBar}>

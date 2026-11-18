@@ -2879,8 +2879,8 @@
     - `inspect_breads/pastry.jpg`
     - `inspect_breads/pita_bread.jpg`
 
-- **17:05:53 – 17:20:46** ⏱️ Active Coding Session (**15 min**)
-  - 📁 **Files Worked On (25):**
+- **17:05:53 – 17:29:37** ⏱️ Active Coding Session (**24 min**)
+  - 📁 **Files Worked On (30):**
     - `process_real_breads.py`
     - `real_clean_breads/brioche.jpg`
     - `real_clean_breads/bun.jpg`
@@ -2906,3 +2906,209 @@
     - `daf_breads`
     - `real_clean_breads`
     - `cmp_commits_food.py`
+    - `.gitattributes`
+    - `all_food_words.json`
+    - `check_backlog_diff.js`
+    - `check_commit_bg.js`
+    - `check_cutoffs.ps1`
+
+- **18:21:26 – 18:22:38** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (3):**
+    - `.gitignore`
+    - `docker-compose.yml`
+    - `.gitattributes`
+
+- **18:45:22 – 18:48:49** ⏱️ Active Coding Session (**3 min**)
+  - 📁 **Files Worked On (30):**
+    - `frontend/scripts/word_picture_data.py`
+    - `frontend/scripts/__pycache__/word_picture_data.cpython-312.pyc`
+    - `frontend/src/modules/uniquePictures.json`
+    - `frontend/src/modules/uniquePictures.part-01.json`
+    - `frontend/src/modules/uniquePictures.part-02.json`
+    - `frontend/src/modules/uniquePictures.part-03.json`
+    - `frontend/src/modules/uniquePictures.part-04.json`
+    - `frontend/src/modules/uniquePictures.part-05.json`
+    - `frontend/src/modules/uniquePictures.ts`
+    - `frontend/src/modules/aacPictograms.ts`
+    - `frontend/src/modules/customCategories.ts`
+    - `frontend/src/modules/localBoardCodec.ts`
+    - `frontend/src/modules/pictureFit.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/scripts/load-word-pictures.cjs`
+    - `frontend/scripts/audit-remote-shadows.py`
+    - `frontend/scripts/check-image-sizing.cjs`
+    - `frontend/scripts/remove-library-shadows.py`
+    - `frontend/scripts/test-board-reload.cjs`
+    - `frontend/scripts/test-local-board-privacy.cjs`
+    - `frontend/scripts/verify-library-shadows.py`
+    - `check_backlog_diff.js`
+    - `check_commit_bg.js`
+    - `trace_food_commits.js`
+    - `save_views.js`
+    - `extract_food.js`
+    - `dump_fd.js`
+    - `save_samples.js`
+    - `download_test_fd.js`
+    - `restore_food.js`
+
+## 2026-11-18
+
+- **09:45:10 – 09:48:46** ⏱️ Active Coding Session (**4 min**)
+  - 📁 **Files Worked On (30):**
+    - `.gitignore`
+    - `.gitattributes`
+    - `docker-compose.yml`
+    - `all_food_words.json`
+    - `trace_food_commits.js`
+    - `save_views.js`
+    - `save_samples.js`
+    - `DOCUMENTATION.md`
+    - `restore_food.js`
+    - `count_food_images.js`
+    - `README.md`
+    - `print_fd_list.js`
+    - `compare_food_commits.js`
+    - `list_categories.js`
+    - `compare_78_daf.js`
+    - `inspect_fruits_drinks.js`
+    - `check_missing_food.js`
+    - `check_food_keys_current.js`
+    - `check_food_keys.js`
+    - `check_food_diffs.js`
+    - `check_fd_dimensions.ps1`
+    - `check_edges.js`
+    - `check_cutoffs.ps1`
+    - `check_commit_bg.js`
+    - `check_backlog_diff.js`
+    - `BACKEND_AND_DATABASE_WORKFLOW.md`
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `inspect_diff_types.js`
+    - `get_fruits_drinks.js`
+    - `get_food_words.js`
+
+- **09:58:46 – 10:47:17** ⏱️ Active Coding Session (**49 min**)
+  - 📁 **Files Worked On (10):**
+    - `frontend/src/modules/normalizeWordImage.ts`
+    - `frontend/src/modules/vehiclePictureReplacements.json`
+    - `frontend/src/modules/uniquePictures.ts`
+    - `frontend/src/modules/breadPictureReplacements.json`
+    - `frontend/src/modules/condimentPictureReplacements.json`
+    - `frontend/src/modules/dairyPictureReplacements.json`
+    - `frontend/src/modules/drinkPictureReplacements.json`
+    - `frontend/src/modules/fruitPictureReplacements.json`
+    - `.gitignore`
+    - `.gitattributes`
+
+- **10:55:08 – 11:02:27** ⏱️ Active Coding Session (**7 min**)
+  - 📁 **Files Worked On (3):**
+    - `frontend/src/modules/meatAndFishPictureReplacements.json`
+    - `frontend/src/modules/uniquePictures.ts`
+    - `frontend/src/modules/clientVocabulary.ts`
+
+- **11:12:22 – 11:52:20** ⏱️ Active Coding Session (**40 min**)
+  - 📁 **Files Worked On (11):**
+    - `frontend/src/modules/cookedFoodPictureReplacements.json`
+    - `frontend/src/modules/uniquePictures.ts`
+    - `frontend/src/modules/meatAndFishPictureReplacements.json`
+    - `frontend/src/modules/nutsSoupsSweetsVegetablesPictures.json`
+    - `frontend/src/modules/normalizeWordImage.ts`
+    - `frontend/src/components/SmartImage.tsx`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/modules/animalPictureReplacements.json`
+    - `frontend/src/modules/vehiclePictureReplacements.json`
+    - `.gitattributes`
+    - `.gitignore`
+
+- **12:29:32 – 12:29:32** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `frontend/src/modules/hygienePictureReplacements.json`
+    - `frontend/src/modules/uniquePictures.ts`
+
+- **12:53:22 – 13:17:20** ⏱️ Active Coding Session (**24 min**)
+  - 📁 **Files Worked On (8):**
+    - `frontend/src/components/SmartImage.tsx`
+    - `frontend/src/modules/normalizeWordImage.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `.gitattributes`
+    - `.gitignore`
+    - `frontend/src/modules/hygienePictureReplacements.json`
+    - `frontend/src/modules/everydayPictureReplacements.json`
+    - `frontend/src/modules/uniquePictures.ts`
+
+- **14:12:31 – 14:12:31** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `.gitignore`
+    - `.gitattributes`
+
+- **14:43:41 – 14:43:41** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (5):**
+    - `frontend/src/modules/clarityPictureReplacements.json`
+    - `frontend/src/components/SmartImage.tsx`
+    - `frontend/src/modules/normalizeWordImage.ts`
+    - `frontend/src/modules/uniquePictures.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+
+- **15:02:16 – 15:15:36** ⏱️ Active Coding Session (**13 min**)
+  - 📁 **Files Worked On (6):**
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/components/SmartImage.tsx`
+    - `frontend/src/modules/normalizeWordImage.ts`
+    - `.gitattributes`
+    - `.gitignore`
+    - `frontend/src/modules/hygienePictureReplacements.json`
+
+- **15:18:43 – 15:36:53** ⏱️ Active Coding Session (**18 min**)
+  - 📁 **Files Worked On (30):**
+    - `docker-compose.yml`
+    - `.gitattributes`
+    - `.gitignore`
+    - `all_food_words.json`
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `BACKEND_AND_DATABASE_WORKFLOW.md`
+    - `check_backlog_diff.js`
+    - `check_commit_bg.js`
+    - `check_cutoffs.ps1`
+    - `check_edges.js`
+    - `check_fd_dimensions.ps1`
+    - `check_food_diffs.js`
+    - `check_food_keys.js`
+    - `check_food_keys_current.js`
+    - `check_missing_food.js`
+    - `cmp_commits_food.py`
+    - `compare_78_daf.js`
+    - `compare_food_commits.js`
+    - `count_food_images.js`
+    - `DOCUMENTATION.md`
+    - `download_test_fd.js`
+    - `drinks_words.json`
+    - `dump_fd.js`
+    - `extract_food.js`
+    - `fruits_words.json`
+    - `get_food_words.js`
+    - `get_fruits_drinks.js`
+    - `inspect_diff_types.js`
+    - `inspect_fruits_drinks.js`
+    - `list_categories.js`
+
+- **15:52:31 – 16:17:04** ⏱️ Active Coding Session (**25 min**)
+  - 📁 **Files Worked On (3):**
+    - `frontend/src/modules/normalizeWordImage.ts`
+    - `frontend/src/components/SmartImage.tsx`
+    - `frontend/src/modules/everydayPictureReplacements.json`
+
+- **16:33:46 – 16:33:46** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `.gitattributes`
+    - `.gitignore`
+
+- **16:42:39 – 16:42:39** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (3):**
+    - `frontend/src/components/SmartImage.tsx`
+    - `frontend/src/modules/aacPictograms.ts`
+    - `frontend/src/modules/clientVocabulary.ts`
+
+- **17:27:32 – 17:27:32** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (3):**
+    - `frontend/src/modules/clientVocabulary.ts`
+    - `frontend/src/modules/aacPictograms.ts`
+    - `frontend/src/modules/customCategories.ts`
