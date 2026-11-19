@@ -3020,7 +3020,7 @@ export const CLIENT_SHELVES: ClientShelf[] = [
           "plastic wrap",
           "plate",
           "popcorn popper",
-          "pot",
+          "pots",
           "pans",
           "rice cooker",
           "rolling pin",

@@ -1,6 +1,6 @@
 ﻿const fs=require('fs'),ts=require('../node_modules/typescript'),assert=require('node:assert/strict');
 function load(name,mocks={}){const result={};new Function('require','exports',ts.transpile(fs.readFileSync('frontend/src/modules/'+name+'.ts','utf8'),{module:ts.ModuleKind.CommonJS}))(id=>{if(!(id in mocks))throw Error('Unexpected import '+id);return mocks[id];},result);return result;}
-const unique=require('./load-word-pictures.cjs');
+const unique=Object.assign({},require('./load-word-pictures.cjs'),require('../src/modules/kitchenPictureReplacements.json'));
 const home=require('../src/modules/homeCategoryPictures.json');
 const codec=load('localBoardCodec',{'./uniquePictures':unique,'./homeCategoryPictures.json':home});
 const verbs=load('verbForms');
@@ -27,6 +27,25 @@ const reloaded=next.listCategories().find(c=>c.id===folder.id);
 assert.ok(reloaded.words.some(w=>w.label==='My private snack xyz'),'Added personal word should survive startup migrations');
 assert.ok(!reloaded.words.some(w=>w.id===removed.id||w.label===removed.label),'Deleted built-in word should not be reseeded');
 const second=boardSession(deviceTwo);await second.ensureCategoriesLoaded();assert.deepEqual(snapshot(second),defaults,'Another device should receive the defaults, without the first device edits');
+const boardKey='kiddocare_custom_categories_wordfile_v6';
+const legacy=codec.parseLocalBoard(deviceTwo.get(boardKey));
+const oldKitchen=legacy.find(c=>(c.seedName||c.name)==='Kitchen');
+const oldPot=oldKitchen.words.find(w=>w.label==='Pots');
+assert.ok(oldPot,'Kitchen must include Pots');
+oldPot.label='Pot';oldPot.seedLabel='Pot';oldPot.phrase='Pot';oldPot.useCount=7;oldPot.audioUri='local-pot-recording';
+oldKitchen.words=oldKitchen.words.filter(w=>w.label!=='Pans');
+deviceTwo.set(boardKey,codec.serializeLocalBoard(legacy));
+deviceTwo.set('kiddocare_deleted_items_wordfile_v6',JSON.stringify([`word::${oldKitchen.id}::pans`]));
+deviceTwo.delete('kiddocare_restored_kitchen_cookware_v1');
+const updated=boardSession(deviceTwo);await updated.ensureCategoriesLoaded();
+const kitchen=updated.listCategories().find(c=>c.id===oldKitchen.id);
+const pots=kitchen.words.filter(w=>w.label==='Pots');
+assert.equal(pots.length,1);assert.equal(pots[0].id,oldPot.id);assert.equal(pots[0].useCount,7);assert.equal(pots[0].audioUri,'local-pot-recording');
+assert.equal(kitchen.words.filter(w=>w.label==='Pans').length,1,'Pans must return as a separate tile');
+assert.ok(!kitchen.words.some(w=>w.label==='Pot'),'The old singular built-in tile should be renamed');
+for(const word of ['bread bin','espresso cup','measuring spoons','rice cooker','spray bottle']){
+  assert.equal(kitchen.words.find(w=>w.label.toLowerCase()===word)?.imageUri,unique['kitchen::'+word]||unique[word],word+' must use its current bundled picture');
+}
 for(const root of next.topLevelCategories())next.deleteCategoryDeep(root.id);
 const empty=boardSession(deviceOne);await empty.ensureCategoriesLoaded();assert.equal(empty.listCategories().length,0,'Deleting the entire board should not recreate it on reload');
 console.log('PASS: complete default board on new devices; personal additions/deletions survive real board reload and migrations; another device keeps defaults; intentionally empty boards stay empty.');

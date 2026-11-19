@@ -2554,6 +2554,7 @@ export function diagnosisLabel(key: string, englishFallback: string, lang: Langu
  * original text — a caregiver's custom word is never guessed at.
  */
 const WORD_AR: Record<string, string> = {
+  Pots: 'قدور', Pans: 'مقالي',
   Coffee: 'قهوة', Tea: 'شاي', 'Hot Chocolate': 'شوكولاتة ساخنة', Soda: 'مشروب غازي', Milkshake: 'ميلك شيك', Smoothie: 'سموذي',
   Lemonade: 'عصير ليمون', 'Water Bottle': 'زجاجة ماء', Burger: 'برغر', Hamburger: 'هامبرغر', Cheeseburger: 'تشيز برغر', 'French Fries': 'بطاطا مقلية',
   'Hot Dog': 'هوت دوغ', Taco: 'تاكو', Nuggets: 'قطع دجاج', 'Chicken Nuggets': 'قطع دجاج', Pasta: 'معكرونة', Noodles: 'نودلز',
@@ -2754,6 +2755,7 @@ const WORD_AR: Record<string, string> = {
   Pet: 'حيوان أليف', Classroom: 'فصل دراسي', Gym: 'صالة ألعاب', Pepper: 'فلفل', Eggs: 'بيض',
 };
 const WORD_UR: Record<string, string> = {
+  Pots: 'دیگچیاں', Pans: 'فرائنگ پین',
   Monday: 'پیر', Tuesday: 'منگل', Wednesday: 'بدھ', Thursday: 'جمعرات', Friday: 'جمعہ', Saturday: 'ہفتہ',
   Sunday: 'اتوار', January: 'جنوری', February: 'فروری', March: 'مارچ', April: 'اپریل', May: 'مئی',
   June: 'جون', July: 'جولائی', August: 'اگست', September: 'ستمبر', October: 'اکتوبر', November: 'نومبر',

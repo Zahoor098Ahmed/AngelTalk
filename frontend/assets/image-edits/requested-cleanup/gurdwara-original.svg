@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <rect width="500" height="500" fill="#ffffff"/>
+  
+  <!-- Ground soft shadow -->
+  <ellipse cx="250" cy="445" rx="195" ry="20" fill="#cbd5e1" opacity="0.6"/>
+
+  <!-- Main Gurdwara Building Structure (White Marble & Gold) -->
+  <!-- Base Plinth -->
+  <polygon points="75,440 425,440 405,405 95,405" fill="#e2e8f0" stroke="#0f172a" stroke-width="7" stroke-linejoin="round"/>
+  <!-- Front Steps -->
+  <polygon points="195,440 305,440 295,410 205,410" fill="#f8fafc" stroke="#0f172a" stroke-width="5"/>
+
+  <!-- Main Lower Building Body -->
+  <rect x="95" y="270" width="310" height="135" rx="6" fill="#ffffff" stroke="#0f172a" stroke-width="8"/>
+  <rect x="110" y="280" width="280" height="14" fill="#fef08a" stroke="#ca8a04" stroke-width="4"/>
+
+  <!-- Central Arched Grand Entrance (Darshani Deorhi) -->
+  <path d="M 205 405 L 205 320 C 205 285 295 285 295 320 L 295 405 Z" 
+        fill="#1e293b" stroke="#0f172a" stroke-width="7"/>
+  <!-- Gold inner arch framing -->
+  <path d="M 215 405 L 215 325 C 215 300 285 300 285 325 L 285 405 Z" 
+        fill="#facc15" stroke="#ca8a04" stroke-width="4"/>
+  <!-- Doorway dark interior -->
+  <path d="M 225 405 L 225 330 C 225 315 275 315 275 330 L 275 405 Z" fill="#0f172a"/>
+
+  <!-- Side Windows (Jharokha Arched Windows) -->
+  <path d="M 125 365 L 125 320 C 125 305 170 305 170 320 L 170 365 Z" fill="#fef08a" stroke="#0f172a" stroke-width="6"/>
+  <line x1="147" y1="308" x2="147" y2="365" stroke="#0f172a" stroke-width="4"/>
+  <path d="M 330 365 L 330 320 C 330 305 375 305 375 320 L 375 365 Z" fill="#fef08a" stroke="#0f172a" stroke-width="6"/>
+  <line x1="352" y1="308" x2="352" y2="365" stroke="#0f172a" stroke-width="4"/>
+
+  <!-- Upper Story / Terrace -->
+  <rect x="145" y="195" width="210" height="75" rx="4" fill="#f8fafc" stroke="#0f172a" stroke-width="7"/>
+  <!-- Parapet / Jali railing -->
+  <rect x="135" y="255" width="230" height="15" fill="#facc15" stroke="#ca8a04" stroke-width="4"/>
+  <!-- Upper central arched window -->
+  <path d="M 225 255 L 225 220 C 225 210 275 210 275 220 L 275 255 Z" fill="#38bdf8" stroke="#0f172a" stroke-width="5"/>
+
+  <!-- Corner Cupolas / Chhatris with mini golden domes -->
+  <!-- Left Chhatri -->
+  <rect x="115" y="210" width="24" height="45" fill="#ffffff" stroke="#0f172a" stroke-width="5"/>
+  <path d="M 110 210 C 110 185 144 185 144 210 Z" fill="#facc15" stroke="#ca8a04" stroke-width="5"/>
+  <line x1="127" y1="185" x2="127" y2="175" stroke="#ca8a04" stroke-width="3"/>
+  <circle cx="127" cy="175" r="3" fill="#ca8a04"/>
+
+  <!-- Right Chhatri -->
+  <rect x="361" y="210" width="24" height="45" fill="#ffffff" stroke="#0f172a" stroke-width="5"/>
+  <path d="M 356 210 C 356 185 390 185 390 210 Z" fill="#facc15" stroke="#ca8a04" stroke-width="5"/>
+  <line x1="373" y1="185" x2="373" y2="175" stroke="#ca8a04" stroke-width="3"/>
+  <circle cx="373" cy="175" r="3" fill="#ca8a04"/>
+
+  <!-- Central Magnificent Golden Fluted Dome (Gumbad) -->
+  <!-- Dome Base Drum -->
+  <rect x="195" y="175" width="110" height="20" fill="#fde047" stroke="#ca8a04" stroke-width="5"/>
+  <!-- Onion/Fluted Dome Curve -->
+  <path d="M 190 175 C 180 120 220 90 250 80 C 280 90 320 120 310 175 Z" 
+        fill="#facc15" stroke="#ca8a04" stroke-width="8" stroke-linejoin="round"/>
+  <!-- Dome flute highlights -->
+  <path d="M 230 175 C 225 130 240 100 250 80" stroke="#fef08a" stroke-width="4" fill="none"/>
+  <path d="M 270 175 C 275 130 260 100 250 80" stroke="#f59e0b" stroke-width="4" fill="none"/>
+  <!-- Golden Finial (Kalash) -->
+  <line x1="250" y1="80" x2="250" y2="50" stroke="#ca8a04" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="250" cy="50" r="7" fill="#facc15" stroke="#ca8a04" stroke-width="4"/>
+  <line x1="250" y1="45" x2="250" y2="35" stroke="#ca8a04" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Saffron Nishan Sahib Flag Mast (Iconic Sikh Symbol) -->
+  <!-- Mast pole -->
+  <line x1="70" y1="440" x2="70" y2="60" stroke="#f97316" stroke-width="7" stroke-linecap="round"/>
+  <!-- Triangular Saffron Flag -->
+  <polygon points="70,65 140,95 70,125" fill="#ea580c" stroke="#c2410c" stroke-width="4"/>
+  <!-- Khanda symbol silhouette on flag -->
+  <circle cx="92" cy="95" r="7" fill="#facc15"/>
+  <line x1="92" y1="80" x2="92" y2="110" stroke="#facc15" stroke-width="3"/>
+</svg>

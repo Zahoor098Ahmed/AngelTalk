@@ -87,6 +87,7 @@ const RESTORED_HOLIDAY_WORDS = "kiddocare_restored_holiday_words_v1";
 const RESTORED_PREPOSITIONS = "kiddocare_restored_prepositions_v2";
 const RESTORED_ATTRIBUTE_PLACE_WORDS = "kiddocare_restored_attribute_place_words_v1";
 const RESTORED_SCHOOL_WORDS = "kiddocare_restored_school_words_v1";
+const RESTORED_KITCHEN_COOKWARE = "kiddocare_restored_kitchen_cookware_v1";
 const PICTURES_RENEWED = "kiddocare_pictures_renewed_v153";
 /** Folders recoloured to matte: their folder pictures reach customised boards too, once per renewal. */
 const MATTE_FOLDERS = ["sentence starters, phrases and questions", "preposition", "pronouns"];
@@ -110,6 +111,7 @@ async function ensureDeletedKeysLoaded() {
     // body singulars (only plurals were kept for a while), and every word of the client's Attributes list
     // ("one", "heart", "tiny", "giant" were removed before the list asked for them), and of its Body list
     const comeBack: [string, string[]][] = [
+      [RESTORED_KITCHEN_COOKWARE, ["pots", "pans"]],
       [RESTORED_BODY_SINGULARS, ["ankle", "arm", "cheek", "elbow", "eyebrow", "finger", "foot", "hand", "knee", "leg", "shoulder", "thumb", "tooth", "ear"]],
       [RESTORED_ATTRIBUTES_LIST, (CLIENT_SHELVES.find((s) => s.name === "Attributes")?.subs ?? []).flatMap((s) => s.words.map((w) => w.toLowerCase()))],
       [RESTORED_BODY_EYE, ["eye"]],
@@ -2295,6 +2297,17 @@ function removeRetiredBuiltinWords(): boolean {
 
 function ensureAllStandardCategories() {
   let changed = removeRetiredBuiltinWords();
+  // Keep the existing kitchen tile's identity, audio and usage when pluralizing Pot.
+  for (const category of cache) {
+    if (folderEnglishName(category).toLowerCase() !== "kitchen") continue;
+    for (const word of category.words) {
+      if (word.isCustom || (word.seedLabel || canonicalWordEn(word.label) || word.label).trim().toLowerCase() !== "pot") continue;
+      word.seedLabel = "pots";
+      word.label = wordLabel("Pots", seedLang) || "Pots";
+      word.phrase = word.label;
+      changed = true;
+    }
+  }
   if (promoteObjectsInFolders()) changed = true;
   if (promotePronounsFolder()) changed = true;
   if (renameFamilyToRelationships()) changed = true;

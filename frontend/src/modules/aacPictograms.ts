@@ -232,6 +232,7 @@ export const AAC_PICTOGRAM_MAP: Record<string, string> = {
   banana: arasaac(2530),
   bread: arasaac(2494),
   pot: dictUrl("pots-pans") || arasaac(3231),
+  pots: dictUrl("pots-pans") || arasaac(3231),
   pans: arasaac(2558),
   cookie: arasaac(2402),
   rice: arasaac(2259),
