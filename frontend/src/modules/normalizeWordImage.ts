@@ -17,6 +17,12 @@ function sharpenRaster(ctx: CanvasRenderingContext2D, width: number, height: num
   const original = image.data.slice();
   const horizontal = radius * 4;
   const vertical = width * horizontal;
+  const isRed = (index: number) => {
+    const red = original[index], green = original[index + 1], blue = original[index + 2];
+    const dominance = red - Math.max(green, blue);
+    return red >= 105 && dominance > 24 && Math.abs(green - blue) <= dominance * 0.7;
+  };
+  const luminance = (index: number) => original[index] * 0.2126 + original[index + 1] * 0.7152 + original[index + 2] * 0.0722;
 
   for (let y = radius; y < height - radius; y++) {
     for (let x = radius; x < width - radius; x++) {
@@ -25,13 +31,19 @@ function sharpenRaster(ctx: CanvasRenderingContext2D, width: number, height: num
       if (original[index + 3] !== 255 ||
           original[index - horizontal + 3] !== 255 || original[index + horizontal + 3] !== 255 ||
           original[index - vertical + 3] !== 255 || original[index + vertical + 3] !== 255) continue;
+      // Keep red areas and their edges soft; never sharpen them back after lightening.
+      if ([index, index - horizontal, index + horizontal, index - vertical, index + vertical].some(isRed)) continue;
 
-      for (let channel = index; channel < index + 3; channel++) {
-        const average = (original[channel - horizontal] + original[channel + horizontal] +
-          original[channel - vertical] + original[channel + vertical]) / 4;
-        const detail = original[channel] - average;
-        image.data[channel] = original[channel] + Math.max(-18, Math.min(18, detail * 1.15));
-      }
+      const average = (luminance(index - horizontal) + luminance(index + horizontal) +
+        luminance(index - vertical) + luminance(index + vertical)) / 4;
+      const detail = luminance(index) - average;
+      // Ignore faint JPEG noise and adjust brightness equally across channels.
+      // Independent RGB sharpening changes the original colors and adds colored halos.
+      if (Math.abs(detail) < 2.5) continue;
+      const darkest = Math.min(original[index], original[index + 1], original[index + 2]);
+      const brightest = Math.max(original[index], original[index + 1], original[index + 2]);
+      const adjustment = Math.max(-darkest, Math.min(255 - brightest, Math.max(-14, Math.min(14, detail * 0.8))));
+      for (let channel = index; channel < index + 3; channel++) image.data[channel] = original[channel] + adjustment;
     }
   }
   ctx.putImageData(image, 0, 0);
@@ -141,7 +153,8 @@ export function normalizeWordImage(uri: string, crisp = false, softenRed: boolea
           const unchangedBounds = bounds.width === scan.width && bounds.height === scan.height;
           if (!softenRed && !sharpen && unchangedBounds) return finish(uri);
 
-          const fit = sharpen ? Math.max(1, Math.min(2, 900 / longestSide)) : Math.min(1, 1536 / longestSide);
+          // Render small originals at enough resolution for large tiles and high-DPI screens.
+          const fit = sharpen ? Math.max(1, Math.min(4, 1024 / longestSide)) : Math.min(1, 2048 / longestSide);
           const output = document.createElement("canvas");
           output.width = Math.max(1, Math.round(sourceWidth * fit));
           output.height = Math.max(1, Math.round(sourceHeight * fit));
@@ -184,7 +197,7 @@ export function normalizeWordImage(uri: string, crisp = false, softenRed: boolea
             if (changed) out.putImageData(pixels, 0, 0);
             else if (!sharpen && unchangedBounds) return finish(uri);
           }
-          if (sharpen) sharpenRaster(out, width, height, fit >= 1.5 ? 2 : 1);
+          if (sharpen) sharpenRaster(out, width, height, Math.max(1, Math.round(fit)));
           finish(output.toDataURL("image/png"));
         } catch {
           finish(uri);

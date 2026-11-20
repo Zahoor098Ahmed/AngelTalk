@@ -1,0 +1,13 @@
+const fs=require('fs'),assert=require('node:assert/strict'),ts=require('../node_modules/typescript');
+const helpers={};
+new Function('require','exports',ts.transpile(fs.readFileSync('frontend/src/modules/textSizing.ts','utf8'),{module:ts.ModuleKind.CommonJS}))(()=>{throw Error('Text sizing must not need platform state');},helpers);
+const {appTextScale,scaledTextStyle}=helpers;
+assert.ok(appTextScale('small')<appTextScale('medium'));
+assert.ok(appTextScale('large')<appTextScale('xlarge'));
+const original={fontSize:20,lineHeight:30};
+assert.deepEqual(scaledTextStyle(original,1.3,false),{fontSize:26,lineHeight:39});
+assert.deepEqual(original,{fontSize:20,lineHeight:30},'Shared styles must not be mutated');
+assert.equal(scaledTextStyle({},1.3,true),undefined,'Nested text must inherit rather than scale twice');
+assert.deepEqual(scaledTextStyle({fontSize:10},1.3,true),{fontSize:13},'Explicit nested sizes scale once');
+assert.equal(scaledTextStyle(original,1,false),undefined,'Normal size must leave the original style intact');
+console.log('PASS: four text sizes, proportional line height, unchanged shared styles and no double scaling in nested text.');

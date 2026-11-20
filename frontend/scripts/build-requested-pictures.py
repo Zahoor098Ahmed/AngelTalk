@@ -19,6 +19,7 @@ for row in rows:
     image.save(buffer,format='JPEG',quality=96,subsampling=0)
     uri='data:image/jpeg;base64,'+base64.b64encode(buffer.getvalue()).decode('ascii')
     for key in set([row['word'],*row.get('aliases',[])]):pictures[key]=uri
+    if row['word']=='bottom':pictures['body parts::bottom']=uri
     report.append({'word':row['word'],'file':source.name,'width':image.width,'height':image.height,'bytes':len(buffer.getvalue())})
 if len(report)!=32 and '--allow-partial' not in sys.argv:
     raise RuntimeError(f'Expected all 32 requested restorations; found {len(report)}')

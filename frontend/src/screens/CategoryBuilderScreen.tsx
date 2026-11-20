@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { View, Text, Pressable, TextInput, StyleSheet, ScrollView, Alert, Modal, Image } from "react-native";
+import { View, Pressable, StyleSheet, ScrollView, Alert, Modal, Image } from "react-native";
+import Text from "../components/AppText";
+import TextInput from "../components/AppTextInput";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useSettings } from "../context/SettingsContext";

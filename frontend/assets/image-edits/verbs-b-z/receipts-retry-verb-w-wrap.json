@@ -1,0 +1,10 @@
+[
+  {
+    "key": "verb w::wrap",
+    "slug": "verb-w-wrap",
+    "original": "verb-w-wrap-original.jpg",
+    "prompt": "Repair this exact AAC verb 'wrap' picture into crisp HD. Preserve original colors, clothing, hair, skin, action, objects, arrows and layout. Give cartoon people coherent connected heads/necks/shoulders/torsos, naturally attached arms/hands, hips and two proper legs/shoes, without extra limbs. Keep the same pose and occlusion: seated/swimming/lying figures must keep their action; do not expose parts hidden by furniture, blankets or the tub. If it is an object-only/hand-only picture, keep that meaningful closeup without adding people. Clean 2D outlines like a fully drawn children's educational cartoon, softly colored, red/coral light rather than saturated. Pure white outside background, no gray ground shadows, full subjects uncropped with a small margin. No added captions, hearts or unrelated icons.",
+    "generated": "C:\\Users\\Zahoor\\.codex\\generated_images\\01a1f255-c318-7d60-9bbd-159bc3f33765\\exec-23cf473e-d611-4e43-af75-1a0e97b80e0c.png",
+    "tool": "built-in imagegen"
+  }
+]

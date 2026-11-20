@@ -1,0 +1,35 @@
+{
+  "words": 437,
+  "tiles": 1777,
+  "byKind": {
+    "raster": 419,
+    "native-vector": 18
+  },
+  "byLetter": {
+    "verb b": 31,
+    "verb c": 32,
+    "verb d": 20,
+    "verb e": 14,
+    "verb f": 33,
+    "verb g": 21,
+    "verb h": 21,
+    "verb i": 12,
+    "verb j": 10,
+    "verb k": 9,
+    "verb l": 20,
+    "verb m": 10,
+    "verb n": 5,
+    "verb o": 7,
+    "verb p": 27,
+    "verb q": 3,
+    "verb r": 24,
+    "verb s": 62,
+    "verb t": 28,
+    "verb u": 9,
+    "verb v": 5,
+    "verb w": 26,
+    "verb x": 1,
+    "verb y": 4,
+    "verb z": 3
+  }
+}

@@ -1,5 +1,6 @@
 import { isValidElement, type ReactNode } from "react";
-import { Pressable, Text, StyleSheet, type ViewStyle } from "react-native";
+import { Pressable, StyleSheet, type ViewStyle } from "react-native";
+import Text from "./AppText";
 import { colors, radius } from "../theme";
 
 type Variant = "primary" | "mint" | "lavender" | "sky" | "ghost";

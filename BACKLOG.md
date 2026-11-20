@@ -3296,3 +3296,228 @@
     - `frontend/assets/image-edits/requested-cleanup/bundled.json`
     - `frontend/assets/image-edits/requested-cleanup/glue-clear.png`
     - `frontend/assets/image-edits/requested-cleanup/water-cooler-clear.png`
+
+## 2026-11-20
+
+- **09:47:49 – 09:48:28** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (3):**
+    - `.gitignore`
+    - `.gitattributes`
+    - `docker-compose.yml`
+
+- **10:09:33 – 11:39:35** ⏱️ Active Coding Session (**90 min**)
+  - 📁 **Files Worked On (30):**
+    - `frontend/src/components/SmartImage.tsx`
+    - `frontend/src/modules/normalizeWordImage.ts`
+    - `frontend/assets/image-edits/requested-cleanup/bottom-clear.png`
+    - `frontend/assets/image-edits/requested-cleanup/audit-summary.txt`
+    - `frontend/assets/image-edits/requested-cleanup/audit.json`
+    - `frontend/assets/image-edits/requested-cleanup/clear-sheet-0.jpg`
+    - `frontend/scripts/build-requested-pictures.py`
+    - `frontend/scripts/test-board-reload.cjs`
+    - `frontend/assets/image-edits/requested-cleanup/kindergarten-clear.png`
+    - `frontend/scripts/test-red-clarity.cjs`
+    - `frontend/src/modules/requestedPictureReplacements.json`
+    - `frontend/assets/image-edits/requested-cleanup/bundled.json`
+    - `frontend/assets/image-edits/requested-cleanup/final-prompts.json`
+    - `frontend/scripts/prepare-people-restoration.cjs`
+    - `frontend/assets/image-edits/people-complete/preposition-about-original.png`
+    - `frontend/assets/image-edits/people-complete/preposition-across-original.jpg`
+    - `frontend/assets/image-edits/people-complete/preposition-against-original.png`
+    - `frontend/assets/image-edits/people-complete/preposition-at-original.png`
+    - `frontend/assets/image-edits/people-complete/manifest.json`
+    - `frontend/assets/image-edits/people-complete/preposition-beneath-original.png`
+    - `frontend/assets/image-edits/people-complete/preposition-by-original.jpg`
+    - `frontend/assets/image-edits/people-complete/preposition-for-original.png`
+    - `frontend/assets/image-edits/people-complete/preposition-inside-original.jpg`
+    - `frontend/assets/image-edits/people-complete/preposition-opposite-original.png`
+    - `frontend/assets/image-edits/people-complete/preposition-outside-original.png`
+    - `frontend/assets/image-edits/people-complete/preposition-with-original.png`
+    - `frontend/assets/image-edits/people-complete/preposition-without-original.png`
+    - `frontend/assets/image-edits/people-complete/pronouns-he-original.png`
+    - `frontend/assets/image-edits/people-complete/pronouns-her-original.png`
+    - `frontend/assets/image-edits/people-complete/pronouns-hers-original.png`
+
+- **11:49:10 – 12:51:13** ⏱️ Active Coding Session (**62 min**)
+  - 📁 **Files Worked On (16):**
+    - `.gitattributes`
+    - `.gitignore`
+    - `logo-review-temp.png`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/AccessibilityScreen.tsx`
+    - `frontend/assets/icon.png`
+    - `frontend/assets/adaptive-icon.png`
+    - `frontend/assets/favicon.png`
+    - `frontend/assets/splash-icon.png`
+    - `frontend/assets/adaptive-icon-background.png`
+    - `frontend/src/components/Logo.tsx`
+    - `frontend/app.json`
+    - `frontend/src/components/SmartImage.tsx`
+    - `frontend/src/modules/boardZoom.ts`
+    - `frontend/scripts/audit-word-resolution.py`
+    - `frontend/src/modules/normalizeWordImage.ts`
+
+- **12:54:39 – 13:04:57** ⏱️ Active Coding Session (**10 min**)
+  - 📁 **Files Worked On (5):**
+    - `frontend/src/modules/boardZoom.ts`
+    - `frontend/src/modules/verbPictureReplacements.ts`
+    - `frontend/src/modules/uniquePictures.ts`
+    - `frontend/src/components/SmartImage.tsx`
+    - `frontend/App.tsx`
+
+- **13:22:14 – 13:23:32** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `frontend/src/modules/verbPictureReplacements.ts`
+
+- **14:30:36 – 14:30:36** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `.gitattributes`
+    - `.gitignore`
+
+- **14:48:50 – 14:50:16** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `frontend/src/modules/verbPictureReplacements.ts`
+
+- **15:09:40 – 15:09:40** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `docker-compose.yml`
+
+- **15:30:48 – 15:30:48** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `.gitattributes`
+    - `.gitignore`
+
+- **15:50:58 – 16:00:25** ⏱️ Active Coding Session (**9 min**)
+  - 📁 **Files Worked On (30):**
+    - `frontend/scripts/prepare-verbs-b-z.cjs`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-back-rub-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/manifest.json`
+    - `frontend/assets/image-edits/verbs-b-z/summary.json`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-back-stroke-original.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-bake-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-balance-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-bathe-original.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-beckon-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-beg-original.svg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-bend-original.svg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-bike-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-bite-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-blow-bubbles-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-blow-nose-original.svg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-blow-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-boil-original.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-borrow-original.svg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-bounce-on-ball-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-bounce-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-bow-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-box-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-braid-hair-original.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-break-original.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-breast-stroke-original.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-bring-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-brush-hair-original.svg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-brush-original.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-brush-teeth-original.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-build-original.svg`
+
+- **16:08:27 – 16:08:35** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (10):**
+    - `frontend/scripts/verb-restoration-contact-sheet.py`
+    - `frontend/assets/image-edits/verbs-b-z/original-sheet-00.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/original-sheet-01.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/original-sheet-02.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/original-sheet-03.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/original-sheet-04.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/original-sheet-05.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/original-sheet-06.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/original-sheet-07.jpg`
+    - `frontend/assets/image-edits/verbs-b-z/original-sheet-08.jpg`
+
+- **16:32:22 – 17:40:35** ⏱️ Active Coding Session (**68 min**)
+  - 📁 **Files Worked On (16):**
+    - `.gitattributes`
+    - `.gitignore`
+    - `frontend/assets/image-edits/verbs-b-z/receipts-001.json`
+    - `frontend/assets/image-edits/verbs-b-z/receipts-002.json`
+    - `frontend/assets/image-edits/verbs-b-z/receipts-003.json`
+    - `frontend/assets/image-edits/verbs-b-z/receipts-004.json`
+    - `frontend/assets/image-edits/verbs-b-z/receipts-005.json`
+    - `frontend/assets/image-edits/verbs-b-z/receipts-006.json`
+    - `frontend/assets/image-edits/verbs-b-z/receipts-007.json`
+    - `frontend/src/modules/nativeVerbBodyRepairs.ts`
+    - `frontend/assets/image-edits/verbs-b-z/receipts-008.json`
+    - `frontend/assets/image-edits/verbs-b-z/receipts-009.json`
+    - `frontend/scripts/import-verb-restorations.ps1`
+    - `frontend/scripts/export-native-verb-repairs.cjs`
+    - `frontend/scripts/build-verbs-b-z.py`
+    - `frontend/assets/image-edits/verbs-b-z/receipts-010.json`
+
+- **17:56:06 – 18:09:57** ⏱️ Active Coding Session (**14 min**)
+  - 📁 **Files Worked On (30):**
+    - `frontend/src/modules/uniquePictures.ts`
+    - `frontend/src/modules/nativeVerbBodyRepairs.ts`
+    - `frontend/assets/image-edits/verbs-b-z/receipts-011.json`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-back-rub-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-back-stroke-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-bake-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-balance-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-beckon-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-bike-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-blow-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-braid-hair-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-choose-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-clap-hands-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-clean-bathroom-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-clean-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-click-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-climb-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-close-container-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-color-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-box-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-brush-teeth-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-burn-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-close-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-close-door-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-collate-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-comb-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-d-dance-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-b-burp-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-cash-out-clear.png`
+    - `frontend/assets/image-edits/verbs-b-z/verb-c-celebrate-clear.png`
+
+- **18:16:46 – 18:35:17** ⏱️ Active Coding Session (**19 min**)
+  - 📁 **Files Worked On (30):**
+    - `frontend/scripts/apply-app-text-size.cjs`
+    - `frontend/src/context/SettingsContext.tsx`
+    - `frontend/src/screens/AccessibilityScreen.tsx`
+    - `frontend/src/components/BackupSettings.tsx`
+    - `frontend/src/components/BigButton.tsx`
+    - `frontend/src/components/EmergencyPasscardModal.tsx`
+    - `frontend/src/components/LangBadge.tsx`
+    - `frontend/src/components/PinGate.tsx`
+    - `frontend/src/components/QuickActionBar.tsx`
+    - `frontend/src/components/SensoryCalmerModal.tsx`
+    - `frontend/src/components/ShareProgressModal.tsx`
+    - `frontend/src/components/TabBar.tsx`
+    - `frontend/src/components/UniversalImagePickerModal.tsx`
+    - `frontend/src/components/VoiceMicStatus.tsx`
+    - `frontend/src/components/WordEditor.tsx`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/AddByVoiceScreen.tsx`
+    - `frontend/src/screens/CategoryBuilderScreen.tsx`
+    - `frontend/src/screens/ContentReviewQueueScreen.tsx`
+    - `frontend/src/screens/EnrollChildScreen.tsx`
+    - `frontend/src/screens/FaceScanScreen.tsx`
+    - `frontend/src/screens/GamesScreen.tsx`
+    - `frontend/src/screens/HomeScreen.tsx`
+    - `frontend/src/screens/LandingScreen.tsx`
+    - `frontend/App.tsx`
+    - `frontend/src/screens/MyCategoriesScreen.tsx`
+    - `frontend/src/screens/ParentDashboardScreen.tsx`
+    - `frontend/src/screens/ParentSetupScreen.tsx`
+    - `frontend/src/screens/PhraseMatchLibraryScreen.tsx`
+    - `frontend/src/screens/QuickOnboardingScreen.tsx`
+
+- **18:46:43 – 18:46:43** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `frontend/src/screens/AACBoardScreen.tsx`

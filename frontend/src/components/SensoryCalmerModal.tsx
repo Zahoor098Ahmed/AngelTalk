@@ -1,14 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  Modal,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  Animated,
-  Easing,
-} from "react-native";
+import { View, Modal, Pressable, StyleSheet, ScrollView, Animated, Easing } from "react-native";
+import Text from "./AppText";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../theme";
 import { tapFeedback } from "../modules/haptics";

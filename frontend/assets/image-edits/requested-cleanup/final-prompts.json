@@ -1,0 +1,14 @@
+[
+  {
+    "name": "bottom",
+    "tool": "built-in imagegen",
+    "prompt": "Correct this nonsexual adult anatomy AAC vocabulary pictogram for the body part 'bottom'. Preserve the same rear view of the adult hips and complete legs, black outline, pale skin and light pink buttock muscles, and the black arrow pointing to the buttocks. Remove the extraneous '+s' text. Make the anatomy clear and coherent and linework clean, with soft light pink rather than saturated red. Pure white background, no gray ground shadow, no other text, complete legs and feet visible. Maintain the same simple educational illustration and subject.",
+    "path": "D:\\Angel Talk\\frontend\\assets\\image-edits\\requested-cleanup\\bottom-clear.png"
+  },
+  {
+    "name": "kindergarten",
+    "tool": "built-in imagegen",
+    "prompt": "Restore this exact kindergarten vocabulary illustration to crisp high definition. Preserve the same building, rainbow mural, blue entrance, playground slide, fence, toys and their original colors; make bright reds soft light red. Complete the cut edges so the entire building and playground objects fit with a white margin. Pure white outer background, no gray ground shadow, no rectangular photo backdrop. Do not redesign or replace the original subjects.",
+    "path": "D:\\Angel Talk\\frontend\\assets\\image-edits\\requested-cleanup\\kindergarten-clear.png"
+  }
+]

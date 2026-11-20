@@ -1,13 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  Animated,
-  Image,
-} from "react-native";
+import { View, Pressable, StyleSheet, ScrollView, Animated, Image } from "react-native";
+import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile, TabScreen } from "../types";

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { Asset } from "expo-asset";
 import type { ReactNode } from "react";
-import { View, Text, Pressable, ActivityIndicator, StyleSheet, ScrollView, Platform } from "react-native";
+import { View, Pressable, ActivityIndicator, StyleSheet, ScrollView, Platform, useWindowDimensions } from "react-native";
+import Text from "./src/components/AppText";
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,6 +12,7 @@ import type { ChildProfile, TabScreen, LanguageCode } from "./src/types";
 import { colors, radius } from "./src/theme";
 import PinGate from "./src/components/PinGate";
 import LangBadge from "./src/components/LangBadge";
+import Logo from "./src/components/Logo";
 
 import LandingScreen from "./src/screens/LandingScreen";
 import FaceScanScreen from "./src/screens/FaceScanScreen";
@@ -33,6 +36,17 @@ import { startAutomaticBackups } from "./src/modules/automaticBackup";
 import { startCloudConnect } from "./src/modules/cloudConnect";
 
 // web: no browser focus outline (black box) around text boxes; every app box already shows its own border
+// Use the bundled asset's hashed URL so localhost tabs do not retain an older cached icon.
+if (Platform.OS === "web" && typeof document !== "undefined") {
+  const href = Asset.fromModule(require("./assets/favicon.png")).uri;
+  for (const rel of ["icon", "shortcut icon", "apple-touch-icon"]) {
+    const link = document.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`) ?? document.createElement("link");
+    link.rel = rel;
+    link.type = "image/png";
+    link.href = href;
+    if (!link.parentNode) document.head.appendChild(link);
+  }
+}
 if (Platform.OS === "web" && typeof document !== "undefined" && !document.getElementById("no-focus-outline")) {
   const s = document.createElement("style");
   s.id = "no-focus-outline";
@@ -68,6 +82,12 @@ const TAB_LABEL: Record<TabScreen, string> = {
 
 function AppInner() {
   const { ready, settings } = useSettings();
+  const { width, height } = useWindowDimensions();
+  const [introDone, setIntroDone] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setIntroDone(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
   // Connect to the Angel Talk server / admin panel in the background once local data is loaded
   useEffect(() => {
     if (ready) { startCloudConnect(); startAutomaticBackups(); }
@@ -104,11 +124,18 @@ function AppInner() {
 
   let body: ReactNode;
 
-  if (!ready) {
+  if (!introDone || !ready) {
     body = (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.forest} />
-      </View>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#FDF8E4", alignItems: "center", justifyContent: "center" }}>
+        <View accessible accessibilityLabel="Angel Talk">
+          <Logo size={Math.min(320, width * 0.8, height * 0.7)} />
+        </View>
+        <View style={{ alignItems: "center", marginTop: 12, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, backgroundColor: "#E5F3EC", borderWidth: 1, borderColor: "#C7E5D8" }}>
+          <Text style={{ color: "#36635A", fontSize: 11, fontWeight: "700", letterSpacing: 1.6 }}>PRESENTED BY</Text>
+          <Text style={{ color: "#075E55", fontSize: 19, fontWeight: "800", textAlign: "center" }}>Hope Bridge Digital</Text>
+        </View>
+        {introDone && <ActivityIndicator size="small" color={colors.forest} />}
+      </SafeAreaView>
     );
   } else if (screen === "landing") {
     body = <LandingScreen onGetStarted={() => go("face-scan")} />;

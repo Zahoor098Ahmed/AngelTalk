@@ -1,14 +1,7 @@
 import React, { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  Modal,
-  TextInput,
-  Alert,
-} from "react-native";
+import { View, Pressable, StyleSheet, ScrollView, Modal, Alert } from "react-native";
+import Text from "../components/AppText";
+import TextInput from "../components/AppTextInput";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile, TabScreen } from "../types";

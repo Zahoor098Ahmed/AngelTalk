@@ -1,15 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Animated,
-  Easing,
-  Modal,
-  ScrollView,
-  Image,
-} from "react-native";
+import { View, Pressable, StyleSheet, Animated, Easing, Modal, ScrollView, Image } from "react-native";
+import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";

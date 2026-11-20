@@ -1,4 +1,5 @@
-import { Pressable, Text, StyleSheet, Alert } from "react-native";
+import { Pressable, StyleSheet, Alert } from "react-native";
+import Text from "./AppText";
 import { useSettings } from "../context/SettingsContext";
 import { applyLanguageDirection, t } from "../modules/i18n";
 import { retranslateSeedBoard, setSeedLanguage } from "../modules/customCategories";

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ComponentRef } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, Alert, Share, TextInput, Modal, Platform, useWindowDimensions } from "react-native";
+import { View, Pressable, StyleSheet, ScrollView, Alert, Share, Modal, Platform, useWindowDimensions } from "react-native";
+import Text from "../components/AppText";
+import TextInput from "../components/AppTextInput";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useSettings } from "../context/SettingsContext";
 import { LANGUAGES, t, applyLanguageDirection } from "../modules/i18n";
@@ -19,7 +21,7 @@ interface Props {
 /** Settings offers the two languages the app is made for. */
 const SETTINGS_LANGUAGES = LANGUAGES.filter((l) => l.code === "en-US" || l.code === "ar-SA");
 /** 0 = automatic (fits the screen). */
-const TILES_PER_ROW = [0, 3, 4, 5, 6, 7];
+const TILES_PER_ROW = [0, 1, 2, 3, 4, 5, 6, 7];
 /** Home page categories per row; 0 = automatic. */
 const HOME_PER_ROW = [0, 2, 3, 4, 5, 6, 7];
 /** Colours a parent can give a category name on the Home page. */
@@ -181,13 +183,27 @@ export default function AccessibilityScreen({ onBack }: Props) {
           </View>
 
           {/* ---- board & GLP mode ---- */}
+          <Text style={styles.sectionTitle}>{lang === "ar-SA" ? "حجم النص" : "App text size"}</Text>
+          <Text style={styles.subLabel}>{lang === "ar-SA" ? "غيّر حجم أسماء الكلمات والقوائم والنصوص في التطبيق." : "Choose the size of words, menus and reading text across the app."}</Text>
+          <View style={[styles.segRow, { flexWrap: "wrap" }]}>
+            {([
+              { value: "small", label: lang === "ar-SA" ? "صغير" : "Small" },
+              { value: "medium", label: lang === "ar-SA" ? "متوسط" : "Medium" },
+              { value: "large", label: lang === "ar-SA" ? "كبير" : "Large" },
+              { value: "xlarge", label: lang === "ar-SA" ? "أكبر" : "Extra large" },
+            ] as const).map(({ value, label }) => (
+              <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: settings.fontSize === value }} onPress={() => update({ fontSize: value })} style={[styles.seg, settings.fontSize === value && styles.segOn]}>
+                <Text style={[styles.segText, settings.fontSize === value && { color: "white" }]}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
           <Text style={styles.sectionTitle}>{lang === "ar-SA" ? "لوحة الكلام" : "Talk board"}</Text>
           <Text style={styles.subLabel}>{t("setTilesPerRow", lang)}</Text>
           <View style={styles.segRow}>
             {TILES_PER_ROW.map((n) => {
               const on = (settings.tilesPerRow ?? 0) === n;
               return (
-                <Pressable key={n} onPress={() => update({ tilesPerRow: n })} style={[styles.seg, on && styles.segOn]}>
+                <Pressable key={n} accessibilityRole="button" accessibilityState={{ selected: on }} onPress={() => update({ tilesPerRow: n })} style={[styles.seg, on && styles.segOn]}>
                   <Text style={[styles.segText, on && { color: "white" }]}>{n === 0 ? (lang === "ar-SA" ? "تلقائي" : "Auto") : n}</Text>
                 </Pressable>
               );

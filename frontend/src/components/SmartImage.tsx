@@ -1,26 +1,33 @@
 ﻿import { useEffect, useState } from "react";
 import { Image, Platform, StyleSheet, View, type ImageProps } from "react-native";
-import { SvgUri } from "react-native-svg";
+import { SvgUri, SvgXml } from "react-native-svg";
 import { normalizeWordImage } from "../modules/normalizeWordImage";
-import requestedPictures from "../modules/requestedPictureReplacements.json";
-import kitchenPictures from "../modules/kitchenPictureReplacements.json";
 
-// These restorations already have approved colors and a white background.
-const RESTORED_PICTURES = new Set<string>([...Object.values(requestedPictures), ...Object.values(kitchenPictures)]);
+function getInlineSvg(uri?: string): string | undefined {
+  const prefix = "data:image/svg+xml,";
+  if (!uri?.startsWith(prefix)) return undefined;
+  try {
+    return decodeURIComponent(uri.slice(prefix.length));
+  } catch {
+    return undefined;
+  }
+}
 
 /** Shared, shadow-free picture frame for word images throughout the app. */
-export default function SmartImage({ source, style, resizeMode = "contain", crisp = false, softenRed = false, ...rest }: ImageProps & { crisp?: boolean; softenRed?: boolean | "all" | "health" }) {
+export default function SmartImage({ source, style, resizeMode = "contain", crisp = true, softenRed = false, ...rest }: ImageProps & { crisp?: boolean; softenRed?: boolean | "all" | "health" }) {
   const uri = (source as { uri?: string } | undefined)?.uri;
-  const colorTreatment = uri && RESTORED_PICTURES.has(uri) ? false : softenRed;
+  const inlineSvg = getInlineSvg(uri);
+  // Lighten reds without washing out the other original colors.
+  const colorTreatment = softenRed === "all" ? true : softenRed;
   const [normalized, setNormalized] = useState<{ original: string; uri: string; crisp: boolean; softenRed: boolean | "all" | "health" }>();
   useEffect(() => {
-    if (Platform.OS !== "web" || !uri) return;
+    if (Platform.OS !== "web" || !uri || inlineSvg) return;
     let current = true;
     normalizeWordImage(uri, crisp, colorTreatment).then((next) => {
       if (current) setNormalized({ original: uri, uri: next, crisp, softenRed: colorTreatment });
     });
     return () => { current = false; };
-  }, [uri, crisp, colorTreatment]);
+  }, [uri, crisp, colorTreatment, inlineSvg]);
   const finalUri = normalized?.original === uri && normalized?.crisp === crisp && normalized?.softenRed === colorTreatment
     ? normalized.uri
     : undefined;
@@ -29,7 +36,7 @@ export default function SmartImage({ source, style, resizeMode = "contain", cris
   return (
     <View style={[style as object, styles.frame]}>
       <View style={styles.picture}>
-        {processing ? null : uri && Platform.OS !== "web" && /\.svg(\?|$)/i.test(uri) ? (
+        {inlineSvg ? <SvgXml xml={inlineSvg} width="100%" height="100%" /> : processing ? null : uri && Platform.OS !== "web" && /\.svg(\?|$)/i.test(uri) ? (
           <SvgUri uri={uri} width="100%" height="100%" onError={() => rest.onError?.({} as never)} />
         ) : (
           <Image

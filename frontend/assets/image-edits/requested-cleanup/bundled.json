@@ -46,7 +46,7 @@
     "file": "bottom-clear.png",
     "width": 1254,
     "height": 1254,
-    "bytes": 238228
+    "bytes": 232812
   },
   {
     "word": "therapy ball",
@@ -140,6 +140,13 @@
     "bytes": 1130180
   },
   {
+    "word": "kindergarten",
+    "file": "kindergarten-clear.png",
+    "width": 1312,
+    "height": 1199,
+    "bytes": 915094
+  },
+  {
     "word": "sensory room",
     "file": "sensory-room-clear.png",
     "width": 1312,
@@ -154,13 +161,6 @@
     "bytes": 860789
   },
   {
-    "word": "pay cheque",
-    "file": "pay-cheque-clear.png",
-    "width": 1254,
-    "height": 1254,
-    "bytes": 240207
-  },
-  {
     "word": "canadian dollar",
     "file": "canadian-dollar-clear.png",
     "width": 1254,
@@ -168,11 +168,25 @@
     "bytes": 489916
   },
   {
+    "word": "pay cheque",
+    "file": "pay-cheque-clear.png",
+    "width": 1254,
+    "height": 1254,
+    "bytes": 240207
+  },
+  {
     "word": "easel",
     "file": "easel-clear.png",
     "width": 1254,
     "height": 1254,
     "bytes": 227819
+  },
+  {
+    "word": "glue",
+    "file": "glue-clear.png",
+    "width": 1254,
+    "height": 1254,
+    "bytes": 217754
   },
   {
     "word": "glue stick",
@@ -189,17 +203,24 @@
     "bytes": 464614
   },
   {
-    "word": "telephone book",
-    "file": "telephone-book-clear.png",
-    "width": 1774,
-    "height": 887,
-    "bytes": 579555
-  },
-  {
     "word": "thumbtack",
     "file": "thumbtack-clear.png",
     "width": 1254,
     "height": 1254,
     "bytes": 243700
+  },
+  {
+    "word": "water cooler",
+    "file": "water-cooler-clear.png",
+    "width": 1254,
+    "height": 1254,
+    "bytes": 221940
+  },
+  {
+    "word": "telephone book",
+    "file": "telephone-book-clear.png",
+    "width": 1774,
+    "height": 887,
+    "bytes": 579555
   }
 ]

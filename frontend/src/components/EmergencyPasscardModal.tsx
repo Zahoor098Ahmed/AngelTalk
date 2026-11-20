@@ -1,16 +1,7 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  Modal,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  Share,
-  Linking,
-  Alert,
-} from "react-native";
+import { View, Modal, Pressable, StyleSheet, ScrollView, Share, Linking, Alert } from "react-native";
+import Text from "./AppText";
+import TextInput from "./AppTextInput";
 import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile, CaregiverPasscard } from "../types";
 import { DIAGNOSIS_LABELS } from "../types";

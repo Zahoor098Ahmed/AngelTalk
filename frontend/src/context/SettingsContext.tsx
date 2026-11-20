@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { appTextScale } from "../modules/textSizing";
 import type { AppSettings } from "../types";
 import { loadSettings, saveSettings, hydrateStorage, isHydrated } from "../modules/storage";
 import { applyLanguageDirection } from "../modules/i18n";
@@ -51,4 +52,10 @@ export function useSettings() {
   const ctx = useContext(SettingsContext);
   if (!ctx) throw new Error("useSettings must be inside SettingsProvider");
   return ctx;
+}
+
+/** Loading screens outside SettingsProvider retain the native default text size. */
+export function useAppTextScale(): number {
+  const ctx = useContext(SettingsContext);
+  return ctx ? appTextScale(ctx.settings.fontSize) : 1;
 }

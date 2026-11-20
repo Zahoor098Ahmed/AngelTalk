@@ -1,6 +1,6 @@
 ﻿const fs=require('fs'),ts=require('../node_modules/typescript'),assert=require('node:assert/strict');
 function load(name,mocks={}){const result={};new Function('require','exports',ts.transpile(fs.readFileSync('frontend/src/modules/'+name+'.ts','utf8'),{module:ts.ModuleKind.CommonJS}))(id=>{if(!(id in mocks))throw Error('Unexpected import '+id);return mocks[id];},result);return result;}
-const unique=Object.assign({},require('./load-word-pictures.cjs'),require('../src/modules/kitchenPictureReplacements.json'));
+const unique=require('./load-current-pictures.cjs');
 const home=require('../src/modules/homeCategoryPictures.json');
 const codec=load('localBoardCodec',{'./uniquePictures':unique,'./homeCategoryPictures.json':home});
 const verbs=load('verbForms');

@@ -1,0 +1,6 @@
+{
+  "key": "school::crafts",
+  "prompt": "Edit this exact school crafts icon in HD. Remove only the heart shape drawn on the paper, leaving the paper blank white. Keep the paper outline, scissors, glue stick, stars and their exact original pastel colors and arrangement. Crisp clean lines, white background, no heart symbols, no new people or objects, no shadows, all objects complete and uncropped.",
+  "path": "D:\\Angel Talk\\frontend\\assets\\image-edits\\people-complete\\school-crafts-clear.png",
+  "tool": "built-in imagegen"
+}

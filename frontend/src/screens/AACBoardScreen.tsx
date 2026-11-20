@@ -1,18 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  Image,
-  I18nManager,
-  Alert,
-  Modal,
-  TextInput,
-  useWindowDimensions,
-  Platform,
-} from "react-native";
+import { View, Pressable, StyleSheet, ScrollView, Image, I18nManager, Alert, Modal, useWindowDimensions, Platform } from "react-native";
+import Text from "../components/AppText";
+import TextInput from "../components/AppTextInput";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Speech from "expo-speech";
@@ -50,6 +39,7 @@ import AddByVoiceScreen from "./AddByVoiceScreen";
 import { colors } from "../theme";
 import { getVerbForms, detectVerbForm, isContinuousForm, generateAllVerbForms, sFormOf, type VerbForms } from "../modules/verbForms";
 import SmartImage from "../components/SmartImage";
+import Logo from "../components/Logo";
 import { zoomedBoardColumns } from "../modules/boardZoom";
 import MONTH_PICTURE_DATA from "../modules/monthPictures.json";
 
@@ -307,6 +297,8 @@ const WEB_PICTURE_PANEL = false;
 function CardPic({
   label,
   imageUri,
+  pictureFolder,
+  pictureWord,
   exact,
   crisp,
   softenRed,
@@ -315,6 +307,8 @@ function CardPic({
 }: {
   label: string;
   imageUri?: string;
+  pictureFolder?: string;
+  pictureWord?: string;
   /** Show imageUri as given (a category's picture), never the word's own picture. */
   exact?: boolean;
   crisp?: boolean;
@@ -324,6 +318,10 @@ function CardPic({
 }) {
   const [imgError, setImgError] = useState(false);
   const enLabel = canonicalWordEn(label) || label;
+  const scopedPicture = pictureFolder
+    ? (UNIQUE_PICTURES as Record<string, string>)[`${pictureFolder.toLowerCase()}::${(canonicalWordEn(pictureWord || label) || pictureWord || label).trim().toLowerCase()}`]
+    : undefined;
+  useEffect(() => setImgError(false), [imageUri, scopedPicture, label]);
   const outsideParen = label.trim().replace(/\s*\([^)]*\)\s*$/, "").trim();
   const dashParts = outsideParen.split(/\s*-\s*/);
   const leadSymbol = dashParts[0].trim();
@@ -334,6 +332,7 @@ function CardPic({
     ["🔡", "🔠", "🔤", "🔢", "🇫🇷", "🇪🇸", "🇩🇪", "🇸🇦", "🇵🇰"].includes(emoji);
   const uri = useMemo(() => {
     if (isLetterOrNumTile) return null;
+    if (!exact && scopedPicture) return scopedPicture;
     // a picture made for the word in its folder beats the word's plain picture
     if (imageUri && (exact || FOLDER_WORD_PICTURES.has(imageUri))) return imageUri;
     const lowerEn = enLabel.trim().toLowerCase();
@@ -347,7 +346,7 @@ function CardPic({
       getPictogramUrl(label) ||
       (!imgError ? dictUrl(enLabel) || dictUrl(label) : null)
     );
-  }, [imageUri, exact, label, enLabel, imgError, isLetterOrNumTile]);
+  }, [imageUri, scopedPicture, exact, label, enLabel, imgError, isLetterOrNumTile]);
 
   // days of the week draw their own English strip (the stock pictures are the Spanish L M X J V S D);
   // a photo a parent chose still wins
@@ -552,6 +551,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
 
   // Responsive columns: supports density levels (1, 2, 4, 8, 16, 28, 35+) or window dimensions
   const baseCols = useMemo(() => {
+    if (settings.tilesPerRow && settings.tilesPerRow > 0) return settings.tilesPerRow;
     if (child.buttonDensity) {
       if (child.buttonDensity === 1) return 1;
       if (child.buttonDensity === 2) return 2;
@@ -561,8 +561,6 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       if (child.buttonDensity <= 28) return 6;
       return 7;
     }
-    // Settings > Tiles per row (0 = automatic); a small phone never gets more than 4
-    if (settings.tilesPerRow && settings.tilesPerRow > 0) return windowWidth < 480 ? Math.min(4, settings.tilesPerRow) : settings.tilesPerRow;
     // Fewer, bigger tiles so pictures stay clear for the child
     if (windowWidth >= 1100) return 6;
     if (windowWidth >= 820) return 5;
@@ -570,15 +568,16 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     return Math.min(4, Math.max(3, settings.boardColumns || 4));
   }, [windowWidth, settings.boardColumns, settings.tilesPerRow, child.buttonDensity]);
 
-  const cols = Platform.OS === "web"
+  const preferredCols = Platform.OS === "web"
     ? zoomedBoardColumns(baseCols, width, windowWidth)
     : baseCols;
+  const cols = Math.max(1, Math.min(preferredCols, Math.floor((width - 12) / 94)));
 
   // Scale the picture to the tile's actual box size instead of a fixed
   // constant — on wide screens with few columns a hardcoded small icon was
   // left floating in a mostly-empty card.
   // Tile is (width / cols - cell padding) wide with aspectRatio 0.95; leave room for the label bar.
-  const tileW = width / cols - 8;
+  const tileW = (width - 12) / cols - 8;
   const cardPicSize = Math.round(Math.min(200, Math.max(40, Math.min(tileW * 0.86, tileW / 0.95 - 38))));
   // Folder tiles also carry a top tab ("FOLDER" pill), so their picture gets a little less height
   const folderPicSize = Math.round(Math.min(190, Math.max(36, Math.min(tileW * 0.8, tileW / 0.95 - 62))));
@@ -763,7 +762,9 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       .map((r) => ({
         ...r,
         // reuse the real tile for that form (keeps its own picture/recording); otherwise speak the form text
-        tile: tiles.find((t) => (canonicalWordEn(t.label) || t.label).toLowerCase() === r.text.toLowerCase()),
+        tile: tiles.find((tile) => tile.verbFormTag === r.badge)
+          ?? tiles.find((tile) => !tile.verbFormTag &&
+            (tile.seedLabel || canonicalWordEn(tile.label) || tile.label).toLowerCase() === r.text.toLowerCase()),
       }));
   }
 
@@ -1093,7 +1094,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
             style={styles.navBtn}
             accessibilityLabel={t("home", lang)}
           >
-            <Ionicons name="home" size={18} color={colors.forest} />
+            <Logo size={34} />
           </Pressable>
 
           <Text style={styles.headerTitle} numberOfLines={1}>
@@ -1471,6 +1472,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       style={({ pressed }) => [
                         styles.tile,
                         styles.wordTile,
+                        { minHeight: cardPicSize + (bilingual ? 105 : 64) },
                         pressed && styles.tilePressed,
                       ]}
                     >
@@ -1516,6 +1518,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                         <CardPic
                           label={w.label}
                           imageUri={w.imageUri}
+                          pictureFolder={w.isCustom ? undefined : folderName}
+                          pictureWord={w.verbForms?.base || w.seedLabel || w.label}
                           emoji={w.emoji}
                           size={cardPicSize}
                           crisp={!inFoodAndDrinks && !inAlphabets}
@@ -1523,7 +1527,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                         />
                       </View>
                       <View style={styles.wordLabelBar}>
-                        <Text style={styles.wordLabelText} numberOfLines={1}>
+                        <Text style={[styles.wordLabelText, { fontSize: Math.round(Math.min(19, Math.max(13, tileW * 0.13))) }]}>
                           {wordLabel(
                             verbKey && !visibleForms.has("1st")
                               ? formRowsFor(verbKey)[0]?.text ?? w.label
@@ -1539,7 +1543,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                           const main = wordLabel(shown, lang);
                           const other = lang === "ar-SA" ? canonicalWordEn(shown) : wordLabel(shown, "ar-SA");
                           return other && other.toLowerCase() !== main.toLowerCase() ? (
-                            <Text style={styles.wordLabelSecond} numberOfLines={1}>
+                            <Text style={styles.wordLabelSecond}>
                               {other}
                             </Text>
                           ) : null;
@@ -1587,7 +1591,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
             >
               {verbOpen &&
                 formRowsFor(verbOpen).map((r) => {
-                  const base = verbGroups.get(verbOpen)!.tiles[0];
+                  const group = verbGroups.get(verbOpen)!;
+                  const base = group.tiles.find((tile) => tile.verbFormTag === "1st")
+                    ?? group.tiles.find((tile) => (tile.seedLabel || canonicalWordEn(tile.label) || tile.label).toLowerCase() === group.forms.base.toLowerCase())
+                    ?? group.tiles[0];
                   const pic = r.tile ?? base;
                   return (
                     <Pressable
@@ -1627,8 +1634,12 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                         <CardPic
                           label={pic.label}
                           imageUri={pic.imageUri || base.imageUri}
+                          pictureFolder={base.isCustom ? undefined : folderName}
+                          pictureWord={base.verbForms?.base || base.seedLabel || base.label}
                           emoji={pic.emoji}
                           size={Math.round(Math.min(verbTileW * 0.86, 190))}
+                          crisp
+                          softenRed={true}
                         />
                       </View>
                       <View style={styles.verbModalTileLabelBar}>
@@ -1637,7 +1648,6 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                             styles.verbModalTileLabelText,
                             { fontSize: Math.round(Math.min(18, Math.max(13, verbTileW * 0.095))) },
                           ]}
-                          numberOfLines={1}
                         >
                           {wordLabel(r.text, lang)}
                         </Text>
@@ -1706,7 +1716,6 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                     <View style={styles.verbModalTileLabelBar}>
                       <Text
                         style={[styles.verbModalTileLabelText, { fontSize: Math.round(Math.min(18, Math.max(13, verbTileW * 0.095))) }]}
-                        numberOfLines={1}
                       >
                         {r.key === "one" ? wordLabel(nounOpen.label, lang) : lang === "en-US" ? r.text : wordLabel(r.text, lang)}
                       </Text>
@@ -2132,9 +2141,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   wordLabelBar: {
+    flexShrink: 0,
     paddingVertical: 6,
     paddingHorizontal: 4,
-    alignItems: "center",
+    alignItems: "stretch",
     backgroundColor: "#f8fafc",
     borderTopWidth: 1,
     borderTopColor: "#f1f5f9",

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView, TextInput, Image, Modal, Alert, ActivityIndicator, Platform } from "react-native";
+import { View, Pressable, StyleSheet, ScrollView, Image, Modal, Alert, ActivityIndicator, Platform } from "react-native";
+import Text from "./AppText";
+import TextInput from "./AppTextInput";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";

@@ -1,4 +1,5 @@
-import { View, Text, Pressable, StyleSheet, useWindowDimensions } from "react-native";
+import { View, Pressable, StyleSheet, useWindowDimensions } from "react-native";
+import Text from "./AppText";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TabScreen } from "../types";

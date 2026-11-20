@@ -1,15 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  Image,
-  ActivityIndicator,
-  Animated,
-  Easing,
-} from "react-native";
+import { View, Pressable, StyleSheet, ScrollView, Image, ActivityIndicator, Animated, Easing } from "react-native";
+import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useSettings } from "../context/SettingsContext";

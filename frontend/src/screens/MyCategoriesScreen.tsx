@@ -1,16 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  Modal,
-  Image,
-  Alert,
-  useWindowDimensions,
-} from "react-native";
+import { View, Pressable, StyleSheet, ScrollView, Modal, Image, Alert, useWindowDimensions } from "react-native";
+import Text from "../components/AppText";
+import TextInput from "../components/AppTextInput";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { CustomCategory, CustomWord, TileSize } from "../types";

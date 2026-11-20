@@ -1,0 +1,751 @@
+[
+  {
+    "key": "preposition::about",
+    "folder": "preposition",
+    "word": "about",
+    "slug": "preposition-about",
+    "original": "preposition-about-original.png",
+    "aliases": [
+      "preposition::about"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "preposition::across",
+    "folder": "preposition",
+    "word": "across",
+    "slug": "preposition-across",
+    "original": "preposition-across-original.jpg",
+    "aliases": [
+      "preposition::across"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "preposition::against",
+    "folder": "preposition",
+    "word": "against",
+    "slug": "preposition-against",
+    "original": "preposition-against-original.png",
+    "aliases": [
+      "preposition::against"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "preposition::at",
+    "folder": "preposition",
+    "word": "at",
+    "slug": "preposition-at",
+    "original": "preposition-at-original.png",
+    "aliases": [
+      "preposition::at"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "preposition::beneath",
+    "folder": "preposition",
+    "word": "beneath",
+    "slug": "preposition-beneath",
+    "original": "preposition-beneath-original.png",
+    "aliases": [
+      "preposition::beneath"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "preposition::by",
+    "folder": "preposition",
+    "word": "by",
+    "slug": "preposition-by",
+    "original": "preposition-by-original.jpg",
+    "aliases": [
+      "preposition::by"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "preposition::for",
+    "folder": "preposition",
+    "word": "for",
+    "slug": "preposition-for",
+    "original": "preposition-for-original.png",
+    "aliases": [
+      "preposition::for"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "preposition::inside",
+    "folder": "preposition",
+    "word": "inside",
+    "slug": "preposition-inside",
+    "original": "preposition-inside-original.jpg",
+    "aliases": [
+      "preposition::inside"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "preposition::opposite",
+    "folder": "preposition",
+    "word": "opposite",
+    "slug": "preposition-opposite",
+    "original": "preposition-opposite-original.png",
+    "aliases": [
+      "preposition::opposite"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "preposition::outside",
+    "folder": "preposition",
+    "word": "outside",
+    "slug": "preposition-outside",
+    "original": "preposition-outside-original.png",
+    "aliases": [
+      "preposition::outside"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "preposition::with",
+    "folder": "preposition",
+    "word": "with",
+    "slug": "preposition-with",
+    "original": "preposition-with-original.png",
+    "aliases": [
+      "preposition::with"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "preposition::without",
+    "folder": "preposition",
+    "word": "without",
+    "slug": "preposition-without",
+    "original": "preposition-without-original.png",
+    "aliases": [
+      "preposition::without"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::he",
+    "folder": "pronouns",
+    "word": "he",
+    "slug": "pronouns-he",
+    "original": "pronouns-he-original.png",
+    "aliases": [
+      "pronouns::he"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::her",
+    "folder": "pronouns",
+    "word": "her",
+    "slug": "pronouns-her",
+    "original": "pronouns-her-original.png",
+    "aliases": [
+      "pronouns::her"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::hers",
+    "folder": "pronouns",
+    "word": "hers",
+    "slug": "pronouns-hers",
+    "original": "pronouns-hers-original.png",
+    "aliases": [
+      "pronouns::hers"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::herself",
+    "folder": "pronouns",
+    "word": "herself",
+    "slug": "pronouns-herself",
+    "original": "pronouns-herself-original.png",
+    "aliases": [
+      "pronouns::herself"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::him",
+    "folder": "pronouns",
+    "word": "him",
+    "slug": "pronouns-him",
+    "original": "pronouns-him-original.png",
+    "aliases": [
+      "pronouns::him"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::himself",
+    "folder": "pronouns",
+    "word": "himself",
+    "slug": "pronouns-himself",
+    "original": "pronouns-himself-original.png",
+    "aliases": [
+      "pronouns::himself"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::his",
+    "folder": "pronouns",
+    "word": "his",
+    "slug": "pronouns-his",
+    "original": "pronouns-his-original.png",
+    "aliases": [
+      "pronouns::his"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::i",
+    "folder": "pronouns",
+    "word": "i",
+    "slug": "pronouns-i",
+    "original": "pronouns-i-original.png",
+    "aliases": [
+      "pronouns::i"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::me",
+    "folder": "pronouns",
+    "word": "me",
+    "slug": "pronouns-me",
+    "original": "pronouns-me-original.png",
+    "aliases": [
+      "pronouns::me"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::mine",
+    "folder": "pronouns",
+    "word": "mine",
+    "slug": "pronouns-mine",
+    "original": "pronouns-mine-original.png",
+    "aliases": [
+      "pronouns::mine"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::my",
+    "folder": "pronouns",
+    "word": "my",
+    "slug": "pronouns-my",
+    "original": "pronouns-my-original.png",
+    "aliases": [
+      "pronouns::my"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::myself",
+    "folder": "pronouns",
+    "word": "myself",
+    "slug": "pronouns-myself",
+    "original": "pronouns-myself-original.png",
+    "aliases": [
+      "pronouns::myself"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::our",
+    "folder": "pronouns",
+    "word": "our",
+    "slug": "pronouns-our",
+    "original": "pronouns-our-original.png",
+    "aliases": [
+      "pronouns::our"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::ours",
+    "folder": "pronouns",
+    "word": "ours",
+    "slug": "pronouns-ours",
+    "original": "pronouns-ours-original.png",
+    "aliases": [
+      "pronouns::ours"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::ourselves",
+    "folder": "pronouns",
+    "word": "ourselves",
+    "slug": "pronouns-ourselves",
+    "original": "pronouns-ourselves-original.png",
+    "aliases": [
+      "pronouns::ourselves"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::she",
+    "folder": "pronouns",
+    "word": "she",
+    "slug": "pronouns-she",
+    "original": "pronouns-she-original.png",
+    "aliases": [
+      "pronouns::she"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::that",
+    "folder": "pronouns",
+    "word": "that",
+    "slug": "pronouns-that",
+    "original": "pronouns-that-original.png",
+    "aliases": [
+      "pronouns::that"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::their",
+    "folder": "pronouns",
+    "word": "their",
+    "slug": "pronouns-their",
+    "original": "pronouns-their-original.png",
+    "aliases": [
+      "pronouns::their"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::theirs",
+    "folder": "pronouns",
+    "word": "theirs",
+    "slug": "pronouns-theirs",
+    "original": "pronouns-theirs-original.png",
+    "aliases": [
+      "pronouns::theirs"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::them",
+    "folder": "pronouns",
+    "word": "them",
+    "slug": "pronouns-them",
+    "original": "pronouns-them-original.png",
+    "aliases": [
+      "pronouns::them"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::themselves",
+    "folder": "pronouns",
+    "word": "themselves",
+    "slug": "pronouns-themselves",
+    "original": "pronouns-themselves-original.png",
+    "aliases": [
+      "pronouns::themselves"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::they",
+    "folder": "pronouns",
+    "word": "they",
+    "slug": "pronouns-they",
+    "original": "pronouns-they-original.png",
+    "aliases": [
+      "pronouns::they"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::us",
+    "folder": "pronouns",
+    "word": "us",
+    "slug": "pronouns-us",
+    "original": "pronouns-us-original.png",
+    "aliases": [
+      "pronouns::us"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::we",
+    "folder": "pronouns",
+    "word": "we",
+    "slug": "pronouns-we",
+    "original": "pronouns-we-original.png",
+    "aliases": [
+      "pronouns::we"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::whom",
+    "folder": "pronouns",
+    "word": "whom",
+    "slug": "pronouns-whom",
+    "original": "pronouns-whom-original.png",
+    "aliases": [
+      "pronouns::whom"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::you",
+    "folder": "pronouns",
+    "word": "you",
+    "slug": "pronouns-you",
+    "original": "pronouns-you-original.png",
+    "aliases": [
+      "pronouns::you"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::your",
+    "folder": "pronouns",
+    "word": "your",
+    "slug": "pronouns-your",
+    "original": "pronouns-your-original.png",
+    "aliases": [
+      "pronouns::your"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::yours",
+    "folder": "pronouns",
+    "word": "yours",
+    "slug": "pronouns-yours",
+    "original": "pronouns-yours-original.png",
+    "aliases": [
+      "pronouns::yours"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::yourself",
+    "folder": "pronouns",
+    "word": "yourself",
+    "slug": "pronouns-yourself",
+    "original": "pronouns-yourself-original.png",
+    "aliases": [
+      "pronouns::yourself"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "pronouns::yourselves",
+    "folder": "pronouns",
+    "word": "yourselves",
+    "slug": "pronouns-yourselves",
+    "original": "pronouns-yourselves-original.png",
+    "aliases": [
+      "pronouns::yourselves"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::assembly",
+    "folder": "school",
+    "word": "assembly",
+    "slug": "school-assembly",
+    "original": "school-assembly-original.png",
+    "aliases": [
+      "school::assembly"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::class",
+    "folder": "school",
+    "word": "class",
+    "slug": "school-class",
+    "original": "school-class-original.jpg",
+    "aliases": [
+      "school::class"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::dramatic play",
+    "folder": "school",
+    "word": "dramatic play",
+    "slug": "school-dramatic-play",
+    "original": "school-dramatic-play-original.png",
+    "aliases": [
+      "school::dramatic play"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::fire drill",
+    "folder": "school",
+    "word": "fire drill",
+    "slug": "school-fire-drill",
+    "original": "school-fire-drill-original.png",
+    "aliases": [
+      "school::fire drill"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::gross motor",
+    "folder": "school",
+    "word": "gross motor",
+    "slug": "school-gross-motor",
+    "original": "school-gross-motor-original.png",
+    "aliases": [
+      "school::gross motor"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::gross motor game",
+    "folder": "school",
+    "word": "gross motor game",
+    "slug": "school-gross-motor-game",
+    "original": "school-gross-motor-game-original.png",
+    "aliases": [
+      "school::gross motor game"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::gym",
+    "folder": "school",
+    "word": "gym",
+    "slug": "school-gym",
+    "original": "school-gym-original.jpg",
+    "aliases": [
+      "school::gym"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::music class",
+    "folder": "school",
+    "word": "music class",
+    "slug": "school-music-class",
+    "original": "school-music-class-original.png",
+    "aliases": [
+      "school::music class"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::pe",
+    "folder": "school",
+    "word": "pe",
+    "slug": "school-pe",
+    "original": "school-pe-original.png",
+    "aliases": [
+      "school::pe"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::reading",
+    "folder": "school",
+    "word": "reading",
+    "slug": "school-reading",
+    "original": "school-reading-original.png",
+    "aliases": [
+      "school::reading"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::show and tell",
+    "folder": "school",
+    "word": "show and tell",
+    "slug": "school-show-and-tell",
+    "original": "school-show-and-tell-original.png",
+    "aliases": [
+      "school::show and tell"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::story time",
+    "folder": "school",
+    "word": "story time",
+    "slug": "school-story-time",
+    "original": "school-story-time-original.png",
+    "aliases": [
+      "school::story time"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "school::crafts",
+    "folder": "school",
+    "word": "crafts",
+    "slug": "school-crafts",
+    "original": "school-crafts-original.jpg",
+    "aliases": [
+      "school::crafts"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::act",
+    "folder": "verb a",
+    "word": "act",
+    "slug": "verb-a-act",
+    "original": "verb-a-act-original.jpg",
+    "aliases": [
+      "verb a::act",
+      "act"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::agree",
+    "folder": "verb a",
+    "word": "agree",
+    "slug": "verb-a-agree",
+    "original": "verb-a-agree-original.png",
+    "aliases": [
+      "verb a::agree",
+      "agree"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::aim",
+    "folder": "verb a",
+    "word": "aim",
+    "slug": "verb-a-aim",
+    "original": "verb-a-aim-original.png",
+    "aliases": [
+      "verb a::aim",
+      "aim"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::answer",
+    "folder": "verb a",
+    "word": "answer",
+    "slug": "verb-a-answer",
+    "original": "verb-a-answer-original.png",
+    "aliases": [
+      "verb a::answer",
+      "answer"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::appear",
+    "folder": "verb a",
+    "word": "appear",
+    "slug": "verb-a-appear",
+    "original": "verb-a-appear-original.jpg",
+    "aliases": [
+      "verb a::appear",
+      "appear"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::approach",
+    "folder": "verb a",
+    "word": "approach",
+    "slug": "verb-a-approach",
+    "original": "verb-a-approach-original.png",
+    "aliases": [
+      "verb a::approach",
+      "approach"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::arrive",
+    "folder": "verb a",
+    "word": "arrive",
+    "slug": "verb-a-arrive",
+    "original": "verb-a-arrive-original.png",
+    "aliases": [
+      "verb a::arrive",
+      "arrive"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::ask",
+    "folder": "verb a",
+    "word": "ask",
+    "slug": "verb-a-ask",
+    "original": "verb-a-ask-original.png",
+    "aliases": [
+      "verb a::ask",
+      "ask"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::assist",
+    "folder": "verb a",
+    "word": "assist",
+    "slug": "verb-a-assist",
+    "original": "verb-a-assist-original.png",
+    "aliases": [
+      "verb a::assist",
+      "assist"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::attempt",
+    "folder": "verb a",
+    "word": "attempt",
+    "slug": "verb-a-attempt",
+    "original": "verb-a-attempt-original.jpg",
+    "aliases": [
+      "verb a::attempt",
+      "attempt"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::attend",
+    "folder": "verb a",
+    "word": "attend",
+    "slug": "verb-a-attend",
+    "original": "verb-a-attend-original.jpg",
+    "aliases": [
+      "verb a::attend",
+      "attend"
+    ],
+    "removeHearts": true
+  },
+  {
+    "key": "verb a::avoid",
+    "folder": "verb a",
+    "word": "avoid",
+    "slug": "verb-a-avoid",
+    "original": "verb-a-avoid-original.png",
+    "aliases": [
+      "verb a::avoid",
+      "avoid"
+    ],
+    "removeHearts": true
+  }
+]

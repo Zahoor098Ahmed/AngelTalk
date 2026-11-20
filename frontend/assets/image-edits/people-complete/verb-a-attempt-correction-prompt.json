@@ -1,0 +1,6 @@
+{
+  "key": "verb a::attempt",
+  "tool": "built-in imagegen",
+  "prompt": "Make a precise background-only edit to this AAC picture: remove the entire gray oval ground shadow under the boy's feet and replace it with pure white. Keep EVERY other element unchanged: the same boy, connected full body and pose, blue shirt, purple-blue trousers and dark shoes, coral jar, brown shelf, small motion marks, outlines, colors and composition. Do not redraw, move or add objects. Pure white background everywhere outside the existing subjects; NO shadow, no gray ellipse, no halo. Preserve HD clarity.",
+  "path": "D:\\Angel Talk\\frontend\\assets\\image-edits\\people-complete\\verb-a-attempt-clear.png"
+}

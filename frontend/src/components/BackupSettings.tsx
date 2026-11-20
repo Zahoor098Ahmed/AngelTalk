@@ -1,5 +1,7 @@
 ﻿import { useEffect, useState } from "react";
-import { View, Text, Pressable, TextInput, Switch, Share, Platform } from "react-native";
+import { View, Pressable, Switch, Share, Platform } from "react-native";
+import Text from "./AppText";
+import TextInput from "./AppTextInput";
 import { useSettings } from "../context/SettingsContext";
 import { loadSettings } from "../modules/storage";
 import { backupNow, getRecoveryCode, setAutomaticBackup, subscribeBackups, findRecoveryBackup, restoreRecoveryBackup, type BackupStatus } from "../modules/automaticBackup";

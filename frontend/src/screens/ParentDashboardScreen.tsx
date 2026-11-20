@@ -1,16 +1,7 @@
 import React, { useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Switch,
-  Share,
-  Modal,
-  TextInput,
-} from "react-native";
+import { View, Pressable, StyleSheet, ScrollView, Alert, Switch, Share, Modal } from "react-native";
+import Text from "../components/AppText";
+import TextInput from "../components/AppTextInput";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import type { ChildProfile, TabScreen, CareLogEntry, TherapyGoal } from "../types";

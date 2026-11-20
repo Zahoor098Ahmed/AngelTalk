@@ -27,8 +27,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundImage": "./assets/adaptive-icon-background.png",
-        "monochromeImage": "./assets/adaptive-icon-monochrome.png",
-        "backgroundColor": "#A45CF0"
+        "backgroundColor": "#FDF8E4"
       },
       "permissions": [
         "android.permission.CAMERA",
@@ -68,7 +67,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 160,
           "resizeMode": "contain",
-          "backgroundColor": "#f5f0e6"
+          "backgroundColor": "#FDF8E4"
         }
       ],
       "expo-speech-recognition"

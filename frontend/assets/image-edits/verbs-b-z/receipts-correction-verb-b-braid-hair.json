@@ -1,0 +1,11 @@
+[
+  {
+    "key": "verb b::braid hair",
+    "slug": "verb-b-braid-hair",
+    "original": "verb-b-braid-hair-clear.png",
+    "prompt": "Outpaint and reframe this exact AAC 'braid hair' illustration so the SAME person is visible from head to shoes, without the waist/lower-body cutoff. Preserve the rear view, brown hair and braid, coral hair tie, skin tone, teal-green long-sleeved top, blue trousers and the same hair-braiding action with connected natural arms and hands. Extend the existing blue trousers into two proper complete legs and dark shoes. Reframe the whole figure with natural child-cartoon body proportions, not an oversized close-up head, while keeping the braid clear. Keep all original colors and clean 2D outlines, pure white background and HD clarity. No extra person, no floating body parts, no heart, no text, no ground shadow.",
+    "generated": "C:\\Users\\Zahoor\\.codex\\generated_images\\01a1f255-c318-7d60-9bbd-159bc3f33765\\exec-e8d718f9-000c-44fe-9a1f-154fcac4231b.png",
+    "tool": "built-in imagegen",
+    "corrective": true
+  }
+]
