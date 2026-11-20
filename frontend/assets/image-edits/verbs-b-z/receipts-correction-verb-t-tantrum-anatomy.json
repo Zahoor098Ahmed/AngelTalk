@@ -1,0 +1,10 @@
+[
+  {
+    "key": "verb t::tantrum",
+    "slug": "verb-t-tantrum",
+    "corrective": true,
+    "mode": "built-in image_gen",
+    "source": "C:\\Users\\Zahoor\\.codex\\generated_images\\01a1f255-c318-7d60-9bbd-159bc3f33765\\exec-0507943d-14dc-4194-9ab6-a2b15dac1cba.png",
+    "prompt": "Use case: precise-object-edit. Correct this AAC tantrum illustration's anatomy: one child lying on their BACK, head at left, feet to right, upset face crying, two arms visibly originating from TWO DIFFERENT shoulder joints (one near side shoulder and one far side shoulder), bent upwards with two normal small fists, not two arms growing out of the same place. Natural connected neck from head to torso, proportional torso, exactly two blue trouser legs with visible knees, kicking with one bent knee and one straighter leg, two dark shoes. Keep brown hair, peach skin, soft salmon shirt, muted blue trousers and dark shoes. Preserve educational tantrum meaning, simple motion marks and small tears. Pure white background without shadow. Center full body using canvas efficiently with generous uncropped margin. HD at least1024, clean consistent outlines, no text/UI labels, no saturated red. Preserve original overall composition and colors."
+  }
+]

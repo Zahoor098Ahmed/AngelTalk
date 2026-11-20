@@ -1,0 +1,6 @@
+{
+  "prompt": "Use case: precise-object-edit. Remove ONLY the small pig icon and its green circle in the bottom right corner, replace that entire badge with pure white matching surrounding white background. Preserve the two raw pork chops EXACTLY: same placement, shape, color, texture, bones, lighting, scale and framing. Do not add or change any other object. No text, no new badges. Clean high resolution photograph on white.",
+  "hint": "Generated images are saved to C:\\Users\\Zahoor\\.codex\\generated_images\\01a1f255-c318-7d60-9bbd-159bc3f33765 as C:\\Users\\Zahoor\\.codex\\generated_images\\01a1f255-c318-7d60-9bbd-159bc3f33765\\exec-b329821f-9724-4476-819f-eae604711322.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link.",
+  "mode": "built-in image_gen",
+  "file": "chop-no-icon.png"
+}

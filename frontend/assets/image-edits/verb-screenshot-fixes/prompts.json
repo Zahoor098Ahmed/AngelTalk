@@ -1,0 +1,34 @@
+[
+  {
+    "word": "assist",
+    "mode": "built-in image_gen",
+    "source": "C:\\Users\\Zahoor\\.codex\\generated_images\\01a1f255-c318-7d60-9bbd-159bc3f33765\\exec-1c1ec375-59af-4d4a-b708-c6e97c5192a4.png",
+    "file": "D:/Angel Talk/frontend/assets/image-edits/verb-screenshot-fixes/assist-clear.png",
+    "request": "Correct screenshot: clear white background, original soft palette; assist joined helping hands, comb teeth on hair, add exactly 2+3=5 blocks, apply three cream dabs.",
+    "prompt": "Use case: precise-object-edit. Edit target: attached local reference. Correct ONLY the helping action and hands. Standing child must firmly and naturally grasp the seated child's raised hand to help them stand. One clear joined pair of hands with anatomically correct fingers, both wrists/arms connected; standing child's other hand relaxed at side. Keep two boys, exact teal and yellow shirts, blue trousers, brown hair, dark shoes, friendly faces, full bodies and original placement. No extra hands or fingers. Pure white background, no cast shadows, no UI, no labels or borders beyond equation requested. Crisp clean friendly outlined cartoon, preserve original identity and palette, no saturated red, uncropped with generous white margin, HD 1024 or higher."
+  },
+  {
+    "word": "comb",
+    "mode": "built-in image_gen",
+    "source": "C:\\Users\\Zahoor\\.codex\\generated_images\\01a1f255-c318-7d60-9bbd-159bc3f33765\\exec-45abe3ed-69f2-47ca-8d6b-7f47b195a23c.png",
+    "file": "D:/Angel Talk/frontend/assets/image-edits/verb-screenshot-fixes/comb-clear.png",
+    "request": "Correct screenshot: clear white background, original soft palette; assist joined helping hands, comb teeth on hair, add exactly 2+3=5 blocks, apply three cream dabs.",
+    "prompt": "Use case: precise-object-edit. Edit target: attached local reference. Correct combing action: normal sized soft coral comb held by a clearly drawn hand ABOVE the forehead, with comb teeth visibly contacting brown HAIR on top of head, never covering eyes or face. Keep boy full body, teal shirt blue trousers dark shoes original palette; natural connected fingers and arms. Remove decorative alarm strokes. Pure white background, no cast shadows, no UI, no labels or borders beyond equation requested. Crisp clean friendly outlined cartoon, preserve original identity and palette, no saturated red, uncropped with generous white margin, HD 1024 or higher."
+  },
+  {
+    "word": "add",
+    "mode": "built-in image_gen",
+    "source": "C:\\Users\\Zahoor\\.codex\\generated_images\\01a1f255-c318-7d60-9bbd-159bc3f33765\\exec-3109e169-d409-4176-b19b-59463ed6c6cb.png",
+    "file": "D:/Angel Talk/frontend/assets/image-edits/verb-screenshot-fixes/add-clear.png",
+    "request": "Correct screenshot: clear white background, original soft palette; assist joined helping hands, comb teeth on hair, add exactly 2+3=5 blocks, apply three cream dabs.",
+    "prompt": "Use case: precise-object-edit. Edit target: attached local reference. Restore as a pristine sharp high resolution educational addition diagram. Exact equation 2 + 3 at top, below two soft coral squares plus three teal squares (grouped 1 above 2), dark blue addition sign, dark blue horizontal rule and EXACTLY FIVE yellow result squares. Preserve composition and muted colors; perfectly clear edges/text and consistent squares. Remove tiny artifacts. Pure white background, no cast shadows, no UI, no labels or borders beyond equation requested. Crisp clean friendly outlined cartoon, preserve original identity and palette, no saturated red, uncropped with generous white margin, HD 1024 or higher."
+  },
+  {
+    "word": "apply",
+    "mode": "built-in image_gen",
+    "source": "C:\\Users\\Zahoor\\.codex\\generated_images\\01a1f255-c318-7d60-9bbd-159bc3f33765\\exec-f0c9c997-09c9-44ee-a15e-5d08f1a1d39e.png",
+    "file": "D:/Angel Talk/frontend/assets/image-edits/verb-screenshot-fixes/apply-clear.png",
+    "request": "Correct screenshot: clear white background, original soft palette; assist joined helping hands, comb teeth on hair, add exactly 2+3=5 blocks, apply three cream dabs.",
+    "prompt": "Use case: precise-object-edit. Edit target: attached local reference. Restore pristine sharp high resolution AAC illustration: peach horizontal forearm with teal sleeve at right, exactly three white cream dabs, small yellow cream tube with soft coral tip upper left angled toward forearm, navy arrow pointing to a dab. Keep same layout, shape and soft colors. Clean connected contours and white background, remove stray gray artifacts. Pure white background, no cast shadows, no UI, no labels or borders beyond equation requested. Crisp clean friendly outlined cartoon, preserve original identity and palette, no saturated red, uncropped with generous white margin, HD 1024 or higher."
+  }
+]
