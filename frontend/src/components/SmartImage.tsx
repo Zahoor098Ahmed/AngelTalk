@@ -14,12 +14,12 @@ function getInlineSvg(uri?: string): string | undefined {
 }
 
 /** Shared, shadow-free picture frame for word images throughout the app. */
-export default function SmartImage({ source, style, resizeMode = "contain", crisp = true, softenRed = false, transparentBackground = false, ...rest }: ImageProps & { crisp?: boolean; softenRed?: boolean | "all" | "health"; transparentBackground?: boolean }) {
+export default function SmartImage({ source, style, resizeMode = "contain", crisp = true, softenRed = false, transparentBackground = false, ...rest }: ImageProps & { crisp?: boolean | "detail"; softenRed?: boolean | "all" | "health"; transparentBackground?: boolean }) {
   const uri = (source as { uri?: string } | undefined)?.uri;
   const inlineSvg = getInlineSvg(uri);
   // Lighten reds without washing out the other original colors.
   const colorTreatment = softenRed === "all" ? true : softenRed;
-  const [normalized, setNormalized] = useState<{ original: string; uri: string; crisp: boolean; softenRed: boolean | "all" | "health"; transparentBackground: boolean }>();
+  const [normalized, setNormalized] = useState<{ original: string; uri: string; crisp: boolean | "detail"; softenRed: boolean | "all" | "health"; transparentBackground: boolean }>();
   useEffect(() => {
     if (Platform.OS !== "web" || !uri || inlineSvg) return;
     let current = true;

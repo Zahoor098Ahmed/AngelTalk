@@ -312,7 +312,7 @@ function CardPic({
   pictureWord?: string;
   /** Show imageUri as given (a category's picture), never the word's own picture. */
   exact?: boolean;
-  crisp?: boolean;
+  crisp?: boolean | "detail";
   softenRed?: boolean | "all" | "health";
   transparentBackground?: boolean;
   emoji: string;
@@ -574,16 +574,6 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   const preferredCols = Platform.OS === "web"
     ? zoomedBoardColumns(baseCols, width, windowWidth)
     : baseCols;
-  const cols = Math.max(1, Math.min(preferredCols, Math.floor((width - 12) / 94)));
-
-  // Scale the picture to the tile's actual box size instead of a fixed
-  // constant — on wide screens with few columns a hardcoded small icon was
-  // left floating in a mostly-empty card.
-  // Tile is (width / cols - cell padding) wide with aspectRatio 0.95; leave room for the label bar.
-  const tileW = (width - 12) / cols - 8;
-  const cardPicSize = Math.round(Math.min(200, Math.max(40, Math.min(tileW * 0.86, tileW / 0.95 - 38))));
-  // Folder tiles also carry a top tab ("FOLDER" pill), so their picture gets a little less height
-  const folderPicSize = Math.round(Math.min(190, Math.max(36, Math.min(tileW * 0.8, tileW / 0.95 - 62))));
 
   const [ready, setReady] = useState(areCategoriesLoaded);
   const [path, setPath] = useState<string[]>(() => {
@@ -664,6 +654,11 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   const inFoodAndDrinks = openFolderNames.includes("food and drinks");
   const inHealthAndMedical = openFolderNames.includes("health and medical");
   const inAlphabets = openFolderNames.includes("alphabets and numerals");
+  const inSportsAndFitness = openFolderNames.includes("sports and fitness");
+  const cols = Math.max(1, Math.min(preferredCols, Math.floor((width - 12) / 94)));
+  const tileW = (width - 12) / cols - 8;
+  const cardPicSize = Math.round(Math.min(200, Math.max(40, Math.min(tileW * 0.86, tileW / 0.95 - 38))));
+  const folderPicSize = Math.round(Math.min(190, Math.max(36, Math.min(tileW * 0.8, tileW / 0.95 - 62))));
   const redTreatment = inHealthAndMedical ? "health" : softenBrightColors ? "all" : true;
   const folders: CustomCategory[] = useMemo(
     () => (currentId ? visibleChildCategories(currentId) : visibleTopLevelCategories()),
@@ -1538,7 +1533,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                           pictureWord={w.verbForms?.base || w.seedLabel || w.label}
                           emoji={w.emoji}
                           size={cardPicSize}
-                          crisp={!inFoodAndDrinks && !inAlphabets}
+                          crisp={inSportsAndFitness ? "detail" : !inFoodAndDrinks && !inAlphabets}
                           softenRed={redTreatment}
                         />
                       </View>

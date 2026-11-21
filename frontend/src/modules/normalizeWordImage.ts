@@ -12,11 +12,13 @@ function pump() {
 }
 
 /** Restore edge contrast after enlarging a small raster picture. */
-function sharpenRaster(ctx: CanvasRenderingContext2D, width: number, height: number, radius: number) {
+function sharpenRaster(ctx: CanvasRenderingContext2D, width: number, height: number, radius: number, strong: boolean) {
   const image = ctx.getImageData(0, 0, width, height);
   const original = image.data.slice();
   const horizontal = radius * 4;
   const vertical = width * horizontal;
+  const limit = strong ? 23 : 14;
+  const amount = strong ? 1.2 : 0.8;
   const isRed = (index: number) => {
     const red = original[index], green = original[index + 1], blue = original[index + 2];
     const dominance = red - Math.max(green, blue);
@@ -42,7 +44,7 @@ function sharpenRaster(ctx: CanvasRenderingContext2D, width: number, height: num
       if (Math.abs(detail) < 2.5) continue;
       const darkest = Math.min(original[index], original[index + 1], original[index + 2]);
       const brightest = Math.max(original[index], original[index + 1], original[index + 2]);
-      const adjustment = Math.max(-darkest, Math.min(255 - brightest, Math.max(-14, Math.min(14, detail * 0.8))));
+      const adjustment = Math.max(-darkest, Math.min(255 - brightest, Math.max(-limit, Math.min(limit, detail * amount))));
       for (let channel = index; channel < index + 3; channel++) image.data[channel] = original[channel] + adjustment;
     }
   }
@@ -141,8 +143,8 @@ function clearWhiteBorder(ctx: CanvasRenderingContext2D, width: number, height: 
 }
 
 /** All web word pictures share trimmed margins, regardless of their source. */
-export function normalizeWordImage(uri: string, crisp = false, softenRed: boolean | "all" | "health" = false, transparentBackground = false): Promise<string> {
-  const cacheKey = `${Number(crisp)}:${softenRed}:${transparentBackground}:${uri}`;
+export function normalizeWordImage(uri: string, crisp: boolean | "detail" = false, softenRed: boolean | "all" | "health" = false, transparentBackground = false): Promise<string> {
+  const cacheKey = `${crisp}:${softenRed}:${transparentBackground}:${uri}`;
   const existing = cache.get(cacheKey);
   if (existing) {
     cache.delete(cacheKey); cache.set(cacheKey, existing);
@@ -183,11 +185,13 @@ export function normalizeWordImage(uri: string, crisp = false, softenRed: boolea
           const isVector = /^data:image\/svg\+xml[;,]|\.svg(?:[?#]|$)/i.test(uri);
           const enhance = !isVector && Math.max(img.naturalWidth, img.naturalHeight) <= 320;
           const sharpen = enhance || (crisp && !isVector && longestSide <= 500);
+          const focusDetail = crisp === "detail";
           const unchangedBounds = bounds.width === scan.width && bounds.height === scan.height;
           if (!transparentBackground && !softenRed && !sharpen && unchangedBounds) return finish(uri);
 
           // Render small originals at enough resolution for large tiles and high-DPI screens.
-          const fit = sharpen ? Math.max(1, Math.min(4, 1024 / longestSide)) : Math.min(1, 2048 / longestSide);
+          const sharpenTarget = focusDetail ? 384 : 1024;
+          const fit = sharpen ? Math.max(1, Math.min(4, sharpenTarget / longestSide)) : Math.min(1, 2048 / longestSide);
           const output = document.createElement("canvas");
           output.width = Math.max(1, Math.round(sourceWidth * fit));
           output.height = Math.max(1, Math.round(sourceHeight * fit));
@@ -230,7 +234,7 @@ export function normalizeWordImage(uri: string, crisp = false, softenRed: boolea
             if (changed) out.putImageData(pixels, 0, 0);
             else if (!transparentBackground && !sharpen && unchangedBounds) return finish(uri);
           }
-          if (sharpen) sharpenRaster(out, width, height, Math.max(1, Math.round(fit)));
+          if (sharpen) sharpenRaster(out, width, height, Math.max(1, Math.round(fit)), focusDetail);
           if (transparentBackground) clearWhiteBorder(out, width, height);
           finish(output.toDataURL("image/png"));
         } catch {
