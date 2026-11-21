@@ -28,7 +28,7 @@ type Phase = "scanning" | "found" | "nomatch" | "error";
 export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdminPortal, onEnrollChild }: Props) {
   const { settings } = useSettings();
   const lang = settings.language;
-  const { s, camSize, width } = useScreenScale();
+  const { s, camSize: scanCameraSize, width, height } = useScreenScale();
   // Wide enough: put the action buttons side by side so nothing needs scrolling
   const sideBySide = width >= 560;
   const actionRowStyle = {
@@ -42,6 +42,8 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [phase, setPhase] = useState<Phase>("scanning");
+  const noMatch = phase === "nomatch";
+  const camSize = noMatch ? Math.min(scanCameraSize, Math.max(150, Math.round(height * 0.28))) : scanCameraSize;
   const [statusMsg, setStatusMsg] = useState<string>(() => t("positionFaceHint", lang));
   const [foundName, setFoundName] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -236,7 +238,10 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={{ flex: 1, width: "100%" }} contentContainerStyle={[styles.body, { gap: 20 * s }]}>
+      <ScrollView
+        style={{ flex: 1, width: "100%" }}
+        contentContainerStyle={[styles.body, { gap: (noMatch ? 10 : 20) * s }, noMatch && styles.noMatchBody]}
+      >
       <View style={{ alignItems: "center" }}>
         <Text style={[styles.greeting, { fontSize: 15 * s }]}>{greeting}</Text>
         <Text style={[styles.title, { fontSize: 32 * s }]}>{t("appName", lang)}</Text>
@@ -313,9 +318,9 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
         )}
       </View>
 
-      <Mascot mood={phase === "found" ? "excited" : phase === "nomatch" ? "love" : "thinking"} size={Math.round(84 * s)} />
+      <Mascot mood={phase === "found" ? "excited" : noMatch ? "love" : "thinking"} size={Math.round((noMatch ? 60 : 84) * s)} />
 
-      <View style={styles.statusCard}>
+      <View style={[styles.statusCard, noMatch && styles.noMatchStatusCard]}>
         <Text style={[styles.statusText, { fontSize: 20 * s }]}>
           {phase === "scanning"
             ? t("scanningFaceEllipsis", lang)
@@ -428,7 +433,7 @@ export default function FaceScanScreen({ onMatch, onNoMatch, onParentArea, onAdm
       </ScrollView>
 
       {/* Footer controls */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, noMatch && styles.noMatchFooter]}>
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
           {false && (
             <Pressable onPress={onEnrollChild ?? onParentArea} style={styles.parentBtn}>
@@ -561,6 +566,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 12,
   },
+  noMatchBody: { paddingVertical: 8 },
+  noMatchStatusCard: { paddingVertical: 12 },
+  noMatchFooter: { paddingTop: 8, paddingBottom: 12 },
   greeting: { fontSize: 15, color: colors.forest, fontWeight: "700", backgroundColor: "rgba(45,95,79,0.08)", paddingHorizontal: 14, paddingVertical: 5, borderRadius: 14, overflow: "hidden" },
   title: { fontSize: 32, fontWeight: "900", color: colors.forest, marginTop: 8, letterSpacing: 0.5 },
   cameraWrap: {

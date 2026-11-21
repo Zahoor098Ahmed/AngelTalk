@@ -1,3 +1,8 @@
 {
-    "pmConnect.custom.projectId": "AngelTalk"
+    "pmConnect.custom.projectId": "AngelTalk",
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.expand": false,
+    "explorer.fileNesting.patterns": {
+        "IMAGE_REVIEW.md": "check_backlog_diff.js, check_commit_bg.js, check_cutoffs.ps1, check_edges.js, check_fd_dimensions.ps1, check_food_diffs.js, check_food_keys.js, check_food_keys_current.js, check_missing_food.js, cmp_commits_food.py, compare_78_daf.js, compare_food_commits.js, count_food_images.js, inspect_diff_types.js, inspect_fruits_drinks.js, trace_food_commits.js, all_food_words.json, drinks_words.json, fruits_words.json, dump_fd.js, extract_food.js, get_food_words.js, get_fruits_drinks.js, list_categories.js, print_fd_list.js, download_test_fd.js, restore_food.js, save_samples.js, save_views.js"
+    }
 }
