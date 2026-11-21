@@ -1534,7 +1534,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                           emoji={w.emoji}
                           size={cardPicSize}
                           crisp={inSportsAndFitness ? "detail" : !inFoodAndDrinks && !inAlphabets}
-                          softenRed={redTreatment}
+                          softenRed={inSportsAndFitness ? false : redTreatment}
                         />
                       </View>
                       <View style={styles.wordLabelBar}>

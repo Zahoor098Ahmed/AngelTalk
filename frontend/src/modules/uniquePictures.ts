@@ -27,6 +27,7 @@ import peopleVerbA from "./peopleVerbAPictures.json";
 import verbPictureReplacements from "./nativeVerbBodyRepairs";
 import verbsBtoZPictures from "./verbsBtoZPictures";
 import verbScreenshotFixes from "./verbScreenshotFixes";
+import sportsAndFitnessPictures from "./sportsAndFitnessPictures.json";
 
 const pictures: Record<string, string> = Object.assign({}, part0, part1, part2, part3, part4, part5, vehiclePictures, breadPictures, condimentPictures, dairyPictures, drinkPictures, fruitPictures, meatAndFishPictures, cookedFoodPictures, nutsSoupsSweetsVegetablesPictures, animalPictures, hygienePictures, everydayPictures, clarityPictures);
 Object.assign(pictures, kitchenPictures, requestedPictures, peoplePrepositions, peoplePronouns, peopleSchool, peopleVerbA);
@@ -35,6 +36,7 @@ for (const [word, picture] of Object.entries(verbPictureReplacements)) {
 }
 Object.assign(pictures, verbsBtoZPictures);
 Object.assign(pictures, verbScreenshotFixes);
+Object.assign(pictures, sportsAndFitnessPictures);
 for (const [word, picture] of Object.entries({ ...breadPictures, ...condimentPictures, ...dairyPictures, ...drinkPictures, ...fruitPictures })) {
   pictures[`food and drinks::${word}`] = picture;
 }
