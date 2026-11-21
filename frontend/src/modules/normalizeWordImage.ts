@@ -107,9 +107,42 @@ function whitenBackground(data: Uint8ClampedArray, width: number, height: number
   return true;
 }
 
+/** Clear near-white pixels connected to the image edge, preserving white details inside the artwork. */
+function clearWhiteBorder(ctx: CanvasRenderingContext2D, width: number, height: number) {
+  const pixels = ctx.getImageData(0, 0, width, height);
+  const { data } = pixels;
+  const pending: number[] = [];
+  const visited = new Uint8Array(width * height);
+  function visit(pixel: number) {
+    if (visited[pixel]) return;
+    visited[pixel] = 1;
+    const i = pixel * 4;
+    if (data[i + 3] && Math.min(data[i], data[i + 1], data[i + 2]) < 245) return;
+    data[i + 3] = 0;
+    pending.push(pixel);
+  }
+  for (let x = 0; x < width; x++) {
+    visit(x);
+    visit((height - 1) * width + x);
+  }
+  for (let y = 1; y < height - 1; y++) {
+    visit(y * width);
+    visit(y * width + width - 1);
+  }
+  while (pending.length) {
+    const pixel = pending.pop()!;
+    const x = pixel % width;
+    if (x > 0) visit(pixel - 1);
+    if (x < width - 1) visit(pixel + 1);
+    if (pixel >= width) visit(pixel - width);
+    if (pixel < width * (height - 1)) visit(pixel + width);
+  }
+  ctx.putImageData(pixels, 0, 0);
+}
+
 /** All web word pictures share trimmed margins, regardless of their source. */
-export function normalizeWordImage(uri: string, crisp = false, softenRed: boolean | "all" | "health" = false): Promise<string> {
-  const cacheKey = `${Number(crisp)}${softenRed}:${uri}`;
+export function normalizeWordImage(uri: string, crisp = false, softenRed: boolean | "all" | "health" = false, transparentBackground = false): Promise<string> {
+  const cacheKey = `${Number(crisp)}:${softenRed}:${transparentBackground}:${uri}`;
   const existing = cache.get(cacheKey);
   if (existing) {
     cache.delete(cacheKey); cache.set(cacheKey, existing);
@@ -151,7 +184,7 @@ export function normalizeWordImage(uri: string, crisp = false, softenRed: boolea
           const enhance = !isVector && Math.max(img.naturalWidth, img.naturalHeight) <= 320;
           const sharpen = enhance || (crisp && !isVector && longestSide <= 500);
           const unchangedBounds = bounds.width === scan.width && bounds.height === scan.height;
-          if (!softenRed && !sharpen && unchangedBounds) return finish(uri);
+          if (!transparentBackground && !softenRed && !sharpen && unchangedBounds) return finish(uri);
 
           // Render small originals at enough resolution for large tiles and high-DPI screens.
           const fit = sharpen ? Math.max(1, Math.min(4, 1024 / longestSide)) : Math.min(1, 2048 / longestSide);
@@ -195,9 +228,10 @@ export function normalizeWordImage(uri: string, crisp = false, softenRed: boolea
               changed = true;
             }
             if (changed) out.putImageData(pixels, 0, 0);
-            else if (!sharpen && unchangedBounds) return finish(uri);
+            else if (!transparentBackground && !sharpen && unchangedBounds) return finish(uri);
           }
           if (sharpen) sharpenRaster(out, width, height, Math.max(1, Math.round(fit)));
+          if (transparentBackground) clearWhiteBorder(out, width, height);
           finish(output.toDataURL("image/png"));
         } catch {
           finish(uri);

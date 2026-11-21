@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useSettings } from "../context/SettingsContext";
 import { t, type TKey } from "../modules/i18n";
+import { ensurePhraseLibraryLoaded } from "../modules/phraseMatch";
 import {
   ensureContentQueueLoaded,
   listQueueEntries,
@@ -54,7 +55,7 @@ export default function ContentReviewQueueScreen({ onBack }: Props) {
   const [eNote, setENote] = useState("");
 
   useEffect(() => {
-    ensureContentQueueLoaded().then(() => {
+    Promise.all([ensureContentQueueLoaded(), ensurePhraseLibraryLoaded()]).then(() => {
       setReady(true);
       setTick((t) => t + 1);
     });

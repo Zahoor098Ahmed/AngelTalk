@@ -5,8 +5,6 @@ import { loadSettings, saveSettings, hydrateStorage, isHydrated } from "../modul
 import { applyLanguageDirection } from "../modules/i18n";
 import { setSeedLanguage } from "../modules/customCategories";
 import { setHapticsEnabled } from "../modules/haptics";
-import { ensurePhraseLibraryLoaded } from "../modules/phraseMatch";
-import { ensureContentQueueLoaded } from "../modules/contentQueue";
 
 interface SettingsContextType {
   settings: AppSettings;
@@ -22,7 +20,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (ready) return;
-    Promise.all([hydrateStorage(), ensurePhraseLibraryLoaded(), ensureContentQueueLoaded()]).then(() => {
+    hydrateStorage().then(() => {
       const s = loadSettings();
       setSeedLanguage(s.language);
       setHapticsEnabled(s.hapticsEnabled);

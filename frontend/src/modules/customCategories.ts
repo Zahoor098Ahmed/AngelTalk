@@ -239,6 +239,15 @@ function migrate(list: CustomCategory[]): CustomCategory[] {
 }
 
 let loadingPromise: Promise<void> | null = null;
+let translatedBoardLanguage: LanguageCode | undefined;
+
+export function areCategoriesLoaded(): boolean {
+  return loaded;
+}
+
+export function ensureBoardLanguage(lang: LanguageCode) {
+  if (translatedBoardLanguage !== lang) retranslateSeedBoard(lang);
+}
 
 export function ensureCategoriesLoaded(): Promise<void> {
   if (!loadingPromise) {
@@ -1944,6 +1953,7 @@ export function retranslateSeedBoard(lang: LanguageCode) {
   if (pendingAsyncItems.length > 0 && isTargetArabic) {
     translatePendingAsync(pendingAsyncItems, lang);
   }
+  translatedBoardLanguage = lang;
 }
 
 /** Shelves made by the first version of the PECS list, later renamed to the PDF's own names. */
@@ -4420,6 +4430,7 @@ export function restoreBackup(data: unknown, mode: "replace" | "merge" = "replac
   if (incoming.length !== file.categories.length) issues.push("Some categories were malformed and skipped.");
 
   cache = mode === "replace" ? incoming : mergeById(cache, incoming);
+  translatedBoardLanguage = undefined;
   loaded = true;
   persist();
 

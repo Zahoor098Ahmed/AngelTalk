@@ -16,11 +16,11 @@ import Logo from "./src/components/Logo";
 
 import LandingScreen from "./src/screens/LandingScreen";
 import FaceScanScreen from "./src/screens/FaceScanScreen";
+import HomeScreen from "./src/screens/HomeScreen";
 import FaceAIHost from "./src/components/FaceAIHost";
 import ParentSetupScreen from "./src/screens/ParentSetupScreen";
 import EnrollChildScreen from "./src/screens/EnrollChildScreen";
 import AccessibilityScreen from "./src/screens/AccessibilityScreen";
-import HomeScreen from "./src/screens/HomeScreen";
 import AACBoardScreen from "./src/screens/AACBoardScreen";
 import VisualScheduleScreen from "./src/screens/VisualScheduleScreen";
 import GamesScreen from "./src/screens/GamesScreen";
@@ -30,10 +30,10 @@ import CategoryBuilderScreen from "./src/screens/CategoryBuilderScreen";
 import PhraseMatchLibraryScreen from "./src/screens/PhraseMatchLibraryScreen";
 import ContentReviewQueueScreen from "./src/screens/ContentReviewQueueScreen";
 import VoiceCommandMatchScreen from "./src/screens/VoiceCommandMatchScreen";
-import QuickOnboardingScreen from "./src/screens/QuickOnboardingScreen";
 import SocialStoriesScreen from "./src/screens/SocialStoriesScreen";
 import { startAutomaticBackups } from "./src/modules/automaticBackup";
 import { startCloudConnect } from "./src/modules/cloudConnect";
+import { ensureCategoriesLoaded } from "./src/modules/customCategories";
 
 // web: no browser focus outline (black box) around text boxes; every app box already shows its own border
 // Use the bundled asset's hashed URL so localhost tabs do not retain an older cached icon.
@@ -90,7 +90,11 @@ function AppInner() {
   }, []);
   // Connect to the Angel Talk server / admin panel in the background once local data is loaded
   useEffect(() => {
-    if (ready) { startCloudConnect(); startAutomaticBackups(); }
+    if (ready) {
+      void ensureCategoriesLoaded().catch((error) => console.warn("Unable to preload Talk categories", error));
+      startCloudConnect();
+      startAutomaticBackups();
+    }
   }, [ready]);
 
   useEffect(() => {
@@ -515,7 +519,6 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
   moreHeader: {
     flexDirection: "row",
     alignItems: "center",

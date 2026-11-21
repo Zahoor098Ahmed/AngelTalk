@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { View, Pressable, StyleSheet, ScrollView, Image, I18nManager, Alert, Modal, useWindowDimensions, Platform } from "react-native";
 import Text from "../components/AppText";
 import TextInput from "../components/AppTextInput";
@@ -10,6 +10,7 @@ import { nounFormsOf } from "../modules/nounForms";
 import { useSettings } from "../context/SettingsContext";
 import {
   ensureCategoriesLoaded,
+  areCategoriesLoaded,
   topLevelCategories,
   visibleTopLevelCategories,
   visibleChildCategories,
@@ -18,8 +19,7 @@ import {
   bottomTabCategories,
   verbFolderLetter,
   categoryPictureFor,
-  setSeedLanguage,
-  retranslateSeedBoard,
+  ensureBoardLanguage,
   recordWordUseByWordId,
   subscribeCategories,
   isNaturalOrderCategory,
@@ -302,6 +302,7 @@ function CardPic({
   exact,
   crisp,
   softenRed,
+  transparentBackground,
   emoji,
   size = 44,
 }: {
@@ -313,6 +314,7 @@ function CardPic({
   exact?: boolean;
   crisp?: boolean;
   softenRed?: boolean | "all" | "health";
+  transparentBackground?: boolean;
   emoji: string;
   size?: number;
 }) {
@@ -405,7 +407,7 @@ function CardPic({
       const bg = PANELS[[...lowerEn].reduce((n, ch) => n + ch.charCodeAt(0), 0) % PANELS.length];
       return (
         <View style={{ width: size, height: size, borderRadius: size * 0.1, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
-          <SmartImage source={{ uri }} style={{ width: size * 0.78, height: size * 0.78 }} onError={() => setImgError(true)} />
+          <SmartImage source={{ uri }} style={{ width: size * 0.78, height: size * 0.78 }} transparentBackground={transparentBackground} onError={() => setImgError(true)} />
         </View>
       );
     }
@@ -416,6 +418,7 @@ function CardPic({
         resizeMode="contain"
         crisp={crisp}
         softenRed={softenRed}
+        transparentBackground={transparentBackground}
         onError={() => setImgError(true)}
       />
     );
@@ -582,10 +585,14 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   // Folder tiles also carry a top tab ("FOLDER" pill), so their picture gets a little less height
   const folderPicSize = Math.round(Math.min(190, Math.max(36, Math.min(tileW * 0.8, tileW / 0.95 - 62))));
 
-  const [ready, setReady] = useState(false);
-  const [path, setPath] = useState<string[]>(initialCategoryId ? [initialCategoryId] : []); // category id stack
+  const [ready, setReady] = useState(areCategoriesLoaded);
+  const [path, setPath] = useState<string[]>(() => {
+    if (initialCategoryId && (!ready || getCategory(initialCategoryId))) return [initialCategoryId];
+    const categoryId = ready ? bottomTabCategories(lang)[0]?.id : undefined;
+    return categoryId ? [categoryId] : [];
+  });
   useEffect(() => {
-    if (initialCategoryId) setPath([initialCategoryId]);
+    if (initialCategoryId && getCategory(initialCategoryId)) setPath([initialCategoryId]);
   }, [initialCategoryId]);
   const [sentence, setSentence] = useState<Chip[]>([]);
   const [typed, setTyped] = useState(""); // word the child is typing in the sentence box
@@ -607,7 +614,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
 
   useEffect(() => {
     void ensurePredictionLoaded();
+    if (ready) return;
+    let active = true;
     ensureCategoriesLoaded().then(() => {
+      if (!active) return;
       setReady(true);
       // Auto-select the first category on load so communication cards appear immediately
       const tabs = bottomTabCategories(lang);
@@ -616,6 +626,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       if (initialCategoryId && getCategory(initialCategoryId)) setPath([initialCategoryId]);
       else if (firstTab?.id) setPath([firstTab.id]);
     });
+    return () => { active = false; };
   }, []);
 
   // Keep the built-in folder/word names in sync with the *actual* current
@@ -625,8 +636,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   // "Schools"/"Sports" translated even while the app is set to English.
   useEffect(() => {
     if (!ready) return;
-    setSeedLanguage(lang);
-    retranslateSeedBoard(lang);
+    ensureBoardLanguage(lang);
     // The sentence-building strip holds its own frozen copy of each tapped
     // word's text, so it doesn't pick up retranslateSeedBoard's changes to
     // the underlying category data — re-translate the chips in place too,
@@ -637,6 +647,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   }, [ready, lang]);
 
   const currentId = path[path.length - 1] ?? null;
+  const gridScrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  useLayoutEffect(() => {
+    gridScrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [currentId]);
   const current = currentId ? getCategory(currentId) : null;
   const folderName = (current?.seedName || current?.name)?.toLowerCase();
   const softenBrightColors = folderName === "places" ||
@@ -1265,6 +1279,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
 
         {/* Main Grid: Responsive AAC cards */}
         <ScrollView
+          ref={gridScrollRef}
           style={styles.gridScroll}
           contentContainerStyle={styles.grid}
           showsVerticalScrollIndicator
@@ -1420,6 +1435,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                             label={f.name}
                             imageUri={categoryPictureFor(f).uri}
                             exact
+                            transparentBackground
                             emoji={f.icon ?? "📁"}
                             size={folderPicSize}
                           />
@@ -2199,7 +2215,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    backgroundColor: "#ffffff",
   },
   letterBadgeText: {
     fontWeight: "900",
