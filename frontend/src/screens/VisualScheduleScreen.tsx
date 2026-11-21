@@ -364,7 +364,7 @@ export default function VisualScheduleScreen({ child, tab, onTabChange, labels }
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={[styles.body, isTablet && styles.bodyTablet]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.body, isSmallPhone && styles.bodyCompact, isTablet && styles.bodyTablet]} showsVerticalScrollIndicator={false}>
           {/* Progress Bar Card */}
           <View style={styles.progressCard}>
             <View style={styles.progressRow}>
@@ -670,6 +670,7 @@ const styles = StyleSheet.create({
   viewToggleBtnActive: { backgroundColor: "#ffffff" },
 
   body: { padding: 16, gap: 14, paddingBottom: 60, width: "100%" },
+  bodyCompact: { paddingHorizontal: 12 },
   bodyTablet: { maxWidth: 860, alignSelf: "center", width: "100%", paddingHorizontal: 28 },
 
   progressCard: {

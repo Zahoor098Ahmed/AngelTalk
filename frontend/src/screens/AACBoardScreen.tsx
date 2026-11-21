@@ -1077,7 +1077,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         {/* Top Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, width < 375 && styles.headerCompact]}>
           <Pressable
             onPress={handleBack}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -1106,18 +1106,18 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
             <Logo size={34} />
           </Pressable>
 
-          <Text style={styles.headerTitle} numberOfLines={1}>
+          <Text style={[styles.headerTitle, width < 375 && styles.headerTitleCompact]} numberOfLines={width < 560 ? 2 : 1}>
             {title}
           </Text>
 
           {/* Clean Oops/Mistake button */}
           <Pressable
             onPress={attentionMistake}
-            style={styles.mistakeHeaderBtn}
+            style={[styles.mistakeHeaderBtn, width < 375 && styles.mistakeHeaderBtnCompact]}
             accessibilityLabel={t("iMadeMistake", lang)}
           >
             <Ionicons name="alert-circle-outline" size={15} color="#ffffff" />
-            <Text style={styles.mistakeHeaderBtnText}>{t("oopsBtn", lang)}</Text>
+            {width >= 375 && <Text style={styles.mistakeHeaderBtnText}>{t("oopsBtn", lang)}</Text>}
           </Pressable>
 
           <LangBadge />
@@ -1822,6 +1822,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
+  headerCompact: { paddingHorizontal: 8, gap: 5 },
   navBtn: {
     width: 36,
     height: 36,
@@ -1835,11 +1836,13 @@ const styles = StyleSheet.create({
   navBtnGhost: { backgroundColor: "transparent", borderColor: "transparent" },
   headerTitle: {
     flex: 1,
+    minWidth: 0,
     fontSize: 18,
     fontWeight: "800",
     color: colors.textDark,
     marginLeft: 4,
   },
+  headerTitleCompact: { fontSize: 15, marginLeft: 0 },
   mistakeHeaderBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1854,6 +1857,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
+  mistakeHeaderBtnCompact: { minHeight: 36, justifyContent: "center" },
   voiceHeaderBtn: {
     width: 34,
     height: 34,

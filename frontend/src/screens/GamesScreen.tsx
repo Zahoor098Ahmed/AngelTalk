@@ -593,7 +593,7 @@ export default function GamesScreen({ child, tab, onTabChange, labels, onUpdateC
           </ScrollView>
         </View>
 
-        <ScrollView contentContainerStyle={[styles.body, isTablet && styles.bodyTablet]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.body, isSmallPhone && styles.bodyCompact, isTablet && styles.bodyTablet]} showsVerticalScrollIndicator={false}>
           {/* Enhanced Metrics Stat Cards */}
           <View style={styles.statRow}>
             <View style={[styles.statPill, { borderLeftColor: "#f59e0b", borderLeftWidth: 4 }]}>
@@ -1033,6 +1033,7 @@ const styles = StyleSheet.create({
   carouselChipText: { fontSize: 12, fontWeight: "700", color: "#475569" },
 
   body: { padding: 18, gap: 16, alignItems: "center", paddingBottom: 60, width: "100%" },
+  bodyCompact: { paddingHorizontal: 12 },
   bodyTablet: { maxWidth: 840, alignSelf: "center", width: "100%", paddingHorizontal: 24 },
 
   /* Stats Pill */

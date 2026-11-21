@@ -162,7 +162,7 @@ export default function AccessibilityScreen({ onBack }: Props) {
           <Text style={styles.headerTitle}>{t("settings", lang)}</Text>
         </View>
 
-        <ScrollView contentContainerStyle={styles.body}>
+        <ScrollView contentContainerStyle={[styles.body, win.width < 375 && styles.bodyCompact]}>
           {/* ---- speech & natural voices ---- */}
           <Text style={styles.sectionTitle}>{lang === "ar-SA" ? "الصوت" : "Voice"}</Text>
           
@@ -618,15 +618,16 @@ const styles = StyleSheet.create({
   backText: { color: "white", fontWeight: "700" },
   headerTitle: { fontSize: 22, fontWeight: "800", color: "white" },
   body: { padding: 20, gap: 10, paddingBottom: 50 },
+  bodyCompact: { paddingHorizontal: 12 },
   sectionTitle: { fontSize: 12, fontWeight: "800", color: colors.textLight, letterSpacing: 1, marginTop: 18, textTransform: "uppercase" },
   subLabel: { fontSize: 13, color: colors.textMid, fontWeight: "600", marginTop: 6 },
-  segRow: { flexDirection: "row", gap: 8 },
-  seg: { flex: 1, paddingVertical: 12, borderRadius: radius, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: "center" },
+  segRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  seg: { flexGrow: 1, flexShrink: 1, flexBasis: 74, minHeight: 44, paddingVertical: 10, paddingHorizontal: 6, borderRadius: radius, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: "center", justifyContent: "center" },
   segOn: { backgroundColor: colors.forest, borderColor: colors.forest },
-  segText: { fontWeight: "800", fontSize: 14, color: colors.textMid },
+  segText: { fontWeight: "800", fontSize: 14, color: colors.textMid, textAlign: "center" },
   actionRow: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.card, borderRadius: radius, paddingVertical: 15, paddingHorizontal: 18, borderWidth: 1, borderColor: colors.border },
   actionLabel: { flex: 1, fontWeight: "600", fontSize: 15, color: colors.textDark },
-  actionState: { fontSize: 12, fontWeight: "700", color: colors.forest },
+  actionState: { maxWidth: "45%", flexShrink: 1, textAlign: "right", fontSize: 12, fontWeight: "700", color: colors.forest },
   infoBox: { backgroundColor: colors.forestLight, borderRadius: radius, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1, borderColor: "transparent" },
   infoText: { color: colors.forestDark, fontSize: 12.5, lineHeight: 19 },
   infoBullet: { color: colors.forestDark, fontSize: 12.5, lineHeight: 19, marginBottom: 4 },

@@ -404,7 +404,12 @@ function MoreMenu({
 }) {
   // Layout never mirrors for Arabic/Urdu — only text changes
   const isRtl = false && isRTL(lang);
+  const rightAlignedText = isRTL(lang) && styles.moreRtlText;
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const compact = width < 560;
+  const englishTitle = t("hubTitle", "en-US");
+  const localizedTitle = t("hubTitle", lang).replace(` (${englishTitle})`, "");
 
   const tabShortcuts: { tab: TabScreen; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
     // Home Hub and AAC Talk Board: hidden for now (Home opens the Talk board itself)
@@ -420,16 +425,17 @@ function MoreMenu({
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
-        <View style={[styles.moreHeader, isRtl && { flexDirection: "row-reverse" }]}>
+    <View style={styles.moreShell}>
+      <SafeAreaView style={styles.moreShell} edges={["top"]}>
+        <View style={[styles.moreHeader, compact && styles.moreHeaderCompact, isRtl && { flexDirection: "row-reverse" }]}>
           <Pressable onPress={onBack} hitSlop={8} style={{ padding: 4 }}>
             <Ionicons name={isRtl ? "arrow-forward" : "arrow-back"} size={22} color={colors.textDark} />
           </Pressable>
-          <View style={{ alignItems: "center" }}>
-            <Text style={styles.moreTitle}>{t("hubTitle", lang)}</Text>
+          <View style={styles.moreHeaderText}>
+            <Text style={[styles.moreTitle, compact && styles.moreTitleCompact]}>{localizedTitle}</Text>
+            {localizedTitle !== englishTitle && <Text style={styles.moreEnglishTitle}>{englishTitle}</Text>}
             {childName ? (
-              <Text style={{ fontSize: 12, color: colors.textMid, fontWeight: "600" }}>
+              <Text style={styles.moreChildName}>
                 {t("activeChildLabel", lang).replace("{name}", childName)}
               </Text>
             ) : null}
@@ -437,68 +443,70 @@ function MoreMenu({
           <LangBadge />
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 + insets.bottom, gap: 14 }}>
-          {/* Main App Tabs */}
-          <Text style={[styles.menuSectionHeader, isRtl && { textAlign: "right" }]}>
-            {t("mainAppsSection", lang)}
-          </Text>
-          <View style={{ gap: 8 }}>
-            {tabShortcuts.map((t) => (
-              <Pressable
-                key={t.tab}
-                onPress={() => onSelectTab(t.tab)}
-                style={[styles.moreRow, isRtl && { flexDirection: "row-reverse" }]}
-              >
-                <View
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 16,
-                    backgroundColor: `${t.color}15`,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+        <ScrollView style={styles.moreScroll} contentContainerStyle={{ paddingVertical: 12 }}>
+          <View style={[styles.moreMenuContent, { marginHorizontal: compact ? 12 : 16, paddingBottom: 12 + insets.bottom }]}>
+            {/* Main App Tabs */}
+            <Text style={[styles.menuSectionHeader, rightAlignedText]}>
+              {t("mainAppsSection", lang)}
+            </Text>
+            <View style={{ gap: 8 }}>
+              {tabShortcuts.map((t) => (
+                <Pressable
+                  key={t.tab}
+                  onPress={() => onSelectTab(t.tab)}
+                  style={[styles.moreRow, compact && styles.moreRowCompact, isRtl && { flexDirection: "row-reverse" }]}
                 >
-                  <Ionicons name={t.icon} size={27} color={t.color} />
-                </View>
-                <Text style={[styles.moreRowText, isRtl && { textAlign: "right" }]}>{t.label}</Text>
-                <Ionicons name={isRtl ? "chevron-back" : "chevron-forward"} size={22} color={colors.textLight} />
-              </Pressable>
-            ))}
-          </View>
+                  <View
+                    style={{
+                      width: compact ? 44 : 52,
+                      height: compact ? 44 : 52,
+                      borderRadius: 16,
+                      backgroundColor: `${t.color}15`,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name={t.icon} size={27} color={t.color} />
+                  </View>
+                  <Text style={[styles.moreRowText, styles.moreRowContent, rightAlignedText]}>{t.label}</Text>
+                  <Ionicons name={isRtl ? "chevron-back" : "chevron-forward"} size={22} color={colors.textLight} />
+                </Pressable>
+              ))}
+            </View>
 
-          {/* Management & Settings */}
-          <Text style={[styles.menuSectionHeader, { marginTop: 8 }, isRtl && { textAlign: "right" }]}>
-            {t("parentClinicalToolsSection", lang)}
-          </Text>
-          <View style={{ gap: 8 }}>
-            {adminRows.map((r) => (
-              <Pressable
-                key={r.key}
-                onPress={() => onNavigate(r.key)}
-                style={[styles.moreRow, isRtl && { flexDirection: "row-reverse" }]}
-              >
-                <View
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: 16,
-                    backgroundColor: `${r.color}15`,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+            {/* Management & Settings */}
+            <Text style={[styles.menuSectionHeader, { marginTop: 8 }, rightAlignedText]}>
+              {t("parentClinicalToolsSection", lang)}
+            </Text>
+            <View style={{ gap: 8 }}>
+              {adminRows.map((r) => (
+                <Pressable
+                  key={r.key}
+                  onPress={() => onNavigate(r.key)}
+                  style={[styles.moreRow, compact && styles.moreRowCompact, isRtl && { flexDirection: "row-reverse" }]}
                 >
-                  <Ionicons name={r.icon} size={27} color={r.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.moreRowText, isRtl && { textAlign: "right" }]}>{r.label}</Text>
-                  <Text style={[{ fontSize: 14, color: colors.textMid, marginTop: 3 }, isRtl && { textAlign: "right" }]}>
-                    {r.desc}
-                  </Text>
-                </View>
-                <Ionicons name={isRtl ? "chevron-back" : "chevron-forward"} size={22} color={colors.textLight} />
-              </Pressable>
-            ))}
+                  <View
+                    style={{
+                      width: compact ? 44 : 52,
+                      height: compact ? 44 : 52,
+                      borderRadius: 16,
+                      backgroundColor: `${r.color}15`,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name={r.icon} size={27} color={r.color} />
+                  </View>
+                  <View style={styles.moreRowContent}>
+                    <Text style={[styles.moreRowText, rightAlignedText]}>{r.label}</Text>
+                    <Text style={[{ fontSize: 14, color: colors.textMid, marginTop: 3 }, rightAlignedText]}>
+                      {r.desc}
+                    </Text>
+                  </View>
+                  <Ionicons name={isRtl ? "chevron-back" : "chevron-forward"} size={22} color={colors.textLight} />
+                </Pressable>
+              ))}
+            </View>
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -519,18 +527,28 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  moreShell: { flex: 1, minWidth: 0, alignSelf: "stretch", backgroundColor: colors.bg },
   moreHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    marginHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.04)",
   },
-  moreTitle: { fontSize: 21, fontWeight: "800", color: colors.textDark },
+  moreHeaderCompact: { marginHorizontal: 10, gap: 6 },
+  moreHeaderText: { flex: 1, minWidth: 0, paddingHorizontal: 4 },
+  moreTitle: { fontSize: 21, fontWeight: "800", color: colors.textDark, textAlign: "center" },
+  moreTitleCompact: { fontSize: 17 },
+  moreEnglishTitle: { fontSize: 12, fontWeight: "700", color: colors.textMid, textAlign: "center" },
+  moreChildName: { fontSize: 12, color: colors.textMid, fontWeight: "600", textAlign: "center" },
+  moreScroll: { flex: 1, alignSelf: "stretch", minWidth: 0 },
+  moreMenuContent: { minWidth: 0, gap: 14 },
+  moreRtlText: { textAlign: "right" },
   menuSectionHeader: { fontSize: 13, fontWeight: "800", color: colors.textLight, letterSpacing: 0.8 },
   moreRow: {
+    alignSelf: "stretch",
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -541,5 +559,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
   },
-  moreRowText: { flex: 1, fontSize: 17, fontWeight: "700", color: colors.textDark },
+  moreRowCompact: { gap: 8, paddingHorizontal: 10 },
+  moreRowContent: { flex: 1, minWidth: 0 },
+  moreRowText: { fontSize: 17, fontWeight: "700", color: colors.textDark },
 });

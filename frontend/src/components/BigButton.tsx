@@ -54,6 +54,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
+    maxWidth: "100%",
     gap: 8,
     paddingHorizontal: 24,
     shadowOffset: { width: 0, height: 4 },
@@ -62,6 +63,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   text: {
+    flexShrink: 1,
+    textAlign: "center",
     fontWeight: "700",
     fontSize: 18,
   },

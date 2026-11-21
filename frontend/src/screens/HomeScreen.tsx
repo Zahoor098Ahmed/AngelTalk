@@ -55,11 +55,12 @@ export default function HomeScreen(props: Props) {
     [catTick, settings.language],
   );
   const child = getChild(propChild.id) ?? propChild;
-  const { isTablet } = useResponsive();
+  const { isTablet, isSmallPhone } = useResponsive();
   // categories per row chosen in Settings (0 = automatic); the card width follows the grid width
-  const perRow = Math.min(settings.homeTilesPerRow ?? 0, 7);
+  const preferredColumns = Math.min(settings.homeTilesPerRow || (isTablet ? 5 : 3), 7);
   const [gridW, setGridW] = useState(0);
-  const cardW = perRow > 0 && gridW > 0 ? Math.floor((gridW - 10 * (perRow - 1)) / perRow) : 0;
+  const columns = Math.max(1, Math.min(preferredColumns, Math.floor((gridW + 10) / 106)));
+  const cardW = gridW > 0 ? Math.floor((gridW - 10 * (columns - 1)) / columns) : 0;
   const lang = settings.language;
   const hour = new Date().getHours();
   const greeting = hour < 12 ? t("morning", lang) : hour < 17 ? t("afternoon", lang) : t("evening", lang);
@@ -99,18 +100,18 @@ export default function HomeScreen(props: Props) {
         <View style={styles.header}>
           <View style={[styles.headerInner, isTablet && styles.headerInnerTablet]}>
             <View style={styles.headerTop}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <Mascot mood="happy" size={58} animate={!settings.reduceMotion} />
-                <View>
+              <View style={styles.profileSummary}>
+                <Mascot mood="happy" size={isSmallPhone ? 44 : 58} animate={!settings.reduceMotion} />
+                <View style={styles.profileText}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                     <Ionicons
                       name={hour < 12 ? "sunny-outline" : hour < 17 ? "partly-sunny-outline" : "moon-outline"}
                       size={16}
                       color="rgba(255,255,255,0.8)"
                     />
-                    <Text style={styles.greeting}>{greeting}</Text>
+                    <Text style={[styles.greeting, styles.profileText]}>{greeting}</Text>
                   </View>
-                  <Text style={styles.name}>{child.name}</Text>
+                  <Text style={[styles.name, isSmallPhone && styles.compactName]} numberOfLines={2}>{child.name}</Text>
                 </View>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -135,7 +136,7 @@ export default function HomeScreen(props: Props) {
         </View>
 
         <ScrollView
-          contentContainerStyle={[styles.body, isTablet && styles.bodyTablet]}
+          contentContainerStyle={[styles.body, isSmallPhone && styles.bodyCompact, isTablet && styles.bodyTablet]}
           showsVerticalScrollIndicator={false}
         >
           {/* Start talking — the main thing a child comes here to do */}
@@ -201,7 +202,7 @@ export default function HomeScreen(props: Props) {
                         if (onOpenCategory) onOpenCategory(c.id);
                         else onTabChange("speak");
                       }}
-                      style={({ pressed }) => [styles.catCard, isTablet && styles.catCardTablet, cardW > 0 && { width: cardW - 3, minWidth: 0, maxWidth: cardW, flexGrow: 1 }, pressed && { transform: [{ scale: 0.97 }] }]}
+                      style={({ pressed }) => [styles.catCard, cardW > 0 && { width: cardW }, pressed && { transform: [{ scale: 0.97 }] }]}
                       accessibilityLabel={tab.name}
                     >
                       <View style={[styles.catPicBox, !pic.uri && { backgroundColor: (c.color || colors.forest) + "18" }]}>
@@ -256,7 +257,10 @@ const styles = StyleSheet.create({
     maxWidth: 860,
     alignSelf: "center",
   },
-  headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  headerTop: { flexDirection: "row", alignItems: "center", gap: 8 },
+  profileSummary: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 8 },
+  profileText: { flex: 1, minWidth: 0 },
+  compactName: { fontSize: 23 },
   greeting: { color: "rgba(255,255,255,0.85)", fontSize: 16, fontWeight: "600" },
   name: { color: "white", fontSize: 28, fontWeight: "900", marginTop: 2 },
   settingsBtn: {
@@ -279,6 +283,7 @@ const styles = StyleSheet.create({
   starBadgeHeaderText: { color: "white", fontSize: 16, fontWeight: "800" },
 
   body: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 14 },
+  bodyCompact: { paddingHorizontal: 12 },
   bodyTablet: { maxWidth: 860, alignSelf: "center", width: "100%", paddingHorizontal: 28 },
 
   /* Start Talking card */
@@ -335,11 +340,10 @@ const styles = StyleSheet.create({
   catTitle: { fontSize: 18, fontWeight: "800", color: colors.textDark, marginTop: 18, marginBottom: 10 },
   catGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   catCard: {
-    width: "31%", flexGrow: 1, maxWidth: "32%", minWidth: 96, backgroundColor: "#ffffff", borderRadius: 20,
+    width: "30%", backgroundColor: "#ffffff", borderRadius: 20,
     borderWidth: 1, borderColor: "#efe9e1", padding: 10, alignItems: "center", gap: 8,
     shadowOpacity: 0, elevation: 0,
   },
-  catCardTablet: { width: "18%", maxWidth: "19.2%" },
   catPicBox: { width: "100%", aspectRatio: 1.295, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   catPic: { width: "100%", height: "100%", resizeMode: "contain" },
   catPicText: { fontSize: 26, fontWeight: "800" },

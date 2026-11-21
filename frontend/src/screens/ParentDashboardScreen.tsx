@@ -321,7 +321,7 @@ export default function ParentDashboardScreen({
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={[styles.body, isTablet && styles.bodyTablet]} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.body, isSmallPhone && styles.bodyCompact, isTablet && styles.bodyTablet]} showsVerticalScrollIndicator={false}>
           {/* ================= 1. OVERVIEW SUBTAB ================= */}
           {subTab === "overview" && (
             <>
@@ -1185,6 +1185,7 @@ const styles = StyleSheet.create({
   subTabUnderline: { display: "none" },
 
   body: { padding: 18, gap: 16, paddingBottom: 60 },
+  bodyCompact: { paddingHorizontal: 12 },
   bodyTablet: {
     maxWidth: 860,
     alignSelf: "center",

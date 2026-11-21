@@ -1,5 +1,5 @@
 import { useRef, useState, type ComponentRef } from "react";
-import { View, Pressable, StyleSheet, Dimensions, ScrollView, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
+import { View, Pressable, StyleSheet, useWindowDimensions, ScrollView, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,7 +13,6 @@ interface Props {
   onGetStarted: () => void;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface Slide {
   icon: keyof typeof Ionicons.glyphMap;
@@ -82,12 +81,13 @@ const SHAPES = [
 
 export default function LandingScreen({ onGetStarted }: Props) {
   const { settings, update } = useSettings();
+  const { width } = useWindowDimensions();
   const isEnglish = settings.language === "en-US";
   const [slideIdx, setSlideIdx] = useState(0);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
 
   function onScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    const idx = Math.round(e.nativeEvent.contentOffset.x / width);
     setSlideIdx(idx);
   }
 
@@ -135,7 +135,7 @@ export default function LandingScreen({ onGetStarted }: Props) {
           style={styles.carousel}
         >
           {SLIDES.map((slide, i) => (
-            <View key={i} style={[styles.slide, { width: SCREEN_WIDTH }]}>
+            <View key={i} style={[styles.slide, { width }]}>
               {i === 0 ? (
                 <Logo size={84} />
               ) : (
@@ -208,13 +208,13 @@ const styles = StyleSheet.create({
   dots: { flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 6 },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.3)" },
   dotActive: { backgroundColor: "white", width: 20 },
-  featureRow: { flexDirection: "row", justifyContent: "space-around", paddingHorizontal: 20, marginTop: 24 },
+  featureRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center", paddingHorizontal: 12, marginTop: 24 },
   featureItem: { alignItems: "center", gap: 6, width: 76 },
   featureIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" },
   featureLabel: { color: "rgba(255,255,255,0.75)", fontSize: 10.5, textAlign: "center" },
   footer: { paddingHorizontal: 28, marginTop: "auto", gap: 14 },
   trustText: { color: "rgba(255,255,255,0.6)", fontSize: 11.5, textAlign: "center" },
-  langRow: { flexDirection: "row", gap: 10, justifyContent: "center" },
+  langRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "center" },
   langBtn: { paddingVertical: 8, paddingHorizontal: 22, borderRadius: 20, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.4)" },
   langBtnActive: { backgroundColor: "white", borderColor: "white" },
   langText: { color: "white", fontWeight: "700", fontSize: 13 },
