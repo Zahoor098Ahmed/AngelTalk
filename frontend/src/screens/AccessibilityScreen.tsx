@@ -281,8 +281,6 @@ export default function AccessibilityScreen({ onBack }: Props) {
             })}
           </View>
 
-          {/* ---- noun forms (off: forms are shown only for verbs) ---- */}
-          {false && (<>
           {/* ---- noun forms ---- */}
           <Text style={styles.sectionTitle}>
             {lang === "ar-SA" ? "صيغ الأسماء المعروضة" : lang === "ur-PK" ? "دکھائی جانے والی اسم کی فارمز" : "Noun forms to show"}
@@ -292,14 +290,14 @@ export default function AccessibilityScreen({ onBack }: Props) {
               ? "عند لمس اسم تظهر صيغه. اختر الصيغ المعروضة."
               : lang === "ur-PK"
                 ? "اسم پر ٹیپ کرنے سے اس کی فارمز کھلتی ہیں۔ جو دکھانی ہیں وہ چنیں۔"
-                : "Tapping a noun opens its forms. Pick the forms the popup shows."}
+                : "Choose the forms shown in People, Relationships, Professions and Organization."}
           </Text>
           <View style={[styles.segRow, { flexWrap: "wrap" }]}>
             {([
-              { key: "one", label: lang === "ar-SA" ? "مفرد" : "One", example: "Apple" },
-              { key: "many", label: lang === "ar-SA" ? "جمع" : "Many", example: "Apples" },
-              { key: "ones", label: "'s", example: "Apple's" },
-              { key: "manys", label: "s'", example: "Apples'" },
+              { key: "one", label: lang === "ar-SA" ? "مفرد" : "One", example: "Brother" },
+              { key: "many", label: lang === "ar-SA" ? "جمع" : "Plural (s / es)", example: "Brothers" },
+              { key: "ones", label: "'s", example: "Brother's" },
+              { key: "manys", label: "s'", example: "Brothers'" },
             ] as { key: NounFormKey; label: string; example: string }[]).map((f) => {
               const shown = settings.visibleNounForms?.length ? settings.visibleNounForms : ALL_NOUN_FORMS;
               const on = shown.includes(f.key);
@@ -327,8 +325,6 @@ export default function AccessibilityScreen({ onBack }: Props) {
               );
             })}
           </View>
-
-          </>)}
 
           {/* ---- admin ---- */}
           <Text style={styles.sectionTitle}>{t("setParentControls", lang)}</Text>

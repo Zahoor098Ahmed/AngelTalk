@@ -1,3 +1,4 @@
+import { boardPictureOptions, warmBoardCategory } from "../modules/boardPictureLoading";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { View, Pressable, StyleSheet, ScrollView, Image, I18nManager, Alert, Modal, useWindowDimensions, Platform } from "react-native";
 import Text from "../components/AppText";
@@ -15,6 +16,7 @@ import {
   visibleTopLevelCategories,
   visibleChildCategories,
   getCategory,
+  folderEnglishName,
   createBlankCategory,
   bottomTabCategories,
   verbFolderLetter,
@@ -496,14 +498,8 @@ function CardPic({
   return <Text style={{ fontSize: Math.max(18, Math.round(size * 0.72)) }}>{emoji || "🔹"}</Text>;
 }
 
-/** The noun forms popup (Apple / Apples / Apple's / Apples') is off: forms are only for verbs. */
-const NOUN_FORMS_ENABLED = false;
-
-/** Shelves whose tiles are not nouns (no Apple / Apples / Apple's / Apples' popup). */
-const NOT_NOUN_SHELVES = new Set([
-  "say it for me", "subjects", "sentence starters & phrases", "attributes", "feelings", "alphabet & numerals",
-  "verbs", "actions", "songs & stories", "red", "calendar",
-]);
+const PEOPLE_NOUN_FOLDERS = new Set(["people", "relationships", "family", "professions"]);
+const ORGANIZATION_FOLDERS = new Set(["organization", "organizations", "organisation", "organisations"]);
 
 function nounFormBadgeTitle(key: NounFormKey, lang: string): string {
   if (lang === "ar-SA") return key === "one" ? "مفرد" : key === "many" ? "جمع" : key === "ones" ? "ملكية المفرد" : "ملكية الجمع";
@@ -643,23 +639,11 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   }, [currentId]);
   const current = currentId ? getCategory(currentId) : null;
   const folderName = (current?.seedName || current?.name)?.toLowerCase();
-  const softenBrightColors = folderName === "places" ||
-    !!folderName?.startsWith("hygiene and ") ||
-    !!folderName?.startsWith("money and ") ||
-    !!folderName?.startsWith("music, instruments");
-  const openFolderNames = path.map((id) => {
-    const category = getCategory(id);
-    return (category?.seedName || category?.name)?.toLowerCase();
-  });
-  const inFoodAndDrinks = openFolderNames.includes("food and drinks");
-  const inHealthAndMedical = openFolderNames.includes("health and medical");
-  const inAlphabets = openFolderNames.includes("alphabets and numerals");
-  const inSportsAndFitness = openFolderNames.includes("sports and fitness");
+  const pictureOptions = useMemo(() => boardPictureOptions(current), [current, tick]);
   const cols = Math.max(1, Math.min(preferredCols, Math.floor((width - 12) / 94)));
   const tileW = (width - 12) / cols - 8;
   const cardPicSize = Math.round(Math.min(200, Math.max(40, Math.min(tileW * 0.86, tileW / 0.95 - 38))));
   const folderPicSize = Math.round(Math.min(190, Math.max(36, Math.min(tileW * 0.8, tileW / 0.95 - 62))));
-  const redTreatment = inHealthAndMedical ? "health" : softenBrightColors ? "all" : true;
   const folders: CustomCategory[] = useMemo(
     () => (currentId ? visibleChildCategories(currentId) : visibleTopLevelCategories()),
     [currentId, ready, tick],
@@ -777,13 +761,20 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       }));
   }
 
-  // Nouns: one box; tapping it opens Apple · Apples · Apple's · Apples' (Settings > "Noun forms to show")
   const isNounCategory = useMemo(() => {
-    // forms are shown only in the Verbs folders; noun tiles speak straight away
-    if (!NOUN_FORMS_ENABLED || !current || isActionsCategory) return false;
-    const root = current.parentCategoryId ? getCategory(current.parentCategoryId) ?? current : current;
-    const en = (canonicalWordEn(root.name) || root.name).trim().toLowerCase();
-    return !NOT_NOUN_SHELVES.has(en);
+    if (!current || isActionsCategory) return false;
+    let category: CustomCategory | undefined = current;
+    const visited = new Set<string>();
+    let inPeopleFolder = false;
+    while (category && !visited.has(category.id)) {
+      visited.add(category.id);
+      const name = folderEnglishName(category).toLowerCase();
+      if (ORGANIZATION_FOLDERS.has(name) || ORGANIZATION_FOLDERS.has(category.name.trim().toLowerCase())) return true;
+      if (name === "people and characters") return inPeopleFolder;
+      if (PEOPLE_NOUN_FOLDERS.has(name)) inPeopleFolder = true;
+      category = category.parentCategoryId ? getCategory(category.parentCategoryId) ?? undefined : undefined;
+    }
+    return false;
   }, [current, isActionsCategory]);
   const visibleNounForms = useMemo(
     () => new Set<string>(settings.visibleNounForms?.length ? settings.visibleNounForms : ALL_NOUN_FORMS),
@@ -1391,6 +1382,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 return (
                   <View key={f.id} style={[styles.cell, tileSize]}>
                     <Pressable
+                      onPressIn={() => warmBoardCategory(f)}
                       onPress={() => openFolder(f.id)}
                       style={({ pressed }) => [
                         styles.tile,
@@ -1529,12 +1521,11 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                         <CardPic
                           label={w.label}
                           imageUri={w.imageUri}
-                          pictureFolder={w.isCustom ? undefined : folderName}
+                          {...pictureOptions}
+                          pictureFolder={w.isCustom ? undefined : pictureOptions.pictureFolder}
                           pictureWord={w.verbForms?.base || w.seedLabel || w.label}
                           emoji={w.emoji}
                           size={cardPicSize}
-                          crisp={inSportsAndFitness ? "detail" : !inFoodAndDrinks && !inAlphabets}
-                          softenRed={inSportsAndFitness ? false : redTreatment}
                         />
                       </View>
                       <View style={styles.wordLabelBar}>
@@ -1722,13 +1713,21 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       </Text>
                     </View>
                     <View style={styles.verbModalTilePicWrap}>
-                      <CardPic label={nounOpen.label} imageUri={nounOpen.imageUri} emoji={nounOpen.emoji} size={Math.round(Math.min(verbTileW * 0.86, 190))} />
+                      <CardPic
+                        {...pictureOptions}
+                        label={nounOpen.label}
+                        imageUri={nounOpen.imageUri}
+                        pictureFolder={nounOpen.isCustom ? undefined : pictureOptions.pictureFolder}
+                        pictureWord={nounOpen.verbForms?.base || nounOpen.seedLabel || nounOpen.label}
+                        emoji={nounOpen.emoji}
+                        size={Math.round(Math.min(verbTileW * 0.86, 190))}
+                      />
                     </View>
                     <View style={styles.verbModalTileLabelBar}>
                       <Text
                         style={[styles.verbModalTileLabelText, { fontSize: Math.round(Math.min(18, Math.max(13, verbTileW * 0.095))) }]}
                       >
-                        {r.key === "one" ? wordLabel(nounOpen.label, lang) : lang === "en-US" ? r.text : wordLabel(r.text, lang)}
+                        {wordLabel(r.text, lang)}
                       </Text>
                     </View>
                   </Pressable>
@@ -1753,6 +1752,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
             return (
               <Pressable
                 key={bt.name}
+                onPressIn={() => warmBoardCategory(stripCat)}
                 onPress={() => openBottomTab(bt.id)}
                 style={[styles.bottomTab, width < 560 && { width: 84 }, active && styles.bottomTabActive]}
                 disabled={!bt.id}

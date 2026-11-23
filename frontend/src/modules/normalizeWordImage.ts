@@ -2,6 +2,12 @@
 
 const CACHE_LIMIT = 256;
 const cache = new Map<string, Promise<string>>();
+const finished = new WeakMap<Promise<string>, string>();
+
+export function cachedWordImage(uri: string, crisp: boolean | "detail", softenRed: boolean | "all" | "health", transparent: boolean) {
+  const pending = cache.get(`${crisp}:${softenRed}:${transparent}:${uri}`);
+  return pending && finished.get(pending);
+}
 const queue: Array<() => void> = [];
 let active = 0;
 function pump() {
@@ -17,8 +23,8 @@ function sharpenRaster(ctx: CanvasRenderingContext2D, width: number, height: num
   const original = image.data.slice();
   const horizontal = radius * 4;
   const vertical = width * horizontal;
-  const limit = strong ? 23 : 14;
-  const amount = strong ? 1.2 : 0.8;
+  const limit = strong ? 18 : 14;
+  const amount = strong ? 1.05 : 0.8;
   const isRed = (index: number) => {
     const red = original[index], green = original[index + 1], blue = original[index + 2];
     const dominance = red - Math.max(green, blue);
@@ -184,13 +190,16 @@ export function normalizeWordImage(uri: string, crisp: boolean | "detail" = fals
           const longestSide = Math.max(sourceWidth, sourceHeight);
           const isVector = /^data:image\/svg\+xml[;,]|\.svg(?:[?#]|$)/i.test(uri);
           const enhance = !isVector && Math.max(img.naturalWidth, img.naturalHeight) <= 320;
-          const sharpen = enhance || (crisp && !isVector && longestSide <= 500);
           const focusDetail = crisp === "detail";
+          // Prepared HD pictures already have their edge detail restored in the asset.
+          const sharpen = enhance || (crisp && !isVector && (focusDetail
+            ? Math.max(img.naturalWidth, img.naturalHeight) <= 512
+            : longestSide <= 500));
           const unchangedBounds = bounds.width === scan.width && bounds.height === scan.height;
           if (!transparentBackground && !softenRed && !sharpen && unchangedBounds) return finish(uri);
 
           // Render small originals at enough resolution for large tiles and high-DPI screens.
-          const sharpenTarget = focusDetail ? 384 : 1024;
+          const sharpenTarget = focusDetail ? 512 : 1024;
           const fit = sharpen ? Math.max(1, Math.min(4, sharpenTarget / longestSide)) : Math.min(1, 2048 / longestSide);
           const output = document.createElement("canvas");
           output.width = Math.max(1, Math.round(sourceWidth * fit));
@@ -234,7 +243,11 @@ export function normalizeWordImage(uri: string, crisp: boolean | "detail" = fals
             if (changed) out.putImageData(pixels, 0, 0);
             else if (!transparentBackground && !sharpen && unchangedBounds) return finish(uri);
           }
-          if (sharpen) sharpenRaster(out, width, height, Math.max(1, Math.round(fit)), focusDetail);
+          if (sharpen) {
+            // Span enough source pixels to recover soft edges at the grid's display size.
+            const radius = focusDetail ? Math.max(width, height) / 128 : fit;
+            sharpenRaster(out, width, height, Math.max(1, Math.round(radius)), focusDetail);
+          }
           if (transparentBackground) clearWhiteBorder(out, width, height);
           finish(output.toDataURL("image/png"));
         } catch {
@@ -247,6 +260,7 @@ export function normalizeWordImage(uri: string, crisp: boolean | "detail" = fals
     pump();
   });
   cache.set(cacheKey, pending);
+  void pending.then(result => finished.set(pending, result));
   if (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value!);
   return pending;
 }

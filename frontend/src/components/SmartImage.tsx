@@ -1,7 +1,7 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Image, Platform, StyleSheet, View, type ImageProps } from "react-native";
 import { SvgUri, SvgXml } from "react-native-svg";
-import { normalizeWordImage } from "../modules/normalizeWordImage";
+import { cachedWordImage, normalizeWordImage } from "../modules/normalizeWordImage";
 
 function getInlineSvg(uri?: string): string | undefined {
   const prefix = "data:image/svg+xml,";
@@ -19,34 +19,39 @@ export default function SmartImage({ source, style, resizeMode = "contain", cris
   const inlineSvg = getInlineSvg(uri);
   // Lighten reds without washing out the other original colors.
   const colorTreatment = softenRed === "all" ? true : softenRed;
+  const cached = useMemo(() => Platform.OS === "web" && uri && !inlineSvg
+    ? cachedWordImage(uri, crisp, colorTreatment, transparentBackground)
+    : undefined, [uri, crisp, colorTreatment, transparentBackground, inlineSvg]);
   const [normalized, setNormalized] = useState<{ original: string; uri: string; crisp: boolean | "detail"; softenRed: boolean | "all" | "health"; transparentBackground: boolean }>();
   useEffect(() => {
-    if (Platform.OS !== "web" || !uri || inlineSvg) return;
+    if (Platform.OS !== "web" || !uri || inlineSvg || cached) return;
     let current = true;
     normalizeWordImage(uri, crisp, colorTreatment, transparentBackground).then((next) => {
       if (current) setNormalized({ original: uri, uri: next, crisp, softenRed: colorTreatment, transparentBackground });
     });
     return () => { current = false; };
-  }, [uri, crisp, colorTreatment, inlineSvg, transparentBackground]);
+  }, [uri, crisp, colorTreatment, inlineSvg, transparentBackground, cached]);
   const finalUri = normalized?.original === uri && normalized?.crisp === crisp && normalized?.softenRed === colorTreatment && normalized?.transparentBackground === transparentBackground
     ? normalized.uri
-    : undefined;
+    : cached;
   const displaySource = finalUri ? { ...(source as object), uri: finalUri } : source;
+  // Keep the frame in place while the web image gets its final crop and colors.
+  const preparing = Platform.OS === "web" && !!uri && !inlineSvg && !finalUri;
   return (
     <View style={[style as object, styles.frame, transparentBackground && styles.transparent]}>
       <View style={[styles.picture, transparentBackground && styles.transparent]}>
         {inlineSvg ? <SvgXml xml={inlineSvg} width="100%" height="100%" /> : uri && Platform.OS !== "web" && /\.svg(\?|$)/i.test(uri) ? (
           <SvgUri uri={uri} width="100%" height="100%" onError={() => rest.onError?.({} as never)} />
-        ) : (
+        ) : !preparing ? (
           <Image
-            resizeMethod={Platform.OS === "android" ? "scale" : undefined}
+            resizeMethod={Platform.OS === "android" ? "auto" : undefined}
             {...rest}
             source={displaySource}
             style={StyleSheet.absoluteFill}
             resizeMode={resizeMode}
             fadeDuration={0}
           />
-        )}
+        ) : null}
       </View>
     </View>
   );

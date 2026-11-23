@@ -1,3 +1,4 @@
+import { warmBoardCategory } from "../modules/boardPictureLoading";
 import { useMemo, useEffect, useState } from "react";
 import { View, Pressable, StyleSheet, ScrollView } from "react-native";
 import Text from "../components/AppText";
@@ -17,6 +18,12 @@ import TabBar from "../components/TabBar";
 import { colors } from "../theme";
 import { ensureCategoriesLoaded, bottomTabCategories, getCategory, categoryPictureFor, subscribeCategories } from "../modules/customCategories";
 import Mascot from "../components/Mascot";
+
+const HOME_BODY_MAX_WIDTH = 860;
+const HOME_PADDING = 18;
+const HOME_COMPACT_PADDING = 12;
+const HOME_TABLET_PADDING = 28;
+const HOME_CARD_GAP = 10;
 
 /** Hand-drawn 3D pictures (Microsoft Fluent Emoji, MIT) for the main categories on the Home screen. */
 
@@ -55,12 +62,14 @@ export default function HomeScreen(props: Props) {
     [catTick, settings.language],
   );
   const child = getChild(propChild.id) ?? propChild;
-  const { isTablet, isSmallPhone } = useResponsive();
+  const { width, isTablet, isSmallPhone } = useResponsive();
   // categories per row chosen in Settings (0 = automatic); the card width follows the grid width
   const preferredColumns = Math.min(settings.homeTilesPerRow || (isTablet ? 5 : 3), 7);
-  const [gridW, setGridW] = useState(0);
-  const columns = Math.max(1, Math.min(preferredColumns, Math.floor((gridW + 10) / 106)));
-  const cardW = gridW > 0 ? Math.floor((gridW - 10 * (columns - 1)) / columns) : 0;
+  const bodyWidth = isTablet ? Math.min(width, HOME_BODY_MAX_WIDTH) : width;
+  const bodyPadding = isTablet ? HOME_TABLET_PADDING : isSmallPhone ? HOME_COMPACT_PADDING : HOME_PADDING;
+  const gridW = Math.max(0, bodyWidth - 2 * bodyPadding);
+  const columns = Math.max(1, Math.min(preferredColumns, Math.floor((gridW + HOME_CARD_GAP) / (96 + HOME_CARD_GAP))));
+  const cardW = Math.floor((gridW - HOME_CARD_GAP * (columns - 1)) / columns);
   const lang = settings.language;
   const hour = new Date().getHours();
   const greeting = hour < 12 ? t("morning", lang) : hour < 17 ? t("afternoon", lang) : t("evening", lang);
@@ -191,18 +200,19 @@ export default function HomeScreen(props: Props) {
           {categories.length > 0 && (
             <>
               <Text style={styles.catTitle}>{tr("Categories", "الفئات", "زمرے")}</Text>
-              <View style={styles.catGrid} onLayout={(e) => setGridW(e.nativeEvent.layout.width)}>
+              <View style={styles.catGrid}>
                 {categories.map(({ tab, cat: c }) => {
                   const pic = categoryPictureFor(c);
                   return (
                     <Pressable
                       key={c.id}
+                      onPressIn={() => warmBoardCategory(c)}
                       onPress={() => {
                         tapFeedback();
                         if (onOpenCategory) onOpenCategory(c.id);
                         else onTabChange("speak");
                       }}
-                      style={({ pressed }) => [styles.catCard, cardW > 0 && { width: cardW }, pressed && { transform: [{ scale: 0.97 }] }]}
+                      style={({ pressed }) => [styles.catCard, { width: cardW }, pressed && { transform: [{ scale: 0.97 }] }]}
                       accessibilityLabel={tab.name}
                     >
                       <View style={[styles.catPicBox, !pic.uri && { backgroundColor: (c.color || colors.forest) + "18" }]}>
@@ -282,9 +292,9 @@ const styles = StyleSheet.create({
   },
   starBadgeHeaderText: { color: "white", fontSize: 16, fontWeight: "800" },
 
-  body: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 14 },
-  bodyCompact: { paddingHorizontal: 12 },
-  bodyTablet: { maxWidth: 860, alignSelf: "center", width: "100%", paddingHorizontal: 28 },
+  body: { paddingHorizontal: HOME_PADDING, paddingTop: 16, paddingBottom: 28, gap: 14 },
+  bodyCompact: { paddingHorizontal: HOME_COMPACT_PADDING },
+  bodyTablet: { maxWidth: HOME_BODY_MAX_WIDTH, alignSelf: "center", width: "100%", paddingHorizontal: HOME_TABLET_PADDING },
 
   /* Start Talking card */
   heroCard: {
@@ -338,9 +348,9 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   catTitle: { fontSize: 18, fontWeight: "800", color: colors.textDark, marginTop: 18, marginBottom: 10 },
-  catGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  catGrid: { flexDirection: "row", flexWrap: "wrap", gap: HOME_CARD_GAP },
   catCard: {
-    width: "30%", backgroundColor: "#ffffff", borderRadius: 20,
+    backgroundColor: "#ffffff", borderRadius: 20,
     borderWidth: 1, borderColor: "#efe9e1", padding: 10, alignItems: "center", gap: 8,
     shadowOpacity: 0, elevation: 0,
   },
