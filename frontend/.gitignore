@@ -45,3 +45,6 @@ Thumbs.db
 
 # Python image maintenance scripts
 __pycache__/
+assets/image-audit/
+assets/image-edits/
+

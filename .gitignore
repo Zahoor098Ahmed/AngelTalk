@@ -10,3 +10,5 @@ build/
 *.log
 .DS_Store
 Thumbs.db
+frontend/assets/image-audit/
+frontend/assets/image-edits/

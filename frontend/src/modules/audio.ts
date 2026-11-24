@@ -262,6 +262,8 @@ export async function deleteClip(uri?: string) {
 }
 
 let currentPlayingWebAudio: any = null;
+let sentencePlaybackId = 0;
+let cancelOnlineWebSpeech: (() => void) | undefined;
 
 // Speaking speed for spoken audio clips (online Arabic/Urdu voice). 1 = normal (Settings "Normal" = 0.9).
 let ttsPlaybackRate = 1;
@@ -359,106 +361,77 @@ export function playOnlineTTS(text: string, langCode: "ar" | "ur" | "de" | "fr" 
 
   return new Promise((resolve) => {
     try {
-      stopSentence();
+      stopCurrentSpeech();
 
       const origin = typeof window !== "undefined" && window.location?.origin ? window.location.origin : "http://localhost:8081";
       const proxyUrl = `${origin}/api/tts?q=${encodeURIComponent(cleanText)}&tl=${langCode}`;
       const directUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanText)}&tl=${langCode}&client=gtx`;
 
       if (Platform.OS === "web") {
-        if (currentPlayingWebAudio) {
-          try {
-            currentPlayingWebAudio.pause();
-            currentPlayingWebAudio.currentTime = 0;
-          } catch {
-            /* ignore */
-          }
-          currentPlayingWebAudio = null;
-        }
-
-        let done = false;
-        const finish = (ok: boolean) => {
-          if (done) return;
-          done = true;
-          resolve(ok);
-        };
-
-        const cacheKey = `${langCode}:${cleanText}`;
-        let audio = ttsAudioInstanceCache.get(cacheKey);
-        if (!audio) {
-          audio = new Audio(proxyUrl);
-          ttsAudioInstanceCache.set(cacheKey, audio);
-        } else {
-          try {
-            audio.currentTime = 0;
-          } catch {
-            /* ignore */
-          }
-        }
-
-        audio.playbackRate = ttsPlaybackRate;
-        currentPlayingWebAudio = audio;
-        audio.onended = () => {
-          if (currentPlayingWebAudio === audio) currentPlayingWebAudio = null;
-          finish(true);
-        };
         const backendUrl = (typeof process !== "undefined" && process.env?.EXPO_PUBLIC_BACKEND_URL) || "http://localhost:4000";
         const backendProxyUrl = `${backendUrl}/api/tts?q=${encodeURIComponent(cleanText)}&tl=${langCode}`;
+        const sources = [...new Set([proxyUrl, backendProxyUrl, directUrl])];
+        const cacheKey = `${langCode}:${cleanText}`;
+        let cleanup = () => {};
+        const finish = (handled: boolean) => {
+          cleanup();
+          cancelOnlineWebSpeech = undefined;
+          resolve(handled);
+        };
+        cancelOnlineWebSpeech = () => finish(true);
 
-        const tryFallback = () => {
-          try {
-            const altBackend = new Audio(backendProxyUrl);
-            altBackend.playbackRate = ttsPlaybackRate;
-            currentPlayingWebAudio = altBackend;
-            altBackend.onended = () => {
-              if (currentPlayingWebAudio === altBackend) currentPlayingWebAudio = null;
-              finish(true);
-            };
-            altBackend.onerror = () => {
-              try {
-                const direct = new Audio(directUrl);
-                direct.playbackRate = ttsPlaybackRate;
-                currentPlayingWebAudio = direct;
-                direct.onended = () => {
-                  if (currentPlayingWebAudio === direct) currentPlayingWebAudio = null;
-                  finish(true);
-                };
-                direct.onerror = () => {
-                  if (currentPlayingWebAudio === direct) currentPlayingWebAudio = null;
-                  finish(false);
-                };
-                direct.play().catch(() => finish(false));
-              } catch {
-                finish(false);
-              }
-            };
-            altBackend.play().catch(() => {
-              try {
-                const direct = new Audio(directUrl);
-                direct.playbackRate = ttsPlaybackRate;
-                currentPlayingWebAudio = direct;
-                direct.onended = () => {
-                  if (currentPlayingWebAudio === direct) currentPlayingWebAudio = null;
-                  finish(true);
-                };
-                direct.onerror = () => {
-                  if (currentPlayingWebAudio === direct) currentPlayingWebAudio = null;
-                  finish(false);
-                };
-                direct.play().catch(() => finish(false));
-              } catch {
-                finish(false);
-              }
-            });
-          } catch {
+        const playSource = (index: number) => {
+          const url = sources[index];
+          if (!url) {
             finish(false);
+            return;
+          }
+          let audio: HTMLAudioElement;
+          try {
+            audio = (index === 0 && ttsAudioInstanceCache.get(cacheKey)) || new Audio(url);
+            if (index === 0) ttsAudioInstanceCache.set(cacheKey, audio);
+            audio.currentTime = 0;
+            audio.playbackRate = ttsPlaybackRate;
+          } catch {
+            playSource(index + 1);
+            return;
+          }
+
+          currentPlayingWebAudio = audio;
+          let active = true;
+          let started = false;
+          const fail = () => {
+            if (!active) return;
+            cleanup();
+            if (started) {
+              finish(true);
+            } else {
+              if (index === 0) ttsAudioInstanceCache.delete(cacheKey);
+              playSource(index + 1);
+            }
+          };
+          const timer = setTimeout(fail, 4000);
+          cleanup = () => {
+            if (!active) return;
+            active = false;
+            clearTimeout(timer);
+            audio.onplaying = audio.onended = audio.onerror = null;
+            audio.pause();
+            if (currentPlayingWebAudio === audio) currentPlayingWebAudio = null;
+          };
+          audio.onplaying = () => {
+            started = true;
+            clearTimeout(timer);
+          };
+          audio.onended = () => finish(true);
+          audio.onerror = fail;
+          try {
+            audio.play().catch(fail);
+          } catch {
+            fail();
           }
         };
-
-        audio.onerror = tryFallback;
-        audio.play().catch(tryFallback);
-
-        setTimeout(() => finish(true), 4000);
+        playSource(0);
         return;
       }
 
@@ -734,6 +707,16 @@ export async function playWord(
   useWholePhrase = false
 ): Promise<void> {
   stopSentence();
+  await playWordAudio(word, lang, rate, voiceType, useWholePhrase);
+}
+
+async function playWordAudio(
+  word: SpokenWord,
+  lang: LanguageCode,
+  rate: number,
+  voiceType: import("../types").VoiceType,
+  useWholePhrase: boolean
+): Promise<void> {
   if (word.audioUri && word.useTextToSpeech !== true) {
     await playClip(word.audioUri);
   } else {
@@ -744,6 +727,12 @@ export async function playWord(
 
 /** Stop any speech currently playing. */
 export function stopSentence(): void {
+  sentencePlaybackId += 1;
+  stopCurrentSpeech();
+}
+
+function stopCurrentSpeech(): void {
+  cancelOnlineWebSpeech?.();
   try {
     Speech.stop();
   } catch {
@@ -782,8 +771,11 @@ export async function playSentence(
   }
 
   // Sequenced playback for custom recorded clips or language-specific Alphabet/Numeral tiles
+  const playbackId = sentencePlaybackId;
   for (const w of words) {
-    await playWord(w, lang, rate, voiceType, true);
+    if (playbackId !== sentencePlaybackId) return;
+    await playWordAudio(w, lang, rate, voiceType, true);
+    if (playbackId !== sentencePlaybackId) return;
     await new Promise((r) => setTimeout(r, 120));
   }
 }
