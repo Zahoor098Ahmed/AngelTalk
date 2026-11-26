@@ -4,6 +4,7 @@ import { categoryPictureFor, getCategory, visibleChildCategories } from "./custo
 import { canonicalWordEn } from "./i18n";
 import pictures from "./uniquePictures";
 import { normalizeWordImage } from "./normalizeWordImage";
+import { softenRedNative } from "./nativeSoftenRed";
 
 export function boardPictureOptions(current?: CustomCategory | null) {
   const folder = (current?.seedName || current?.name)?.toLowerCase();
@@ -31,6 +32,9 @@ export function warmBoardCategory(category?: CustomCategory | null) {
     seen.add(uri);
     if (Platform.OS === "web") {
       void normalizeWordImage(uri, folderTile || options.crisp, folderTile ? false : options.softenRed, folderTile);
+    } else if (!folderTile && options.softenRed) {
+      // phones: start softening the reds as soon as the folder is tapped, like the web does
+      void softenRedNative(uri, options.softenRed === "health" ? "health" : true);
     } else {
       void Image.prefetch(uri).catch(() => {});
     }

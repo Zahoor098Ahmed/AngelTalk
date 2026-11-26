@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Alert } from "react-native";
 import Text from "./AppText";
 import { useSettings } from "../context/SettingsContext";
 import { applyLanguageDirection, t } from "../modules/i18n";
-import { retranslateSeedBoard, setSeedLanguage } from "../modules/customCategories";
+import { ensureBoardLanguage, setSeedLanguage } from "../modules/customCategories";
 import { colors } from "../theme";
 
 interface LangBadgeProps {
@@ -17,7 +17,9 @@ export default function LangBadge({ dark }: LangBadgeProps) {
     const nextLang = isEnglish ? "ar-SA" : "en-US";
     update({ language: nextLang });
     setSeedLanguage(nextLang);
-    retranslateSeedBoard(nextLang);
+    // the screen switches language right away (labels translate as they draw);
+    // re-saving the whole board in the new language happens just after, so the tap never waits on it
+    setTimeout(() => ensureBoardLanguage(nextLang), 60);
     const flipped = applyLanguageDirection(nextLang);
     if (flipped) Alert.alert(nextLang === "ar-SA" ? "العربية" : "English", t("reopenForLanguage", nextLang));
   }

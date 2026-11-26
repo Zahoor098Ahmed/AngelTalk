@@ -3731,7 +3731,7 @@
 
 ## 2026-11-24
 
-- **11:05:44 – 11:46:44** ⏱️ Active Coding Session (**41 min**)
+- **11:05:44 – 12:17:56** ⏱️ Active Coding Session (**72 min**)
   - 📁 **Files Worked On (30):**
     - `angel-talk-backend/src/app.ts`
     - `angel-talk-backend/src/modules/content/content.routes.ts`
@@ -3763,3 +3763,280 @@
     - `fruits_words.json`
     - `get_food_words.js`
     - `get_fruits_drinks.js`
+
+- **12:33:09 – 12:47:48** ⏱️ Active Coding Session (**15 min**)
+  - 📁 **Files Worked On (3):**
+    - `frontend/package.json`
+    - `.gitignore`
+    - `docker-compose.yml`
+
+- **13:00:47 – 13:12:22** ⏱️ Active Coding Session (**12 min**)
+  - 📁 **Files Worked On (5):**
+    - `README.md`
+    - `DOCUMENTATION.md`
+    - `BACKEND_AND_DATABASE_WORKFLOW.md`
+    - `.gitignore`
+    - `.gitattributes`
+
+- **13:20:14 – 13:20:14** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+- **14:39:53 – 14:39:57** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (3):**
+    - `.gitattributes`
+    - `.gitignore`
+    - `angel-talk-production.aab`
+
+- **14:57:20 – 15:04:52** ⏱️ Active Coding Session (**8 min**)
+  - 📁 **Files Worked On (6):**
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `README.md`
+    - `Angel Talk - Play Store Listing.docx`
+    - `~$gel Talk - Play Store Listing.docx`
+    - `Angel Talk - Updated Play Store Listing.docx`
+    - `~$gel Talk - Updated Play Store Listing.docx`
+
+- **16:01:40 – 16:01:40** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `.gitattributes`
+    - `.gitignore`
+
+- **16:33:46 – 16:33:49** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `Angel Talk - Updated Play Store Listing.docx`
+    - `angel-talk-production.aab`
+
+## 2026-11-25
+
+- **09:48:45 – 09:48:45** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `.gitattributes`
+    - `.gitignore`
+
+- **09:49:00 – 09:50:41** ⏱️ Active Coding Session (**2 min**)
+  - 📁 **Files Worked On (2):**
+    - `docker-compose.yml`
+    - `angel-talk-production.aab`
+
+- **10:52:17 – 10:52:17** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `.gitattributes`
+    - `.gitignore`
+
+- **11:09:23 – 11:09:26** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `Angel Talk - Updated Play Store Listing.docx`
+    - `angel-talk-production.aab`
+
+- **11:58:06 – 11:58:06** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `.gitattributes`
+    - `.gitignore`
+
+- **12:13:33 – 12:13:36** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `Angel Talk - Updated Play Store Listing.docx`
+    - `angel-talk-production.aab`
+
+- **13:07:21 – 13:17:13** ⏱️ Active Coding Session (**10 min**)
+  - 📁 **Files Worked On (7):**
+    - `docker-compose.yml`
+    - `.gitattributes`
+    - `.gitignore`
+    - `frontend/src/modules/uniquePictures.json`
+    - `frontend/src/modules/customCategories.ts`
+    - `Angel Talk - Updated Play Store Listing.docx`
+    - `angel-talk-production.aab`
+
+- **14:30:00 – 14:34:02** ⏱️ Active Coding Session (**4 min**)
+  - 📁 **Files Worked On (4):**
+    - `.gitattributes`
+    - `.gitignore`
+    - `Angel Talk - Updated Play Store Listing.docx`
+    - `angel-talk-production.aab`
+
+- **15:52:36 – 16:22:00** ⏱️ Active Coding Session (**29 min**)
+  - 📁 **Files Worked On (30):**
+    - `angel-talk.apk`
+    - `.gitattributes`
+    - `.gitignore`
+    - `angel-talk-production.aab`
+    - `docker-compose.yml`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/AACBoardScreen.tsx.tmp.13144.3582b828d6e8`
+    - `frontend/app.json`
+    - `frontend/src/modules/animalPictureReplacements.json`
+    - `frontend/src/modules/breadPictureReplacements.json`
+    - `frontend/src/modules/everydayPictureReplacements.json`
+    - `frontend/src/modules/dairyPictureReplacements.json`
+    - `frontend/src/modules/clarityPictureReplacements.json`
+    - `frontend/src/modules/condimentPictureReplacements.json`
+    - `frontend/src/modules/drinkPictureReplacements.json`
+    - `frontend/src/modules/hygienePictureReplacements.json`
+    - `frontend/src/modules/fruitPictureReplacements.json`
+    - `frontend/src/modules/kitchenPictureReplacements.json`
+    - `frontend/src/modules/cookedFoodPictureReplacements.json`
+    - `frontend/src/modules/homeCategoryPictures.json`
+    - `frontend/src/modules/peoplePrepositionPictures.json`
+    - `frontend/src/modules/meatAndFishPictureReplacements.json`
+    - `frontend/src/modules/nutsSoupsSweetsVegetablesPictures.json`
+    - `frontend/src/modules/peoplePronounPictures.json`
+    - `frontend/src/modules/peopleSchoolPictures.json`
+    - `frontend/src/modules/peopleVerbAPictures.json`
+    - `frontend/src/modules/requestedPictureReplacements.json`
+    - `frontend/src/modules/uniquePictures.part-05.json`
+    - `frontend/src/modules/vehiclePictureReplacements.json`
+    - `frontend/src/modules/verbScreenshotFixes.json`
+
+- **16:41:41 – 16:55:27** ⏱️ Active Coding Session (**14 min**)
+  - 📁 **Files Worked On (4):**
+    - `angel-talk-production.aab`
+    - `angel-talk.apk`
+    - `.gitattributes`
+    - `.gitignore`
+
+- **17:31:35 – 17:31:35** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `frontend/app.json`
+
+- **17:51:30 – 17:56:46** ⏱️ Active Coding Session (**5 min**)
+  - 📁 **Files Worked On (5):**
+    - `angel-talk-v4.aab`
+    - `Angel Talk - Updated Play Store Listing.docx`
+    - `angel-talk-production.aab`
+    - `angel-talk.apk`
+    - `.gitignore`
+
+## 2026-11-26
+
+- **10:16:04 – 10:16:04** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+- **10:16:18 – 10:34:41** ⏱️ Active Coding Session (**18 min**)
+  - 📁 **Files Worked On (4):**
+    - `docker-compose.yml`
+    - `.gitattributes`
+    - `frontend/src/modules/audio.ts`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+
+- **10:48:12 – 10:48:13** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (5):**
+    - `frontend/src/components/LangBadge.tsx.tmp.4204.d70b9a4a3147`
+    - `frontend/src/components/LangBadge.tsx`
+    - `frontend/src/components/LangBadge.tsx.tmp.4204.7d6ffd6d62fc`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/AACBoardScreen.tsx.tmp.4204.0917563384be`
+
+- **11:16:40 – 11:16:40** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.gitignore`
+
+- **11:44:45 – 11:44:45** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `frontend/src/components/AppTextInput.tsx`
+    - `frontend/src/screens/EnrollChildScreen.tsx`
+
+- **12:14:15 – 12:22:34** ⏱️ Active Coding Session (**8 min**)
+  - 📁 **Files Worked On (30):**
+    - `.gitattributes`
+    - `all_food_words.json`
+    - `Angel Talk - Updated Play Store Listing.docx`
+    - `angel-talk-production.aab`
+    - `angel-talk-v4.aab`
+    - `angel-talk.apk`
+    - `compare_food_commits.js`
+    - `compare_78_daf.js`
+    - `check_missing_food.js`
+    - `check_food_keys_current.js`
+    - `check_food_keys.js`
+    - `check_food_diffs.js`
+    - `check_fd_dimensions.ps1`
+    - `check_edges.js`
+    - `check_cutoffs.ps1`
+    - `check_commit_bg.js`
+    - `check_backlog_diff.js`
+    - `BACKEND_AND_DATABASE_WORKFLOW.md`
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `trace_food_commits.js`
+    - `save_views.js`
+    - `save_samples.js`
+    - `restore_food.js`
+    - `README.md`
+    - `print_fd_list.js`
+    - `list_categories.js`
+    - `inspect_fruits_drinks.js`
+    - `extract_food.js`
+    - `dump_fd.js`
+    - `drinks_words.json`
+
+- **14:22:45 – 14:25:28** ⏱️ Active Coding Session (**3 min**)
+  - 📁 **Files Worked On (7):**
+    - `.gitignore`
+    - `frontend/src/modules/nativeSoftenRed.ts.tmp.4204.85715878d93c`
+    - `frontend/src/modules/nativeSoftenRed.ts`
+    - `frontend/src/components/SmartImage.tsx`
+    - `frontend/src/modules/boardPictureLoading.ts`
+    - `.gitattributes`
+    - `frontend/app.json`
+
+- **15:22:14 – 15:31:11** ⏱️ Active Coding Session (**9 min**)
+  - 📁 **Files Worked On (30):**
+    - `ANGEL_TALK_OVERVIEW.md`
+    - `Angel Talk - Updated Play Store Listing.docx`
+    - `BACKEND_AND_DATABASE_WORKFLOW.md`
+    - `DOCUMENTATION.md`
+    - `IMAGE_REVIEW.md`
+    - `README.md`
+    - `all_food_words.json`
+    - `angel-talk-production.aab`
+    - `angel-talk-v4.aab`
+    - `angel-talk.apk`
+    - `check_backlog_diff.js`
+    - `check_commit_bg.js`
+    - `check_cutoffs.ps1`
+    - `check_edges.js`
+    - `check_fd_dimensions.ps1`
+    - `check_food_diffs.js`
+    - `check_food_keys.js`
+    - `check_food_keys_current.js`
+    - `check_missing_food.js`
+    - `compare_78_daf.js`
+    - `compare_food_commits.js`
+    - `count_food_images.js`
+    - `docker-compose.yml`
+    - `download_test_fd.js`
+    - `drinks_words.json`
+    - `dump_fd.js`
+    - `extract_food.js`
+    - `fruits_words.json`
+    - `get_food_words.js`
+    - `get_fruits_drinks.js`
+
+- **15:57:55 – 16:35:22** ⏱️ Active Coding Session (**37 min**)
+  - 📁 **Files Worked On (11):**
+    - `frontend/src/screens/AccessibilityScreen.tsx.tmp.4204.db2e1faa59b4`
+    - `frontend/src/screens/AccessibilityScreen.tsx`
+    - `frontend/src/screens/AACBoardScreen.tsx`
+    - `frontend/src/screens/HomeScreen.tsx`
+    - `frontend/src/screens/HomeScreen.tsx.tmp.4204.41ef7e7ba008`
+    - `frontend/src/screens/AACBoardScreen.tsx.tmp.4204.d50c6e6df19a`
+    - `frontend/src/screens/AACBoardScreen.tsx.tmp.4204.b5d030d222c4`
+    - `frontend/src/screens/AACBoardScreen.tsx.tmp.4204.15568a66a570`
+    - `.gitignore`
+    - `frontend/src/screens/AACBoardScreen.tsx.tmp.4204.cc8b838e4a3b`
+    - `frontend/src/screens/AACBoardScreen.tsx.tmp.4204.c6ec4b2ddfdc`
+
+- **16:42:59 – 16:43:00** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `frontend/src/screens/AACBoardScreen.tsx`
+
+- **16:52:20 – 16:52:20** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (1):**
+    - `.easignore`
+
+- **17:22:51 – 17:23:25** ⏱️ Active Coding Session (**1 min**)
+  - 📁 **Files Worked On (2):**
+    - `.gitattributes`
+    - `.gitignore`

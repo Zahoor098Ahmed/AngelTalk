@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRe
 import { View, Pressable, StyleSheet, ScrollView, Image, I18nManager, Alert, Modal, useWindowDimensions, Platform } from "react-native";
 import Text from "../components/AppText";
 import TextInput from "../components/AppTextInput";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Speech from "expo-speech";
 import { ALL_VERB_FORMS, ALL_NOUN_FORMS, type NounFormKey, type ChildProfile, type CustomCategory, type CustomWord, type TabScreen } from "../types";
@@ -41,7 +41,6 @@ import AddByVoiceScreen from "./AddByVoiceScreen";
 import { colors } from "../theme";
 import { getVerbForms, detectVerbForm, isContinuousForm, generateAllVerbForms, sFormOf, type VerbForms } from "../modules/verbForms";
 import SmartImage from "../components/SmartImage";
-import Logo from "../components/Logo";
 import { zoomedBoardColumns } from "../modules/boardZoom";
 import MONTH_PICTURE_DATA from "../modules/monthPictures.json";
 
@@ -537,6 +536,17 @@ function verbFormBadgeTitle(badge: string, lang: string): string {
   }
 }
 
+/** Font size that keeps the longest single word on one line inside a tile (never splits "Ankylosaurus"). */
+function fitLabelSize(text: string, tileW: number, base: number, maxLines = 2): number {
+  const clean = (text || "").trim();
+  const longest = clean.split(/\s+/).reduce((m, p) => Math.max(m, p.length), 1);
+  const inner = tileW - 16;
+  const byWord = inner / (longest * 0.62); // ~0.62em per bold character
+  // the whole label fits in maxLines, so it is never pushed past the tile's edges
+  const byLines = (inner * maxLines) / (Math.max(1, clean.length) * 0.64);
+  return Math.round(Math.max(10, Math.min(base, byWord, byLines)));
+}
+
 export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategories, labels, initialCategoryId }: Props) {
   const { settings, update } = useSettings();
   const lang = settings.language;
@@ -544,8 +554,10 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   const bilingual = settings.bilingualDisplay || false;
   const voiceType = settings.voiceType || "boy";
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // web: the browser window (or the emulated device in DevTools), never wider than the page itself
   const windowWidth = Platform.OS === "web" && typeof window !== "undefined" && window.outerWidth > 0
-    ? window.outerWidth
+    ? Math.min(window.outerWidth, width)
     : width;
 
   // Responsive columns: supports density levels (1, 2, 4, 8, 16, 28, 35+) or window dimensions
@@ -561,15 +573,18 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       return 7;
     }
     // Fewer, bigger tiles so pictures stay clear for the child
-    if (windowWidth >= 1100) return 6;
-    if (windowWidth >= 820) return 5;
-    if (windowWidth >= 560) return 4;
-    return Math.min(4, Math.max(3, settings.boardColumns || 4));
+    if (windowWidth >= 1100) return 6; // laptop / desktop
+    if (windowWidth >= 560) return 3; // every iPad / tablet (mini 768 up to Pro 12.9" 1024)
+    return 2; // phones: two big, clear tiles per row (Settings can choose more)
   }, [windowWidth, settings.boardColumns, settings.tilesPerRow, child.buttonDensity]);
 
   const preferredCols = Platform.OS === "web"
     ? zoomedBoardColumns(baseCols, width, windowWidth)
     : baseCols;
+
+  // the board's real width (window minus side margins/scrollbar), measured on layout
+  const [measuredGridW, setMeasuredGridW] = useState(0);
+  const gridW = measuredGridW > 0 ? measuredGridW : width;
 
   const [ready, setReady] = useState(areCategoriesLoaded);
   const [path, setPath] = useState<string[]>(() => {
@@ -622,14 +637,18 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   // "Schools"/"Sports" translated even while the app is set to English.
   useEffect(() => {
     if (!ready) return;
-    ensureBoardLanguage(lang);
+    // let the new language paint first; the heavy board re-translation runs right after
+    const timer = setTimeout(() => {
+      ensureBoardLanguage(lang);
+      setTick((n) => n + 1);
+    }, 60);
     // The sentence-building strip holds its own frozen copy of each tapped
     // word's text, so it doesn't pick up retranslateSeedBoard's changes to
     // the underlying category data — re-translate the chips in place too,
     // otherwise a phrase spoken in one language stays stuck in it even
     // after the whole rest of the board has switched.
     setSentence((prev) => prev.map((c) => ({ ...c, label: wordLabel(c.label, lang) })));
-    setTick((n) => n + 1);
+    return () => clearTimeout(timer);
   }, [ready, lang]);
 
   const currentId = path[path.length - 1] ?? null;
@@ -640,10 +659,22 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
   const current = currentId ? getCategory(currentId) : null;
   const folderName = (current?.seedName || current?.name)?.toLowerCase();
   const pictureOptions = useMemo(() => boardPictureOptions(current), [current, tick]);
-  const cols = Math.max(1, Math.min(preferredCols, Math.floor((width - 12) / 94)));
-  const tileW = (width - 12) / cols - 8;
-  const cardPicSize = Math.round(Math.min(200, Math.max(40, Math.min(tileW * 0.86, tileW / 0.95 - 38))));
-  const folderPicSize = Math.round(Math.min(190, Math.max(36, Math.min(tileW * 0.8, tileW / 0.95 - 62))));
+  const cols = Math.max(1, Math.min(preferredCols, Math.floor((gridW - 16) / 98)));
+  const tileW = (gridW - 16) / cols - 12; // grid side padding 8 + cell padding 6 on each side
+  // pictures grow with the tile (1 tile per row = a big picture), only capped on very wide screens
+  const cardPicSize = Math.round(Math.min(340, Math.max(40, Math.min(tileW * 0.86, tileW / 0.95 - 38))));
+  // folder name bar: always room for two lines, the same on every folder, so pictures line up
+  const folderLabelFont = Math.min(22, Math.max(12, tileW * 0.075));
+  const folderLabelLine = Math.round(folderLabelFont * 1.25);
+  const folderLabelH = folderLabelLine * 2 + 10;
+  // folder tile = the category picture across the whole tile (same 1.295 : 1 shape as the Home cards),
+  // with the name bar under it; the folder / count pills sit on top of the picture
+  const folderPanelH = Math.round(Math.max(60, tileW / 1.295));
+  const folderTileH = folderPanelH + folderLabelH;
+  const folderAvailH = folderPanelH - 38; // room for a letter / emoji below the top pills
+  // picture leaves a clear gap above the name bar (top tab ~30, gap ~14)
+  const folderPicSize = Math.round(Math.min(320, Math.max(36, Math.min(tileW * 0.72, folderAvailH))));
+  const labelBase = Math.min(24, Math.max(13, tileW * 0.11));
   const folders: CustomCategory[] = useMemo(
     () => (currentId ? visibleChildCategories(currentId) : visibleTopLevelCategories()),
     [currentId, ready, tick],
@@ -1061,6 +1092,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
     setPath([idOrNull]);
   }
 
+  // web: percentages fill the board exactly (scrollbar/margins included); phone: whole pixels so nothing is clipped
+  // (a tile never grows wider than its cell: word tiles take width 100% with no aspectRatio)
   const tileSize = { width: `${100 / cols}%` as const };
   const title = current ? wordLabel(current.name, lang) : t("talk", lang);
 
@@ -1082,45 +1115,17 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
             />
           </Pressable>
 
-          <Pressable
-            onPress={() => {
-              tapFeedback();
-              const tabs = bottomTabCategories(lang);
-              const firstTab = tabs[0];
-              if (firstTab?.id) setPath([firstTab.id]);
-              else setPath([]);
-            }}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            style={styles.navBtn}
-            accessibilityLabel={t("home", lang)}
+          <Text
+            style={[styles.headerTitle, width < 375 && styles.headerTitleCompact]}
+            numberOfLines={width < 560 && /\s/.test(title.trim()) ? 2 : 1}
+            // a single long name ("Attributes") shrinks to fit instead of breaking mid-word
+            adjustsFontSizeToFit={width < 560 && !/\s/.test(title.trim())}
+            minimumFontScale={0.6}
           >
-            <Logo size={34} />
-          </Pressable>
-
-          <Text style={[styles.headerTitle, width < 375 && styles.headerTitleCompact]} numberOfLines={width < 560 ? 2 : 1}>
             {title}
           </Text>
 
-          {/* Clean Oops/Mistake button */}
-          <Pressable
-            onPress={attentionMistake}
-            style={[styles.mistakeHeaderBtn, width < 375 && styles.mistakeHeaderBtnCompact]}
-            accessibilityLabel={t("iMadeMistake", lang)}
-          >
-            <Ionicons name="alert-circle-outline" size={15} color="#ffffff" />
-            {width >= 375 && <Text style={styles.mistakeHeaderBtnText}>{t("oopsBtn", lang)}</Text>}
-          </Pressable>
-
           <LangBadge />
-
-          <Pressable
-            onPress={() => onTabChange("home")}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            style={styles.navBtn}
-            accessibilityLabel={t("settings", lang)}
-          >
-            <Ionicons name="grid-outline" size={18} color={colors.forest} />
-          </Pressable>
         </View>
 
         {/* Top Sentence Strip (Miniature Cards + Orange Trash Button + Green Speak Button) */}
@@ -1268,6 +1273,12 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
           ref={gridScrollRef}
           style={styles.gridScroll}
           contentContainerStyle={styles.grid}
+          // Android: tiles scrolled off screen are not drawn, so long folders (163 animals) scroll smoothly
+          removeClippedSubviews={Platform.OS === "android"}
+          onLayout={(e) => {
+            const w = Math.round(e.nativeEvent.layout.width);
+            if (w > 0 && w !== measuredGridW) setMeasuredGridW(w);
+          }}
           showsVerticalScrollIndicator
           keyboardShouldPersistTaps="handled"
         >
@@ -1387,10 +1398,19 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       style={({ pressed }) => [
                         styles.tile,
                         styles.folderTile,
-                        { borderColor: c, backgroundColor: c + "08" },
+                        { borderColor: c, backgroundColor: c + "08", aspectRatio: undefined, height: folderTileH },
                         pressed && styles.tilePressed,
                       ]}
                     >
+                      {categoryPictureFor(f).uri && !categoryPictureFor(f).text ? (
+                        // the picture is the folder's background, edge to edge, exactly like a Home card
+                        <Image
+                          source={{ uri: categoryPictureFor(f).uri! }}
+                          style={{ position: "absolute", top: 0, left: 0, right: 0, height: folderPanelH }}
+                          resizeMode="cover"
+                          fadeDuration={0}
+                        />
+                      ) : null}
                       <View style={styles.folderTopTab}>
                         <View style={[styles.folderTabPill, { backgroundColor: c }]}>
                           <Ionicons name="folder-open" size={13} color="#ffffff" />
@@ -1404,7 +1424,7 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                           </View>
                         )}
                       </View>
-                      <View style={[styles.folderBody, { backgroundColor: c + "10" }]}>
+                      <View style={[styles.folderBody, { backgroundColor: categoryPictureFor(f).uri && !categoryPictureFor(f).text ? "transparent" : c + "10" }]}>
                         {verbFolderLetter(f) && !categoryPictureFor(f).uri ? (
                           <View style={[styles.letterBadge, { width: folderPicSize, height: folderPicSize, borderRadius: folderPicSize * 0.24, borderColor: c }]}>
                             <Text style={[styles.letterBadgeText, { color: c, fontSize: Math.round(folderPicSize * 0.66) }]}>
@@ -1418,20 +1438,18 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                             </Text>
                           </View>
                         ) : categoryPictureFor(f).uri ? (
-                          <CardPic
-                            label={f.name}
-                            imageUri={categoryPictureFor(f).uri}
-                            exact
-                            transparentBackground
-                            emoji={f.icon ?? "📁"}
-                            size={folderPicSize}
-                          />
+                          // like the Home cards: the picture fills the folder's width
+                          // drawn as the folder's background above; nothing more here
+                          null
                         ) : (
                           <Text style={[styles.folderIcon, { fontSize: Math.round(folderPicSize * 0.7) }]}>{f.icon ?? "📁"}</Text>
                         )}
                       </View>
-                      <View style={[styles.folderLabelBar, { backgroundColor: c }]}>
-                        <Text style={[styles.folderLabelText, width < 560 && { fontSize: 12, lineHeight: 15 }]} numberOfLines={width < 560 ? 2 : 1}>
+                      <View style={[styles.folderLabelBar, { backgroundColor: c, height: folderLabelH, justifyContent: "center" }]}>
+                        <Text
+                          style={[styles.folderLabelText, { fontSize: fitLabelSize(wordLabel(f.name, lang), tileW, folderLabelFont), lineHeight: folderLabelLine }]}
+                          numberOfLines={2}
+                        >
                           {wordLabel(f.name, lang)}
                         </Text>
                       </View>
@@ -1475,7 +1493,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                       style={({ pressed }) => [
                         styles.tile,
                         styles.wordTile,
-                        { minHeight: cardPicSize + (bilingual ? 105 : 64) },
+                        // fixed width + no aspectRatio: minHeight must never widen the tile past its cell
+                        { width: "100%", aspectRatio: undefined, minHeight: Math.max(tileW / 0.95, cardPicSize + (bilingual ? 105 : 64)) },
                         pressed && styles.tilePressed,
                       ]}
                     >
@@ -1529,16 +1548,21 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                         />
                       </View>
                       <View style={styles.wordLabelBar}>
-                        <Text style={[styles.wordLabelText, { fontSize: Math.round(Math.min(19, Math.max(13, tileW * 0.13))) }]}>
-                          {wordLabel(
+                        {(() => {
+                          const shownLabel = wordLabel(
                             verbKey && !visibleForms.has("1st")
                               ? formRowsFor(verbKey)[0]?.text ?? w.label
                               : !verbKey && !visibleNounForms.has("one") && nounRowsFor(w).length
                                 ? nounRowsFor(w)[0].text
                                 : w.label,
                             lang,
-                          )}
-                        </Text>
+                          );
+                          return (
+                            <Text style={[styles.wordLabelText, { fontSize: fitLabelSize(shownLabel, tileW, labelBase) }]}>
+                              {shownLabel}
+                            </Text>
+                          );
+                        })()}
                         {bilingual && (() => {
                           // Settings > Bilingual cards: the word in the other language underneath
                           const shown = verbKey && !visibleForms.has("1st") ? formRowsFor(verbKey)[0]?.text ?? w.label : w.label;
@@ -1738,7 +1762,8 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
       </Modal>
 
       {/* Category Navigation Bar (Tools, Emotion, Attributes, Sentences, Schools, Sports, Hygiene, Music) */}
-      <View style={styles.bottomBar}>
+      {/* sits above the phone's own gesture / button bar */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(6, insets.bottom) }]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -1754,26 +1779,42 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                 key={bt.name}
                 onPressIn={() => warmBoardCategory(stripCat)}
                 onPress={() => openBottomTab(bt.id)}
-                style={[styles.bottomTab, width < 560 && { width: 84 }, active && styles.bottomTabActive]}
+                style={[styles.bottomTab, width < 560 && { width: 80 }, active && { backgroundColor: nameColor + "14" }]}
                 disabled={!bt.id}
               >
-                <View
-                  style={[
-                    styles.bottomTabIcon,
-                    width < 560 && { width: 54, height: 54 },
-                    active && { backgroundColor: nameColor + "28" },
-                  ]}
-                >
-                  <CardPic label={bt.name} imageUri={stripCat ? categoryPictureFor(stripCat).uri : undefined} exact emoji={bt.icon} size={width < 560 ? 48 : 64} />
-                </View>
+                {(() => {
+                  const tabPic = stripCat ? categoryPictureFor(stripCat).uri : undefined;
+                  const iconSize = width < 560 ? 46 : 58;
+                  return (
+                    <View
+                      style={[
+                        styles.bottomTabIcon,
+                        { width: iconSize, height: iconSize, borderRadius: iconSize * 0.28 },
+                        active && { borderWidth: 2, borderColor: nameColor },
+                      ]}
+                    >
+                      {tabPic ? (
+                        // the picture's own pastel panel fills the rounded icon: no white frame
+                        <Image source={{ uri: tabPic }} style={{ width: "100%", height: "100%" }} resizeMode="cover" fadeDuration={0} />
+                      ) : (
+                        <Text style={{ fontSize: Math.round(iconSize * 0.55) }}>{bt.icon || "📁"}</Text>
+                      )}
+                    </View>
+                  );
+                })()}
                 <Text
                   style={[
                     styles.bottomTabLabel,
-                    width < 560 && { fontSize: 11.5 },
-                    { color: nameColor, fontWeight: "800" },
+                    (() => {
+                      // whole name on up to two lines, never "Alphabets a..."
+                      const tabW = width < 560 ? 80 : 100;
+                      const fs = fitLabelSize(wordLabel(bt.name, lang), tabW + 6, width < 560 ? 11.5 : 13, 2);
+                      return { fontSize: fs, lineHeight: Math.round(fs * 1.2), height: Math.round(fs * 1.2) * 2 };
+                    })(),
+                    { color: nameColor, fontWeight: active ? "900" : "700" },
                     !bt.id && { color: colors.textLight },
                   ]}
-                  numberOfLines={1}
+                  numberOfLines={2}
                 >
                   {wordLabel(bt.name, lang)}
                 </Text>
@@ -1871,7 +1912,7 @@ const styles = StyleSheet.create({
   msgBar: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 10,
+    marginHorizontal: 14,
     marginBottom: 6,
     paddingHorizontal: 8,
     paddingVertical: 8,
@@ -2119,14 +2160,16 @@ const styles = StyleSheet.create({
   gridScroll: {
     flex: 1,
   },
+  // 14 px from the screen edges and 12 px between tiles, in line with the sentence card above
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
+    paddingTop: 4,
     paddingBottom: 20,
   },
   cell: {
-    padding: 4,
+    padding: 6,
   },
   tile: {
     aspectRatio: 0.95,
@@ -2248,9 +2291,14 @@ const styles = StyleSheet.create({
   // Category Tab Bar at bottom
   bottomBar: {
     backgroundColor: "#ffffff",
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingVertical: 4,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingTop: 8,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 12,
   },
   bottomRow: {
     flexDirection: "row",
@@ -2260,9 +2308,9 @@ const styles = StyleSheet.create({
   },
   bottomTab: {
     alignItems: "center",
-    width: 110,
-    borderRadius: 12,
-    paddingVertical: 5,
+    width: 100,
+    borderRadius: 16,
+    paddingVertical: 6,
     paddingHorizontal: 2,
     position: "relative",
   },
@@ -2270,12 +2318,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#f1f5f9",
   },
   bottomTabIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 10,
+    width: 58,
+    height: 58,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 2,
+    marginBottom: 4,
   },
   bottomTabLabel: {
     fontSize: 14.5,

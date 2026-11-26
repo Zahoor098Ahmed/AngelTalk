@@ -338,6 +338,86 @@ function playClip(uri: string, rate = 1): Promise<void> {
   });
 }
 
+const TTS_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  Referer: "https://translate.google.com/",
+  Accept: "*/*",
+};
+
+function ttsCacheName(text: string, langCode: string): string {
+  let h = 5381;
+  const s = `${langCode}:${text}`;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return `tts_${langCode}_${h.toString(36)}_${s.length}.mp3`;
+}
+
+/** Native only: the spoken clip as a local file (downloaded once, then reused), or null. */
+async function downloadNativeTts(text: string, langCode: string, url: string): Promise<string | null> {
+  try {
+    const dir = FileSystem.cacheDirectory;
+    if (!dir) return null;
+    const fileUri = `${dir}${ttsCacheName(text, langCode)}`;
+    const info = await FileSystem.getInfoAsync(fileUri);
+    if (info.exists && (info as { size?: number }).size && (info as { size: number }).size > 500) return fileUri;
+    const res = await FileSystem.downloadAsync(url, fileUri, { headers: TTS_HEADERS });
+    const after = await FileSystem.getInfoAsync(fileUri);
+    const size = (after as { size?: number }).size ?? 0;
+    if (res.status !== 200 || size <= 500) {
+      await FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+      return null;
+    }
+    return fileUri;
+  } catch {
+    return null;
+  }
+}
+
+// Native only: resolves true once the clip really played, false if it never started
+// (no internet, blocked, bad URL) so the caller can use another voice instead of staying silent.
+function playNativeClipChecked(uri: string, rate = 1): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false;
+    let started = false;
+    let player: ReturnType<typeof createAudioPlayer> | null = null;
+    let sub: { remove?: () => void } | null = null;
+    const done = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(startTimer);
+      clearTimeout(endTimer);
+      sub?.remove?.();
+      try {
+        player?.remove();
+      } catch {
+        /* ignore */
+      }
+      resolve(ok);
+    };
+    const startTimer = setTimeout(() => {
+      if (!started) done(false);
+    }, 4000);
+    const endTimer = setTimeout(() => done(started), 10000);
+    try {
+      player = createAudioPlayer({
+        uri,
+        ...(/^https?:/.test(uri) ? { headers: TTS_HEADERS } : {}),
+      } as never);
+      try {
+        if (rate !== 1) (player as unknown as { setPlaybackRate?: (r: number) => void }).setPlaybackRate?.(rate);
+      } catch {
+        /* speed is a nicety */
+      }
+      sub = player.addListener("playbackStatusUpdate", (s: AudioStatus) => {
+        if (s.playing || (s.currentTime ?? 0) > 0) started = true;
+        if (s.didJustFinish) done(true);
+      });
+      player.play();
+    } catch {
+      done(false);
+    }
+  });
+}
+
 const ttsAudioInstanceCache = new Map<string, HTMLAudioElement>();
 
 export function preloadTTS(text: string, langCode: "ar" | "ur" | "de" | "fr" | "es" | "en" = "ar"): void {
@@ -435,9 +515,15 @@ export function playOnlineTTS(text: string, langCode: "ar" | "ur" | "de" | "fr" 
         return;
       }
 
-      playClip(proxyUrl, ttsPlaybackRate).then(() => resolve(true)).catch(() => {
-        playClip(directUrl, ttsPlaybackRate).then(() => resolve(true)).catch(() => resolve(false));
-      });
+      // On the phone there is no localhost proxy: go straight to the online voice,
+      // and report a failure so the caller falls back to the phone's own Arabic voice.
+      // Fetch it the way the localhost proxy does (browser headers + Referer, which Google needs),
+      // keep it in the phone's cache (instant and offline next time), then play the local file.
+      downloadNativeTts(cleanText, langCode, directUrl)
+        .then((localUri) => (localUri ? playNativeClipChecked(localUri, ttsPlaybackRate) : false))
+        .then((ok) => (ok ? true : playNativeClipChecked(directUrl, ttsPlaybackRate)))
+        .then(resolve)
+        .catch(() => resolve(false));
     } catch {
       resolve(false);
     }

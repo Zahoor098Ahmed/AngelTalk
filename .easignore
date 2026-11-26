@@ -1,0 +1,40 @@
+# What EAS Build skips when uploading (replaces .gitignore for EAS uploads).
+# Same rules as .gitignore, plus large files the app does not need.
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+build/
+.expo/
+.cache/
+*.log
+.DS_Store
+Thumbs.db
+
+# old builds and signing files (hundreds of MB)
+*.apk
+*.aab
+*.ipa
+*.jks
+*.keystore
+*.p8
+*.p12
+*.mobileprovision
+credentials.json
+
+# image working folders, never used by the app
+frontend/assets/image-audit/
+frontend/assets/image-edits/
+
+# other apps in this repo, not part of the phone app
+angel-talk-backend/
+angel-talk-admin/
+
+# frontend-only
+frontend/android/
+frontend/ios/
+frontend/web-build/
+frontend/.expo-shared/
+frontend/coverage/
+*.docx

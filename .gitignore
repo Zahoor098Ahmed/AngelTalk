@@ -12,3 +12,7 @@ build/
 Thumbs.db
 frontend/assets/image-audit/
 frontend/assets/image-edits/
+
+# build outputs (too big for GitHub; download them from EAS)
+*.apk
+*.aab

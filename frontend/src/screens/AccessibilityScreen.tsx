@@ -267,7 +267,7 @@ export default function AccessibilityScreen({ onBack }: Props) {
                     }
                     update({ visibleVerbForms: ALL_VERB_FORMS.filter((k) => next.includes(k)) });
                   }}
-                  style={[styles.seg, on && styles.segOn, { minWidth: 96 }]}
+                  style={[styles.seg, on && styles.segOn, styles.segGrid3]}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: on }}
                 >
@@ -312,7 +312,8 @@ export default function AccessibilityScreen({ onBack }: Props) {
                     }
                     update({ visibleNounForms: ALL_NOUN_FORMS.filter((k) => next.includes(k)) });
                   }}
-                  style={[styles.seg, on && styles.segOn, { minWidth: 96 }]}
+                  // fixed 2 x 2 grid: wrapping flexible tiles made Android overlap the next section
+                  style={[styles.seg, on && styles.segOn, styles.segGrid]}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: on }}
                 >
@@ -620,6 +621,8 @@ const styles = StyleSheet.create({
   segRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   seg: { flexGrow: 1, flexShrink: 1, flexBasis: 74, minHeight: 44, paddingVertical: 10, paddingHorizontal: 6, borderRadius: radius, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: "center", justifyContent: "center" },
   segOn: { backgroundColor: colors.forest, borderColor: colors.forest },
+  segGrid: { flexGrow: 0, flexShrink: 0, flexBasis: "auto", width: "48%", minHeight: 64 },
+  segGrid3: { flexGrow: 0, flexShrink: 0, flexBasis: "auto", width: "31.5%", minHeight: 64 },
   segText: { fontWeight: "800", fontSize: 14, color: colors.textMid, textAlign: "center" },
   actionRow: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.card, borderRadius: radius, paddingVertical: 15, paddingHorizontal: 18, borderWidth: 1, borderColor: colors.border },
   actionLabel: { flex: 1, fontWeight: "600", fontSize: 15, color: colors.textDark },

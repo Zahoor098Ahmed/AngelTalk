@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: "800", color: colors.textDark, textAlign: "center" },
   form: { width: "100%", maxWidth: 440, gap: 16 },
   label: { fontWeight: "700", fontSize: 15, color: colors.textMid, marginBottom: 6 },
-  input: { width: "100%", paddingVertical: 14, paddingHorizontal: 16, borderRadius: radius, borderWidth: 2, borderColor: colors.border, fontSize: 17 },
+  input: { width: "100%", paddingVertical: 14, paddingHorizontal: 16, borderRadius: radius, borderWidth: 1.5, borderColor: "#d6cdbb", backgroundColor: "#ffffff", color: colors.textDark, fontSize: 17 },
   tagWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   tag: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 2, borderColor: colors.border, backgroundColor: "white" },
   tagActive: { borderColor: colors.forest, backgroundColor: colors.forest },

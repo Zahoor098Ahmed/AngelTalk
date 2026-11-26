@@ -1,6 +1,6 @@
 import { warmBoardCategory } from "../modules/boardPictureLoading";
 import { useMemo, useEffect, useState } from "react";
-import { View, Pressable, StyleSheet, ScrollView } from "react-native";
+import { View, Pressable, StyleSheet, ScrollView, Platform } from "react-native";
 import Text from "../components/AppText";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,7 +19,9 @@ import { colors } from "../theme";
 import { ensureCategoriesLoaded, bottomTabCategories, getCategory, categoryPictureFor, subscribeCategories } from "../modules/customCategories";
 import Mascot from "../components/Mascot";
 
-const HOME_BODY_MAX_WIDTH = 860;
+// tablets (up to 1099 wide, e.g. iPad Pro 13", Surface Pro) use the full width like an iPad mini;
+// only a laptop / desktop window is limited so the cards do not get huge
+const HOME_BODY_MAX_WIDTH = 1100;
 const HOME_PADDING = 18;
 const HOME_COMPACT_PADDING = 12;
 const HOME_TABLET_PADDING = 28;
@@ -37,6 +39,17 @@ interface Props {
   onUpdateChild?: (child: ChildProfile) => void;
   /** Opens the Talk board inside this category. */
   onOpenCategory?: (categoryId: string) => void;
+}
+
+function homeNameSize(name: string, cardW: number): number {
+  // never cut: the longest word fits on one line, and the whole name fits in about 3 lines
+  const text = (name || "").trim();
+  const longest = text.split(/\s+/).reduce((m, p) => Math.max(m, p.length), 1);
+  const inner = cardW - 22;
+  const byWord = inner / (longest * 0.6);
+  const byLines = (inner * 3) / (Math.max(1, text.length) * 0.62);
+  // bigger cards (tablets) get bigger names, up to 20
+  return Math.round(Math.max(11, Math.min(cardW >= 220 ? 20 : 17, byWord, byLines)));
 }
 
 export default function HomeScreen(props: Props) {
@@ -64,15 +77,19 @@ export default function HomeScreen(props: Props) {
   const child = getChild(propChild.id) ?? propChild;
   const { width, isTablet, isSmallPhone } = useResponsive();
   // categories per row chosen in Settings (0 = automatic); the card width follows the grid width
-  const preferredColumns = Math.min(settings.homeTilesPerRow || (isTablet ? 5 : 3), 7);
+  // Auto follows the real window width (a narrow browser window gets phone-like big cards)
+  // (web: the browser window's real size, so zooming the page out does not shrink the cards and their names)
+  const windowW = Platform.OS === "web" && typeof window !== "undefined" && window.outerWidth > 0 ? Math.min(width, window.outerWidth) : width;
+  // phones 2, every iPad / tablet (768–1099, incl. iPad Pro 12.9") 3, laptop / desktop 4
+  const autoColumns = windowW >= 1100 ? 4 : windowW >= 560 ? 3 : 2;
+  const preferredColumns = Math.min(settings.homeTilesPerRow || autoColumns, 7);
   const bodyWidth = isTablet ? Math.min(width, HOME_BODY_MAX_WIDTH) : width;
   const bodyPadding = isTablet ? HOME_TABLET_PADDING : isSmallPhone ? HOME_COMPACT_PADDING : HOME_PADDING;
   const gridW = Math.max(0, bodyWidth - 2 * bodyPadding);
-  const columns = Math.max(1, Math.min(preferredColumns, Math.floor((gridW + HOME_CARD_GAP) / (96 + HOME_CARD_GAP))));
+  // a card is never narrower than 120 px, so names stay readable
+  const columns = Math.max(1, Math.min(preferredColumns, Math.floor((gridW + HOME_CARD_GAP) / (120 + HOME_CARD_GAP))));
   const cardW = Math.floor((gridW - HOME_CARD_GAP * (columns - 1)) / columns);
   const lang = settings.language;
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? t("morning", lang) : hour < 17 ? t("afternoon", lang) : t("evening", lang);
   const tr = (en: string, ar: string, ur: string) => (lang === "ar-SA" ? ar : lang === "ur-PK" ? ur : en);
 
   const usage = useMemo(() => getUsage(child.id), [child.id]);
@@ -112,14 +129,6 @@ export default function HomeScreen(props: Props) {
               <View style={styles.profileSummary}>
                 <Mascot mood="happy" size={isSmallPhone ? 44 : 58} animate={!settings.reduceMotion} />
                 <View style={styles.profileText}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                    <Ionicons
-                      name={hour < 12 ? "sunny-outline" : hour < 17 ? "partly-sunny-outline" : "moon-outline"}
-                      size={16}
-                      color="rgba(255,255,255,0.8)"
-                    />
-                    <Text style={[styles.greeting, styles.profileText]}>{greeting}</Text>
-                  </View>
                   <Text style={[styles.name, isSmallPhone && styles.compactName]} numberOfLines={2}>{child.name}</Text>
                 </View>
               </View>
@@ -224,7 +233,14 @@ export default function HomeScreen(props: Props) {
                           <Text style={{ fontSize: 34 }}>{tab.icon || "📁"}</Text>
                         )}
                       </View>
-                      <Text style={[styles.catName, { color: settings.categoryNameColors?.[c.id] || c.color || colors.textDark }]} numberOfLines={2}>
+                      <Text
+                        style={[
+                          styles.catName,
+                          { color: settings.categoryNameColors?.[c.id] || c.color || colors.textDark },
+                          // a long single word ("Transportation") shrinks to fit its card instead of breaking
+                          { fontSize: homeNameSize(tab.name, cardW), lineHeight: Math.round(homeNameSize(tab.name, cardW) * 1.25) },
+                        ]}
+                      >
                         {tab.name}
                       </Text>
                     </Pressable>
@@ -264,7 +280,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   headerInnerTablet: {
-    maxWidth: 860,
+    maxWidth: HOME_BODY_MAX_WIDTH,
     alignSelf: "center",
   },
   headerTop: { flexDirection: "row", alignItems: "center", gap: 8 },

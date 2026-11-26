@@ -2,6 +2,7 @@
 import { Image, Platform, StyleSheet, View, type ImageProps } from "react-native";
 import { SvgUri, SvgXml } from "react-native-svg";
 import { cachedWordImage, normalizeWordImage } from "../modules/normalizeWordImage";
+import { cachedSoftRed, softenRedNative } from "../modules/nativeSoftenRed";
 
 function getInlineSvg(uri?: string): string | undefined {
   const prefix = "data:image/svg+xml,";
@@ -31,12 +32,45 @@ export default function SmartImage({ source, style, resizeMode = "contain", cris
     });
     return () => { current = false; };
   }, [uri, crisp, colorTreatment, inlineSvg, transparentBackground, cached]);
-  const finalUri = normalized?.original === uri && normalized?.crisp === crisp && normalized?.softenRed === colorTreatment && normalized?.transparentBackground === transparentBackground
-    ? normalized.uri
-    : cached;
+  // Phones: the same red softening as the web (Skia), saved once per picture.
+  const nativeSoften = Platform.OS !== "web" && !!uri && !inlineSvg && !!colorTreatment && !/\.svg(\?|$)/i.test(uri);
+  const nativeMode = colorTreatment === "health" ? "health" : true;
+  const [nativeSoft, setNativeSoft] = useState<{ original: string; uri: string | null }>();
+  const [nativeGaveUp, setNativeGaveUp] = useState(false);
+  useEffect(() => {
+    if (!nativeSoften || !uri) return;
+    setNativeGaveUp(false);
+    const ready = cachedSoftRed(uri, nativeMode);
+    if (ready) {
+      setNativeSoft({ original: uri, uri: ready });
+      return;
+    }
+    let current = true;
+    // never leave a tile empty for long: only a very slow / failed picture shows its original
+    const timer = setTimeout(() => current && setNativeGaveUp(true), 6000);
+    softenRedNative(uri, nativeMode).then((out) => {
+      if (!current) return;
+      clearTimeout(timer);
+      setNativeSoft({ original: uri, uri: out });
+    });
+    return () => {
+      current = false;
+      clearTimeout(timer);
+    };
+  }, [uri, nativeSoften, nativeMode]);
+  const nativeDone = nativeSoft?.original === uri;
+  const nativeUri = nativeSoften && nativeDone ? nativeSoft?.uri ?? undefined : undefined;
+
+  const finalUri = Platform.OS !== "web"
+    ? nativeUri
+    : normalized?.original === uri && normalized?.crisp === crisp && normalized?.softenRed === colorTreatment && normalized?.transparentBackground === transparentBackground
+      ? normalized.uri
+      : cached;
   const displaySource = finalUri ? { ...(source as object), uri: finalUri } : source;
-  // Keep the frame in place while the web image gets its final crop and colors.
-  const preparing = Platform.OS === "web" && !!uri && !inlineSvg && !finalUri;
+  // Keep the frame in place while the image gets its final crop and colors.
+  const preparing = Platform.OS === "web"
+    ? !!uri && !inlineSvg && !finalUri
+    : nativeSoften && !nativeDone && !nativeGaveUp;
   return (
     <View style={[style as object, styles.frame, transparentBackground && styles.transparent]}>
       <View style={[styles.picture, transparentBackground && styles.transparent]}>
