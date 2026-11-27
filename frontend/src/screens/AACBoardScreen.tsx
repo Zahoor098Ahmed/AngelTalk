@@ -1404,12 +1404,23 @@ export default function AACBoardScreen({ child, tab, onTabChange, onOpenCategori
                     >
                       {categoryPictureFor(f).uri && !categoryPictureFor(f).text ? (
                         // the picture is the folder's background, edge to edge, exactly like a Home card
-                        <Image
-                          source={{ uri: categoryPictureFor(f).uri! }}
-                          style={{ position: "absolute", top: 0, left: 0, right: 0, height: folderPanelH }}
-                          resizeMode="cover"
-                          fadeDuration={0}
-                        />
+                        (() => {
+                          // German / French / Spanish Numerals: the plain 1-2-3 blocks of "Numerals", without the
+                          // "eins" / "un" / "uno" bubble that ran into the count pill
+                          const bubbleFolder = /^(german|french|spanish) numerals$/i.test(folderEnglishName(f).trim());
+                          const plainNumerals = bubbleFolder
+                            ? folders.find((x) => folderEnglishName(x).trim().toLowerCase() === "numerals")
+                            : undefined;
+                          const uri = (plainNumerals && categoryPictureFor(plainNumerals).uri) || categoryPictureFor(f).uri!;
+                          return (
+                            <Image
+                              source={{ uri }}
+                              style={{ position: "absolute", top: 0, left: 0, right: 0, height: folderPanelH }}
+                              resizeMode="cover"
+                              fadeDuration={0}
+                            />
+                          );
+                        })()
                       ) : null}
                       <View style={styles.folderTopTab}>
                         <View style={[styles.folderTabPill, { backgroundColor: c }]}>
